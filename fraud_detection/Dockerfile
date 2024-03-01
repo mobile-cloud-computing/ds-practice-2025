@@ -1,5 +1,5 @@
 # Use an official Python runtime as the base image
-FROM --platform=$BUILDPLATFORM python:3.11
+FROM --platform=linux/amd64 python:3.11
 
 # Set the working directory in the container
 # Both the utils and src folders will be mounted as volumes, please see docker-compose.yaml
