@@ -72,3 +72,17 @@ services:
     volumes:
       - ./utils:/app/utils
       - ./transaction_verification/src:/app/transaction_verification/src
+
+
+  suggestions_service:
+    build:
+      context: ./
+      dockerfile: ./suggestions_service/Dockerfile
+    ports:
+      - "50053:50053"
+    environment:
+      - PYTHONUNBUFFERED=TRUE
+      - PYTHONFILE=/app/transaction_verification/src/run.py
+    volumes:
+      - ./utils:/app/utils
+      - ./suggestions_service/src:/app/suggestions_service/src

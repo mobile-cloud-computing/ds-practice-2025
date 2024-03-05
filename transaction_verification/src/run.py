@@ -7,19 +7,21 @@ sys.path.insert(0, str(app_dir))
 
 import utils.pb.transaction_verification.transaction_verification_pb2 as transaction_verification
 import utils.pb.transaction_verification.transaction_verification_pb2_grpc as transaction_verification_grpc
-
+from utils.logger import logger 
 import grpc
 from concurrent import futures
 
+logs = logger.get_module_logger("VERIFICATION") 
+
 class TransactionVerification(transaction_verification_grpc.TransactionServiceServicer):
-    # Extremely transaction verification is handled here.
+    # Transaction verification is handled here.
     def verifyTransaction(self, request, context):
         response = transaction_verification.Determination()
         response.determination = True
 
         # Check if credit card number is correct length.
         if not 20 > len(str(request.creditcard.number)) > 15:
-            print("Invalid credit card number")
+            logs.warning("Invalid credit card number")
             response.determination = False
 
         # Check if expiration date is valid and in the future.
@@ -27,12 +29,12 @@ class TransactionVerification(transaction_verification_grpc.TransactionServiceSe
             import datetime
             datetime.datetime.strptime(request.creditcard.expirationDate, "%M/%y")
         except ValueError:
-            print("Invalid credit card expiration date")
+            logs.warning("Invalid credit card expiration date")
             response.determination = False
 
         # Check if CVV is valid.
         if not 1000 > int(request.creditcard.cvv) > 0 or len(str(request.creditcard.cvv)) != 3:
-            print("Invalid credit card CVV")
+            logs.warning("Invalid credit card CVV")
             response.determination = False
 
         return response
@@ -45,12 +47,9 @@ def serve():
 
     port = "50052"
     server.add_insecure_port("[::]:" + port)
-    # Start the server
     server.start()
-    print("Server started. Listening on port 50052.")
-    # Keep thread alive
+    logs.info(f"Server started. Listening on port {port}.")
     server.wait_for_termination()
-
 
 if __name__ == '__main__':
     serve()
