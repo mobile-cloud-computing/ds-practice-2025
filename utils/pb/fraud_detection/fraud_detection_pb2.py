@@ -14,7 +14,7 @@ _sym_db = _symbol_database.Default()
 
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x15\x66raud_detection.proto\x12\x05hello\"\x1c\n\x0cHelloRequest\x12\x0c\n\x04name\x18\x01 \x01(\t\"!\n\rHelloResponse\x12\x10\n\x08greeting\x18\x01 \x01(\t\"8\n\x0f\x43heckoutRequest\x12%\n\ncreditcard\x18\x01 \x01(\x0b\x32\x11.hello.CreditCard\"A\n\nCreditCard\x12\x0e\n\x06number\x18\x01 \x01(\t\x12\x16\n\x0e\x65xpirationDate\x18\x02 \x01(\t\x12\x0b\n\x03\x63vv\x18\x03 \x01(\t\"&\n\rDetermination\x12\x15\n\rdetermination\x18\x01 \x01(\x08\x32\x45\n\x0cHelloService\x12\x35\n\x08SayHello\x12\x13.hello.HelloRequest\x1a\x14.hello.HelloResponse2K\n\x0c\x46raudService\x12;\n\x0b\x44\x65tectFraud\x12\x16.hello.CheckoutRequest\x1a\x14.hello.Determinationb\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x15\x66raud_detection.proto\x12\x05hello\"\x1c\n\x0cHelloRequest\x12\x0c\n\x04name\x18\x01 \x01(\t\"!\n\rHelloResponse\x12\x10\n\x08greeting\x18\x01 \x01(\t\"\x88\x02\n\x0f\x43heckoutRequest\x12\x1d\n\x04user\x18\x02 \x01(\x0b\x32\x0f.hello.UserData\x12)\n\ncreditCard\x18\x03 \x01(\x0b\x32\x15.hello.CreditCardData\x12\x31\n\x0e\x62illingAddress\x18\x04 \x01(\x0b\x32\x19.hello.BillingAddressData\x12!\n\x06\x64\x65vice\x18\x05 \x01(\x0b\x32\x11.hello.DeviceData\x12#\n\x07\x62rowser\x18\x06 \x01(\x0b\x32\x12.hello.BrowserData\x12\x1e\n\x05items\x18\x07 \x03(\x0b\x32\x0f.hello.ItemData\x12\x10\n\x08referrer\x18\x08 \x01(\t\")\n\x08UserData\x12\x0c\n\x04name\x18\x01 \x01(\t\x12\x0f\n\x07\x63ontact\x18\x02 \x01(\t\"E\n\x0e\x43reditCardData\x12\x0e\n\x06number\x18\x01 \x01(\t\x12\x16\n\x0e\x65xpirationDate\x18\x02 \x01(\t\x12\x0b\n\x03\x63vv\x18\x03 \x01(\t\"_\n\x12\x42illingAddressData\x12\x0e\n\x06street\x18\x01 \x01(\t\x12\x0c\n\x04\x63ity\x18\x02 \x01(\t\x12\r\n\x05state\x18\x03 \x01(\t\x12\x0b\n\x03zip\x18\x04 \x01(\t\x12\x0f\n\x07\x63ountry\x18\x05 \x01(\t\"5\n\nDeviceData\x12\x0c\n\x04type\x18\x01 \x01(\t\x12\r\n\x05model\x18\x02 \x01(\t\x12\n\n\x02os\x18\x03 \x01(\t\",\n\x0b\x42rowserData\x12\x0c\n\x04name\x18\x01 \x01(\t\x12\x0f\n\x07version\x18\x02 \x01(\t\"*\n\x08ItemData\x12\x0c\n\x04name\x18\x01 \x01(\t\x12\x10\n\x08quantity\x18\x02 \x01(\t\"&\n\rDetermination\x12\x15\n\rdetermination\x18\x01 \x01(\x08\x32\x45\n\x0cHelloService\x12\x35\n\x08SayHello\x12\x13.hello.HelloRequest\x1a\x14.hello.HelloResponse2K\n\x0c\x46raudService\x12;\n\x0b\x44\x65tectFraud\x12\x16.hello.CheckoutRequest\x1a\x14.hello.Determinationb\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
@@ -25,14 +25,24 @@ if _descriptor._USE_C_DESCRIPTORS == False:
   _globals['_HELLOREQUEST']._serialized_end=60
   _globals['_HELLORESPONSE']._serialized_start=62
   _globals['_HELLORESPONSE']._serialized_end=95
-  _globals['_CHECKOUTREQUEST']._serialized_start=97
-  _globals['_CHECKOUTREQUEST']._serialized_end=153
-  _globals['_CREDITCARD']._serialized_start=155
-  _globals['_CREDITCARD']._serialized_end=220
-  _globals['_DETERMINATION']._serialized_start=222
-  _globals['_DETERMINATION']._serialized_end=260
-  _globals['_HELLOSERVICE']._serialized_start=262
-  _globals['_HELLOSERVICE']._serialized_end=331
-  _globals['_FRAUDSERVICE']._serialized_start=333
-  _globals['_FRAUDSERVICE']._serialized_end=408
+  _globals['_CHECKOUTREQUEST']._serialized_start=98
+  _globals['_CHECKOUTREQUEST']._serialized_end=362
+  _globals['_USERDATA']._serialized_start=364
+  _globals['_USERDATA']._serialized_end=405
+  _globals['_CREDITCARDDATA']._serialized_start=407
+  _globals['_CREDITCARDDATA']._serialized_end=476
+  _globals['_BILLINGADDRESSDATA']._serialized_start=478
+  _globals['_BILLINGADDRESSDATA']._serialized_end=573
+  _globals['_DEVICEDATA']._serialized_start=575
+  _globals['_DEVICEDATA']._serialized_end=628
+  _globals['_BROWSERDATA']._serialized_start=630
+  _globals['_BROWSERDATA']._serialized_end=674
+  _globals['_ITEMDATA']._serialized_start=676
+  _globals['_ITEMDATA']._serialized_end=718
+  _globals['_DETERMINATION']._serialized_start=720
+  _globals['_DETERMINATION']._serialized_end=758
+  _globals['_HELLOSERVICE']._serialized_start=760
+  _globals['_HELLOSERVICE']._serialized_end=829
+  _globals['_FRAUDSERVICE']._serialized_start=831
+  _globals['_FRAUDSERVICE']._serialized_end=906
 # @@protoc_insertion_point(module_scope)

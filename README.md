@@ -44,3 +44,16 @@ frontend service:
 - node.js, npm (or any other package manager)
 
 And then run each service individually.
+
+### Overview 
+
+This application has one meaningful endpoint as of now (defined in frontend/bookstore.yaml). The backend is composed of 4 grpc microservices. It's managed by the orchestrator class, which upon recieving a checkout request dispatches asynchronous requests to 
+
+-Suggestions Service (currently working with dummy logic)
+
+-Transaction Verification (currently checks credit card legitness)
+
+-Fraud Detection (Simple ML solution working here)
+
+System and architecture diagram: 
+[Here](https://imgur.com/a/05cSvc4)

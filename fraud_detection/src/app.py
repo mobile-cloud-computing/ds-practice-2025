@@ -13,6 +13,9 @@ import fraud_detection_pb2_grpc as fraud_detection_grpc
 from utils.logger import logger
 import grpc
 from concurrent import futures
+import pickle
+import pandas as pd
+from sklearn.preprocessing import LabelEncoder
 
 logs = logger.get_module_logger("FRAUD")
 
@@ -29,25 +32,31 @@ class HelloService(fraud_detection_grpc.HelloServiceServicer):
 class FraudService(fraud_detection_grpc.FraudServiceServicer):
     # Extremely simplistic fraud detection is handled here.
     def DetectFraud(self, request, context):
+
         response = fraud_detection.Determination()
         response.determination = True
 
         # Check if credit card number is correct length.
-        if not 20 > len(str(request.creditcard.number)) > 15:
+        if not 20 > len(str(request.creditCard.number)) > 15:
             logs.warning("Invalid credit card number")
             response.determination = False
 
         # Check if expiration date is valid and in the future.
         try:
             import datetime
-            datetime.datetime.strptime(request.creditcard.expirationDate, "%M/%y")
+            datetime.datetime.strptime(request.creditCard.expirationDate, "%M/%y")
         except ValueError:
             logs.warning("Invalid credit card expiration date")
             response.determination = False
 
         # Check if CVV is valid.
-        if not 1000 > int(request.creditcard.cvv) > 0 or len(str(request.creditcard.cvv)) != 3:
+        if not 1000 > int(request.creditCard.cvv) > 0 or len(str(request.creditCard.cvv)) != 3:
             logs.warning("Invalid credit card CVV")
+            response.determination = False
+
+        response_2 = predict(request)[0]
+        if not response_2:
+            logs.warning("Fraud suspected")
             response.determination = False
 
         return response
@@ -61,6 +70,68 @@ def serve():
     server.start()
     logs.info(f"Server started. Listening on port {port}.")
     server.wait_for_termination()
+
+def predict(request):
+
+    name = request.user.name
+    contact = request.user.contact
+    credit_card_number = request.creditCard.number
+    expiration_date = request.creditCard.expirationDate
+    cvv = request.creditCard.cvv
+    street = request.billingAddress.street
+    city = request.billingAddress.city
+    state = request.billingAddress.state
+    zip_code = request.billingAddress.zip
+    country = request.billingAddress.country
+    device_type = request.device.type
+    device_model = request.device.model
+    device_os = request.device.os
+    browser_name = request.browser.name
+    browser_version = request.browser.version
+    items_name = "blank"
+    items_quantity = "1"
+    referrer = request.referrer
+
+    # Create the new_data dictionary
+    new_data = {
+        'name': name,
+        'contact': contact,
+        'creditCard_number': credit_card_number,
+        'creditCard_expirationDate': expiration_date,
+        'creditCard_cvv': cvv,
+        'billingAddress_street': street,
+        'billingAddress_city': city,
+        'billingAddress_state': state,
+        'billingAddress_zip': zip_code,
+        'billingAddress_country': country,
+        'device_type': device_type,
+        'device_model': device_model,
+        'device_os': device_os,
+        'browser_name': browser_name,
+        'browser_version': browser_version,
+        'items_name': items_name,
+        'items_quantity': items_quantity,
+        'referrer': referrer
+    }
+
+
+    with open('/app/fraud_detection/src/random_forest_model.pkl', 'rb') as model_file:
+        loaded_model = pickle.load(model_file)
+
+    new_data_df = pd.DataFrame([new_data])
+    label_encoder = LabelEncoder()
+    new_data_encoded = new_data_df.apply(label_encoder.fit_transform)
+
+    prediction = loaded_model.predict(new_data_encoded)
+
+    return prediction
+
+
+
+
+
+    
+
 
 if __name__ == '__main__':
     serve()

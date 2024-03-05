@@ -19,14 +19,49 @@ service FraudService {
 }
 
 message CheckoutRequest {
-    CreditCard creditcard = 1;
+    UserData user = 2;
+    CreditCardData creditCard = 3;
+    BillingAddressData billingAddress = 4;
+    DeviceData device = 5;  
+    BrowserData browser = 6;
+    repeated ItemData items = 7;
+    string referrer = 8;
 }
 
-// A new message type for encapsulating credit card details.
-message CreditCard {
-    string number = 1; // Credit card number
-    string expirationDate = 2; // Expiration date in MM/YYYY format
-    string cvv = 3; // CVV code
+
+message UserData {
+    string name = 1;
+    string contact = 2;
+}
+
+message CreditCardData {
+    string number = 1;
+    string expirationDate = 2;
+    string cvv = 3;
+}
+
+message BillingAddressData {
+    string street = 1;
+    string city = 2;
+    string state = 3;
+    string zip = 4;
+    string country = 5;
+}
+
+message DeviceData {
+    string type = 1;
+    string model = 2;
+    string os = 3;
+}
+
+message BrowserData {
+    string name = 1;
+    string version = 2;
+}
+
+message ItemData {
+    string name = 1;
+    string quantity = 2;
 }
 
 message Determination {

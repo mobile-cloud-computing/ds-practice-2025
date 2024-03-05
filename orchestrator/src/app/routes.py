@@ -51,7 +51,7 @@ def init_routes(app):
             return jsonify({"code": "500", "message": "Internal Server Error"}), 500
 
         try:
-            fraud_detection_task = asyncio.create_task(fraud(creditcard=data['creditCard']))
+            fraud_detection_task = asyncio.create_task(fraud(checkout_request=data))
             logs.info("Fraud detection task created")
             verify_transaction_task = asyncio.create_task(verify_transaction(creditcard=data['creditCard']))
             logs.info("Transaction verification task created")
