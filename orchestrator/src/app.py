@@ -4,7 +4,6 @@ import sys
 # The path of the stubs is relative to the current file, or absolute inside the container.
 # Change these lines only if strictly needed.
 FILE = __file__ if "__file__" in globals() else os.getenv("PYTHONFILE", "")
-
 relative_modules_path = os.path.abspath(os.path.join(FILE, "../../../orchestrator/src"))
 sys.path.insert(0, relative_modules_path)
 
@@ -14,6 +13,7 @@ from flask_cors import CORS
 
 import book_recommendation
 import fraud_detection
+import transaction_verification
 
 app = Flask(__name__)
 # Enable CORS for the app.
@@ -56,10 +56,12 @@ def health():
     """
     fraud_detection_status = fraud_detection.health_check()
     recommendation_status = book_recommendation.health_check()
+    transaction_verification_status = transaction_verification.health_check()
 
     return {
-        "fraudDetection": fraud_detection_status,
-        "recommendation": recommendation_status,
+        "fraud_detection": fraud_detection_status,
+        "book_recommendation": recommendation_status,
+        "transaction_verification": transaction_verification_status,
         "orchestrator": "Healthy",
     }
 

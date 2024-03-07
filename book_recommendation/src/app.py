@@ -13,14 +13,14 @@ sys.path.insert(0, utils_path)
 # ruff : noqa: E402
 from concurrent import futures
 
-import book_recommendation_pb2 as fraud_detection
-import book_recommendation_pb2_grpc as fraud_detection_grpc
+import book_recommendation_pb2 as book_recommendation
+import book_recommendation_pb2_grpc as book_recommendation_grpc
 import grpc
 
 
-class RecommendationService(fraud_detection_grpc.RecommendationServiceServicer):
+class RecommendationService(book_recommendation_grpc.RecommendationServiceServicer):
     def GetRecommendations(self, request, context):
-        dummy_response = fraud_detection.GetRecommendationsResponse()
+        dummy_response = book_recommendation.GetRecommendationsResponse()
         dummy_response.recommendations.add(
             id="123",
             title="Dummy Book 1",
@@ -37,12 +37,12 @@ class RecommendationService(fraud_detection_grpc.RecommendationServiceServicer):
         return dummy_response
 
     def HealthCheck(self, request, context):
-        return fraud_detection.HealthCheckResponse(status="Healthy")
+        return book_recommendation.HealthCheckResponse(status="Healthy")
 
 
 def serve():
     server = grpc.server(futures.ThreadPoolExecutor())
-    fraud_detection_grpc.add_RecommendationServiceServicer_to_server(
+    book_recommendation_grpc.add_RecommendationServiceServicer_to_server(
         RecommendationService(), server
     )
     port = "50053"
