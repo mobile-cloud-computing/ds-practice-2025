@@ -1,0 +1,25 @@
+syntax = "proto3";
+
+package transaction;
+
+service TransactionService {
+    rpc VerifyTransaction(TransactionRequest) returns (TransactionResponse);
+    rpc HealthCheck(HealthCheckRequest) returns (HealthCheckResponse);
+}
+
+message TransactionRequest {
+    string transactionId = 1;
+}
+
+message TransactionResponse {
+
+}
+
+message HealthCheckRequest {
+
+}
+
+message HealthCheckResponse {
+    string status = 1;
+}
+

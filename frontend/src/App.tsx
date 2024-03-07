@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import {Routes, Route, Navigate} from 'react-router-dom';
 
 import './App.css';
@@ -10,7 +10,15 @@ import {SearchBooksPage} from './layouts/SearchBooksPage/SearchBooksPage';
 import ViewSingleBook from "./layouts/ViewSingleBook";
 import CheckoutPage from "./CheckoutPage/CheckoutPage";
 import CheckoutConfirmation from "./CheckoutPage/CheckoutConfirmation";
+
+console.log({BaseURL: process.env.REACT_APP_API_BASE_URL});
+
 export const App = () => {
+    
+    useEffect(() => {
+        console.log('App mounted');
+    }, []);
+
     return (
         <div className='d-flex flex-column min-vh-100'>
             <Navbar/>

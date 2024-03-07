@@ -14,17 +14,21 @@ _sym_db = _symbol_database.Default()
 
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x15\x66raud_detection.proto\x12\x05hello\"\x1c\n\x0cHelloRequest\x12\x0c\n\x04name\x18\x01 \x01(\t\"!\n\rHelloResponse\x12\x10\n\x08greeting\x18\x01 \x01(\t2E\n\x0cHelloService\x12\x35\n\x08SayHello\x12\x13.hello.HelloRequest\x1a\x14.hello.HelloResponseb\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x15\x66raud_detection.proto\x12\x0e\x66rauddetection\"X\n\x0c\x46raudRequest\x12\x0c\n\x04name\x18\x01 \x01(\t\x12\r\n\x05\x65mail\x18\x02 \x01(\t\x12\x0f\n\x07\x61\x64\x64ress\x18\x03 \x01(\t\x12\r\n\x05phone\x18\x04 \x01(\t\x12\x0b\n\x03ssn\x18\x05 \x01(\t\"1\n\rFraudResponse\x12\x0f\n\x07isFraud\x18\x01 \x01(\x08\x12\x0f\n\x07message\x18\x02 \x01(\t\"\x14\n\x12HealthCheckRequest\"%\n\x13HealthCheckResponse\x12\x0e\n\x06status\x18\x01 \x01(\t2\xba\x01\n\x15\x46raudDetectionService\x12I\n\nCheckFraud\x12\x1c.frauddetection.FraudRequest\x1a\x1d.frauddetection.FraudResponse\x12V\n\x0bHealthCheck\x12\".frauddetection.HealthCheckRequest\x1a#.frauddetection.HealthCheckResponseb\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
 _builder.BuildTopDescriptorsAndMessages(DESCRIPTOR, 'fraud_detection_pb2', _globals)
 if _descriptor._USE_C_DESCRIPTORS == False:
   DESCRIPTOR._options = None
-  _globals['_HELLOREQUEST']._serialized_start=32
-  _globals['_HELLOREQUEST']._serialized_end=60
-  _globals['_HELLORESPONSE']._serialized_start=62
-  _globals['_HELLORESPONSE']._serialized_end=95
-  _globals['_HELLOSERVICE']._serialized_start=97
-  _globals['_HELLOSERVICE']._serialized_end=166
+  _globals['_FRAUDREQUEST']._serialized_start=41
+  _globals['_FRAUDREQUEST']._serialized_end=129
+  _globals['_FRAUDRESPONSE']._serialized_start=131
+  _globals['_FRAUDRESPONSE']._serialized_end=180
+  _globals['_HEALTHCHECKREQUEST']._serialized_start=182
+  _globals['_HEALTHCHECKREQUEST']._serialized_end=202
+  _globals['_HEALTHCHECKRESPONSE']._serialized_start=204
+  _globals['_HEALTHCHECKRESPONSE']._serialized_end=241
+  _globals['_FRAUDDETECTIONSERVICE']._serialized_start=244
+  _globals['_FRAUDDETECTIONSERVICE']._serialized_end=430
 # @@protoc_insertion_point(module_scope)

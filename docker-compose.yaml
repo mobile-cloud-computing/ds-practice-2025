@@ -60,3 +60,16 @@ services:
       - ./utils:/app/utils
       # Mount the fraud_detection/src directory in the current directory to the /app/fraud_detection/src directory in the container
       - ./fraud_detection/src:/app/fraud_detection/src
+
+  book_recommendation:
+    build:
+      context: ./
+      dockerfile: ./book_recommendation/Dockerfile
+    ports:
+      - 50053:50053
+    environment:
+      - PYTHONUNBUFFERED=TRUE
+      - PYTHONFILE=/app/book_recommendation/src/app.py
+    volumes:
+      - ./utils:/app/utils
+      - ./book_recommendation/src:/app/book_recommendation/src
