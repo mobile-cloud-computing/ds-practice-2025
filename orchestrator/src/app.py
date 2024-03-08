@@ -1,3 +1,4 @@
+import json
 import os
 import sys
 
@@ -17,6 +18,7 @@ from logging.config import dictConfig
 import data_store as store
 from flask import Flask, jsonify, request
 from flask_cors import CORS
+from google.protobuf.json_format import MessageToJson
 
 import book_recommendation
 import fraud_detection
@@ -141,26 +143,40 @@ def checkout():
     """
     Responds with a JSON object containing the order ID, status, and suggested books.
     """
-    # Dummy response following the provided YAML specification for the bookstore
-    # TODO:
-    # 1. Check fraud
-    # 2. Verify transaction
-    # 3. Get recommendations
-    # 2,3 can be done in parallel
 
-    fraud_detection_response = fraud_detection.check_fraud(request.json)
-    logging.info("fraud detection resultL %s", fraud_detection_response)
-    requestJson = request.json
+    fraud_res = fraud_detection.check_fraud(request.json)
+    if fraud_res.isFraud:
+        return {"status": "Order Rejected", "message": fraud_res.message}
+
+    jsonRequest = request.json
+
+    def verify_transaction():
+        return transaction_verification.verify_transaction(
+            {
+                "cardNumber": jsonRequest["creditCard"]["number"],
+                "expirationDate": jsonRequest["creditCard"]["expirationDate"],
+                "cvv": jsonRequest["creditCard"]["cvv"],
+            }
+        )
+
+    def get_recommendations():
+        return book_recommendation.get_recommendations(["1", "2"])
+
+    with ThreadPoolExecutor() as executor:
+        future_transaction = executor.submit(verify_transaction)
+        future_recommendation = executor.submit(get_recommendations)
+
+    transaction = future_transaction.result()
+    book_res = future_recommendation.result()
+
+    msg_obj = json.loads(MessageToJson(book_res))
     order_status_response = {
-        "orderId": "1234567890",
+        "orderId": transaction.transactionId,
         "status": "Order Approved",
-        "suggestedBooks": [
-            {"bookId": "123", "title": "Dummy Book 1", "author": "Author 1"},
-            {"bookId": "456", "title": "Dummy Book 2", "author": "Author 2"},
-        ],
+        "suggestedBooks": msg_obj["recommendations"],
     }
 
-    return order_status_response
+    return jsonify(order_status_response)
 
 
 @app.route("/error", methods=["GET"])

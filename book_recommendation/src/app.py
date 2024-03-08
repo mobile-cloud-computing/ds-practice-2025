@@ -5,6 +5,12 @@ import sys
 # The path of the stubs is relative to the current file, or absolute inside the container.
 # Change these lines only if strictly needed.
 FILE = __file__ if "__file__" in globals() else os.getenv("PYTHONFILE", "")
+relative_modules_path = os.path.abspath(
+    os.path.join(FILE, "../../../book_recommendation/src")
+)
+sys.path.insert(0, relative_modules_path)
+import data_store as store
+
 utils_path = os.path.abspath(
     os.path.join(FILE, "../../../utils/pb/book_recommendation")
 )
@@ -20,21 +26,25 @@ import grpc
 
 class RecommendationService(book_recommendation_grpc.RecommendationServiceServicer):
     def GetRecommendations(self, request, context):
-        dummy_response = book_recommendation.GetRecommendationsResponse()
-        dummy_response.recommendations.add(
-            id="123",
-            title="Dummy Book 1",
-            author="Author 1",
-            description="Description 1",
-            copies="10",
-            copies_available="5",
-            category="Category 1",
-            image_url="https://example.com/image1",
-            price=10.0,
-            tags=["tag1", "tag2"],
-        )
-
-        return dummy_response
+        response = book_recommendation.GetRecommendationsResponse()
+        books = store.get_books()
+        for book in books:
+            if book["id"] in request.bookIds:
+                response.recommendations.append(
+                    book_recommendation.Recommendation(
+                        id=book["id"],
+                        title=book["title"],
+                        author=book["author"],
+                        description=book["description"],
+                        copies=book["copies"],
+                        copiesAvailable=book["copiesAvailable"],
+                        category=book["category"],
+                        image_url=book["image_url"],
+                        price=book["price"],
+                        tags=book["tags"],
+                    )
+                )
+        return response
 
     def HealthCheck(self, request, context):
         return book_recommendation.HealthCheckResponse(status="Healthy")

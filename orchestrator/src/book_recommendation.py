@@ -26,10 +26,10 @@ def health_check():
         return f"Unhealthy: {e}"
 
 
-def get_recommendations(user_id):
+def get_recommendations(bookIds):
     with grpc.insecure_channel(_BOOK_RECOMMENDATION_SERVICE) as channel:
         stub = book_recommendation_grpc.RecommendationServiceStub(channel)
         response = stub.GetRecommendations(
-            book_recommendation.GetRecommendationsRequest(user_id=user_id)
+            book_recommendation.GetRecommendationsRequest(bookIds=bookIds)
         )
-    return response.books
+    return response

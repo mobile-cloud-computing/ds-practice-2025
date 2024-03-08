@@ -8,7 +8,7 @@ service RecommendationService {
 }
 
 message GetRecommendationsRequest {
-  string user_id = 1;
+  repeated string bookIds = 1;
 }
 
 message GetRecommendationsResponse {

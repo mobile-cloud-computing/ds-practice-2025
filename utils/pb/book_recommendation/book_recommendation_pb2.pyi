@@ -6,10 +6,10 @@ from typing import ClassVar as _ClassVar, Iterable as _Iterable, Mapping as _Map
 DESCRIPTOR: _descriptor.FileDescriptor
 
 class GetRecommendationsRequest(_message.Message):
-    __slots__ = ("user_id",)
-    USER_ID_FIELD_NUMBER: _ClassVar[int]
-    user_id: str
-    def __init__(self, user_id: _Optional[str] = ...) -> None: ...
+    __slots__ = ("bookIds",)
+    BOOKIDS_FIELD_NUMBER: _ClassVar[int]
+    bookIds: _containers.RepeatedScalarFieldContainer[str]
+    def __init__(self, bookIds: _Optional[_Iterable[str]] = ...) -> None: ...
 
 class GetRecommendationsResponse(_message.Message):
     __slots__ = ("recommendations",)

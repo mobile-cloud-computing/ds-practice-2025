@@ -26,3 +26,12 @@ def health_check():
         return response.status
     except Exception as e:
         return f"Unhealthy: {e}"
+
+
+def verify_transaction(transaction):
+    with grpc.insecure_channel(_TRANSACTION_VERIFICATION_SERVICE) as channel:
+        stub = transaction_verification_grpc.TransactionServiceStub(channel)
+        response = stub.VerifyTransaction(
+            transaction_verification.TransactionRequest(**transaction)
+        )
+    return response

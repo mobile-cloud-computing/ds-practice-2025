@@ -1,5 +1,6 @@
 import os
 import sys
+import uuid
 
 # This set of lines are needed to import the gRPC stubs.
 # The path of the stubs is relative to the current file, or absolute inside the container.
@@ -22,9 +23,9 @@ class TransactionVerificationService(
     transaction_verification_grpc.TransactionServiceServicer
 ):
     def VerifyTransaction(self, request, context):
-        dummy_response = transaction_verification.TransactionResponse()
-        dummy_response.status = "Success"
-        return dummy_response
+        transaction_response = transaction_verification.TransactionResponse()
+        transaction_response.transactionId = str(uuid.uuid4().node)
+        return transaction_response
 
     def HealthCheck(self, request, context):
         return transaction_verification.HealthCheckResponse(status="Healthy")
