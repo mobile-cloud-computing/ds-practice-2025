@@ -16,6 +16,7 @@ from concurrent.futures import ThreadPoolExecutor
 from logging.config import dictConfig
 
 import data_store as store
+from exceptions import FraudActivityException
 from flask import Flask, jsonify, request
 from flask_cors import CORS
 from google.protobuf.json_format import MessageToJson
@@ -55,7 +56,7 @@ dictConfig(
             "info_file": {
                 "class": "logging.handlers.RotatingFileHandler",
                 "formatter": "access",
-                "filename": "/app/logs/orchestrator.access.log",
+                "filename": "/app/logs/orchestrator.info.log",
                 "maxBytes": 10000,
                 "backupCount": 10,
                 "delay": "True",
@@ -103,6 +104,8 @@ def exceptions(e):
         request.full_path,
         tb,
     )
+    if isinstance(e, FraudActivityException):
+        return "Fraudulent activity detected", 400
     return "Internal Server Error", 500
 
 
@@ -130,14 +133,6 @@ def book(book_id):
     return jsonify(store.get_book_by_id(book_id))
 
 
-@app.route("/recommendations", methods=["POST"])
-def recommendations():
-    """
-    Responds with a list of recommended books.
-    """
-    return jsonify(book_recommendation.get_recommendations())
-
-
 @app.route("/checkout", methods=["POST"])
 def checkout():
     """
@@ -146,9 +141,14 @@ def checkout():
 
     fraud_res = fraud_detection.check_fraud(request.json)
     if fraud_res.isFraud:
-        return {"status": "Order Rejected", "message": fraud_res.message}
+        raise FraudActivityException()
 
     jsonRequest = request.json
+    bookNames = [book["name"] for book in jsonRequest["items"]]
+    books = store.get_books_by_names(bookNames)
+    bookIds = [book["id"] for book in books]
+    if bookIds is None or len(bookIds) == 0:
+        raise Exception("No books found")
 
     def verify_transaction():
         return transaction_verification.verify_transaction(
@@ -160,7 +160,7 @@ def checkout():
         )
 
     def get_recommendations():
-        return book_recommendation.get_recommendations(["1", "2"])
+        return book_recommendation.get_recommendations(bookIds)
 
     with ThreadPoolExecutor() as executor:
         future_transaction = executor.submit(verify_transaction)
@@ -198,7 +198,6 @@ def health():
         return name, status
 
     with ThreadPoolExecutor() as executor:
-        # Run the health checks in separate threads
         futures = [
             executor.submit(run_health_check, fraud_detection, "fraud_detection"),
             executor.submit(
@@ -208,8 +207,6 @@ def health():
                 run_health_check, transaction_verification, "transaction_verification"
             ),
         ]
-
-        # Collect the results
         statuses = {future.result()[0]: future.result()[1] for future in futures}
 
     statuses["orchestrator"] = "Healthy"

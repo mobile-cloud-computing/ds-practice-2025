@@ -10,6 +10,7 @@ relative_modules_path = os.path.abspath(
 )
 sys.path.insert(0, relative_modules_path)
 import data_store as store
+from model import BookRecommendationModel
 
 utils_path = os.path.abspath(
     os.path.join(FILE, "../../../utils/pb/book_recommendation")
@@ -23,27 +24,42 @@ import book_recommendation_pb2 as book_recommendation
 import book_recommendation_pb2_grpc as book_recommendation_grpc
 import grpc
 
+recommendation_model = BookRecommendationModel()
+
+
+def get_model_recommendations(title):
+    books = store.get_books()
+    book_titles = [book["title"] for book in books]
+    current_book_title = title
+    recommendations = recommendation_model.recommend(current_book_title, book_titles)
+    if len(recommendations) == 0:
+        return []
+    top_recommendations = recommendations[:2]
+    recommended_titles = [book[0] for book in top_recommendations]
+    return store.get_books_by_titles(recommended_titles)
+
 
 class RecommendationService(book_recommendation_grpc.RecommendationServiceServicer):
     def GetRecommendations(self, request, context):
         response = book_recommendation.GetRecommendationsResponse()
-        books = store.get_books()
-        for book in books:
-            if book["id"] in request.bookIds:
-                response.recommendations.append(
-                    book_recommendation.Recommendation(
-                        id=book["id"],
-                        title=book["title"],
-                        author=book["author"],
-                        description=book["description"],
-                        copies=book["copies"],
-                        copiesAvailable=book["copiesAvailable"],
-                        category=book["category"],
-                        image_url=book["image_url"],
-                        price=book["price"],
-                        tags=book["tags"],
-                    )
+        current_book_title = store.get_book_by_id(request.bookIds[0])["title"]
+        recommended_books = get_model_recommendations(current_book_title)
+
+        for book in recommended_books:
+            response.recommendations.append(
+                book_recommendation.Recommendation(
+                    id=book["id"],
+                    title=book["title"],
+                    author=book["author"],
+                    description=book["description"],
+                    copies=book["copies"],
+                    copiesAvailable=book["copiesAvailable"],
+                    category=book["category"],
+                    image_url=book["image_url"],
+                    price=book["price"],
+                    tags=book["tags"],
                 )
+            )
         return response
 
     def HealthCheck(self, request, context):
@@ -51,6 +67,8 @@ class RecommendationService(book_recommendation_grpc.RecommendationServiceServic
 
 
 def serve():
+    sample = get_model_recommendations("Learning Python")
+    print(f"recommendation model is ready {sample}")
     server = grpc.server(futures.ThreadPoolExecutor())
     book_recommendation_grpc.add_RecommendationServiceServicer_to_server(
         RecommendationService(), server
