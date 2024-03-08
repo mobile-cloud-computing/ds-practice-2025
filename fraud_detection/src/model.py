@@ -1,24 +1,23 @@
 import jax
 from transformers import AutoTokenizer, FlaxBertForMultipleChoice
 
-# _DEFAULT_MODEL = "bert-base-uncased"
-_DEFAULT_MODEL = "distilbert-base-uncased"
-
+_DEFAULT_DISTILBERT_MODEL = "distilbert-base-uncased"
+_MODEL_BIAS = 0.1003
 
 class FraudDetectionModel:
-    def __init__(self, model_name=_DEFAULT_MODEL):
-        self.model_name = model_name
-        self.tokenizer = AutoTokenizer.from_pretrained(model_name, resume_download=True)
+    def __init__(self):
+        self.model_name = _DEFAULT_DISTILBERT_MODEL
+        self.tokenizer = AutoTokenizer.from_pretrained(self.model_name, resume_download=True)
         self.mc_model = FlaxBertForMultipleChoice.from_pretrained(
-            model_name,
+            self.model_name,
             resume_download=True,
             output_attentions=True,
             output_hidden_states=True,
         )
 
     def check_fraud(self, input):
-        fraud = "Fraud"
-        not_fraud = "Not Fraud"
+        fraud = "fraud"
+        not_fraud = "not fraud"
         choices = [fraud, not_fraud]
         input = [input] * len(choices)
         encoding = self.tokenizer(
@@ -28,7 +27,7 @@ class FraudDetectionModel:
         probs = jax.nn.softmax(outputs.logits, axis=-1)
         probs_list = probs.tolist()[0]
         mapped = {choice: prob for choice, prob in zip(choices, probs_list)}
-        is_fraud = mapped[fraud] > (mapped[not_fraud] + 0.1)
+        is_fraud = mapped[fraud] > (mapped[not_fraud] + _MODEL_BIAS)
         return {
             "is_fraud": is_fraud,
             "probabilities": {"fraud": mapped[fraud], "not_fraud": mapped[not_fraud]},
