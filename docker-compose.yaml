@@ -38,6 +38,7 @@ services:
       - ./utils:/app/utils
       # Mount the orchestrator/src directory in the current directory to the /app/orchestrator/src directory in the container
       - ./orchestrator/src:/app/orchestrator/src
+      - ./logs:/app/logs
   fraud_detection:
     build:
       # Use the current directory as the build context

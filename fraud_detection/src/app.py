@@ -14,13 +14,18 @@ import grpc
 
 class FraudDetectionService(fraud_detection_grpc.FraudDetectionServiceServicer):
     def CheckFraud(self, request, context):
-        response = fraud_detection.CheckFraudResponse()
-        response.fraud = False
-        print(f"Fraud: {response.fraud}")
+        response = fraud_detection.FraudResponse()
+        response.isFraud = False
+        response.message = "Transaction is not fraud"
+        print(
+            "============================ Fraud Request: ====================================="
+        )
+        print(request)
+        print(f"Fraud: {response}")
         return response
 
     def HealthCheck(self, request, context):
-        return fraud_detection.HealthCheckResponse(status="Super Healthy")
+        return fraud_detection.HealthCheckResponse(status="Healthy")
 
 
 def serve():

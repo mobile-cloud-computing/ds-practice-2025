@@ -1,70 +1,38 @@
-import React, { useEffect, useState} from 'react';
+import React, { useEffect, useMemo, useState} from 'react';
 import {Link, useParams, useNavigate} from 'react-router-dom';
-import { responseData } from "../Api";
+import { AsyncActionType, useGetBook } from '../hooks/bookstore.hook';
 
-type BookData = {
-    id: string;
-    title: string;
-    author: string;
-    description: string;
-    copies: number;
-    copiesAvailable: number;
-    category: string;
-    img: string;
-    price: number;
-};
 
 const ViewSingleBook: React.FC = () => {
     let { bookId } = useParams<{ bookId: string }>();
-
     const navigate = useNavigate();
-
-
-    const [book, setBook] = useState<BookData | null>(null);
-    const [isLoading, setIsLoading] = useState(true);
-    const [httpError, setHttpError] = useState<string | null>(null);
     const [quantityAdjustment, setQuantityAdjustment] = useState(1);
-
+    const { state: bookState, actions } = useGetBook();
     const formatPrice = (price: number) => {
         return `$${price.toFixed(2)}`;
     };
 
-    const totalAmount = book ? book.price * quantityAdjustment : 0;
-
-    const fetchBooksData = async (): Promise<BookData | null> => {
-        return new Promise((resolve) => {
-            setTimeout(() => {
-                const bookData = Object.values(responseData).find(book => book.id === bookId);
-                resolve(bookData ?? null); // Return null if no book is found
-            }, 1000);
-        });
-    };
-
+    const totalAmount = useMemo(() => {
+        return bookState.payload ? bookState.payload.price * quantityAdjustment : 0;
+    }, [bookState.payload]);
+    
     const handleCheckout = () => {
-        navigate(`/checkout/${book?.id}`, { state: { ...book, totalAmount } });
+        navigate(`/checkout/${bookState.payload?.id}`, { state: { ...bookState.payload, totalAmount } });
     };
-
-
 
     useEffect(() => {
-        const fetchBook = async () => {
-            setIsLoading(true);
-            try {
-                const fetchedBook = await fetchBooksData();
-                setBook(fetchedBook);
-            } catch (error) {
-                console.log(error);
-                setHttpError('An error occurred while fetching data');
-            } finally {
-                setIsLoading(false);
-            }
-        };
+        if(bookId) {
+            actions.fetchBook(bookId);
+        }
+    }, [bookId]);
 
-        fetchBook();
-        window.scrollTo(0, 0);
-    },[bookId]);
+    useEffect(() => {
+        if(bookState.state === AsyncActionType.Success) {
+            window.scrollTo(0, 0);
+        }
+    },[bookState]);
 
-    if (isLoading) {
+    if (bookState.state === AsyncActionType.Loading) {
         return (
             <div className="d-flex justify-content-center align-items-center" style={{ height: '100vh' }}>
                 <div className="spinner-border" role="status">
@@ -76,7 +44,7 @@ const ViewSingleBook: React.FC = () => {
     }
 
     // Enhanced Error Handling
-    if (httpError) {
+    if (bookState.state === AsyncActionType.Error) {
         return (
             <div className="container mt-3 alert alert-danger">
                 Something went wrong. Please try reloading the page or contact support.
@@ -84,12 +52,12 @@ const ViewSingleBook: React.FC = () => {
         );
     }
 
-    if (!book) {
+    if (!bookState.payload) {
         return <div className="container mt-3 alert alert-warning">Book not found</div>;
     }
 
-    const availabilityIndicator = book.copiesAvailable > 0 ? 'text-success' : 'text-danger';
-    const availabilityText = book.copiesAvailable > 0 ? 'Available' : 'Out of Stock';
+    const availabilityIndicator = (bookState.payload?.copiesAvailable ?? 0) > 0 ? 'text-success' : 'text-danger';
+    const availabilityText =( bookState.payload?.copiesAvailable ?? 0 )> 0 ? 'Available' : 'Out of Stock';
 
     const QuantityAdjustmentUI = () => (
         <div>
@@ -118,19 +86,19 @@ const ViewSingleBook: React.FC = () => {
             <div className="row">
                 {/* Book Image */}
                 <div className="col-md-6">
-                    <img src={book?.img} alt={book?.title} className="img-fluid rounded"/>
+                    <img src={bookState.payload?.image_url} alt={bookState.payload?.title} className="img-fluid rounded"/>
                 </div>
 
 
                 {/* Book Details */}
                 <div className="col-md-6">
-                    <h2 className="mb-3">{book?.title}</h2>
-                    <p className="lead"><strong>Price:</strong> {formatPrice(book?.price)}</p>
-                    <p><strong>Author:</strong> {book?.author}</p>
-                    <p><strong>Description:</strong> {book?.description}</p>
-                    <p className={availabilityIndicator}><strong>Copies Available:</strong> {book?.copiesAvailable} ({availabilityText})</p>
+                    <h2 className="mb-3">{bookState.payload?.title}</h2>
+                    <p className="lead"><strong>Price:</strong> {formatPrice(bookState.payload?.price)}</p>
+                    <p><strong>Author:</strong> {bookState.payload?.author}</p>
+                    <p><strong>Description:</strong> {bookState.payload?.description}</p>
+                    <p className={availabilityIndicator}><strong>Copies Available:</strong> {bookState.payload?.copiesAvailable} ({availabilityText})</p>
                     <QuantityAdjustmentUI />
-                    <p className="lead"><strong>Price:</strong> {book && formatPrice(book.price)}</p>
+                    <p className="lead"><strong>Price:</strong> {bookState.payload && formatPrice(bookState.payload.price)}</p>
                     <p className="total-price mt-2">Total Price: {formatPrice(totalAmount)}</p>
                     <button onClick={handleCheckout} className="btn btn-outline-success btn-lg">
                         Checkout

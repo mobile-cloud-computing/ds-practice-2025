@@ -1,73 +1,48 @@
-import React, {useCallback, useEffect, useState} from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import debounce from 'lodash.debounce';
-import {Pagination} from '../Utils/Pagination';
-import {SpinnerLoading} from '../Utils/SpinnerLoading';
-import {SearchBook} from './components/SearchBook';
-import {responseData} from "../../Api";
-import {Link} from "react-router-dom";
+import { Pagination } from '../Utils/Pagination';
+import { SpinnerLoading } from '../Utils/SpinnerLoading';
+import { SearchBook } from './components/SearchBook';
+import { Link } from "react-router-dom";
+import { AsyncActionType, useGetBooks } from '../../hooks/bookstore.hook';
+import { Book } from '../../Api/bookstoreClient';
 
-type BookData = {
-    id: string;
-    title: string;
-    author: string;
-    description: string;
-    copies: number;
-    copiesAvailable: number;
-    category: string;
-    img: string;
-};
-
-
-type ResponseData = {
-    [key: string]: BookData;
-};
 
 export const SearchBooksPage = () => {
-    const [books, setBooks] = useState<BookData[]>([]);
-    const [isLoading, setIsLoading] = useState(true);
-    const [httpError, setHttpError] = useState<string | null>(null);
     const [currentPage, setCurrentPage] = useState(1);
     const [booksPerPage] = useState(5);
     const [totalAmountOfBooks, setTotalAmountOfBooks] = useState(0);
     const [totalPages, setTotalPages] = useState(0);
     const [search, setSearch] = useState('');
-    const [searchResults, setSearchResults] = useState<BookData[]>([]);
+    const [searchResults, setSearchResults] = useState<Book[]>([]);
 
-    const fetchBooksData = async (): Promise<ResponseData> => {
-        return new Promise((resolve) => {
-            setTimeout(() => {
-                resolve(responseData);
-            }, 1000);
-        });
-    };
+    const { state: bookState } = useGetBooks();
+
+    const currentBooks = useMemo(() => {
+        if (searchResults.length > 0) {
+            return searchResults.slice((currentPage - 1) * booksPerPage, currentPage * booksPerPage)
+        }
+        return [];
+    }, [searchResults, currentPage, booksPerPage]);
 
 
     useEffect(() => {
-        const fetchBooks = async () => {
-            setIsLoading(true);
-            try {
-                const responseData = await fetchBooksData();
-                const loadedBooks = Object.values(responseData)
-                setBooks(loadedBooks);
-                setSearchResults(loadedBooks); // Set initial search results
-                updatePagination(loadedBooks.length);
-            } catch (error) {
-                console.error('Fetch Books Error:', error);
-                setHttpError('An error occurred while fetching book data.');
-            } finally {
-                setIsLoading(false);
-            }
-        };
-        fetchBooks();
-    },[]);
+        console.log({bookState});
+        if (bookState.state === AsyncActionType.Success) {
+            const loadedBooks = bookState.payload ?? []
+            setSearchResults(loadedBooks);
+            updatePagination(loadedBooks.length);
+        }
+    }, [bookState.state, bookState.payload]);
 
     const handleSearch = useCallback((searchValue: string) => {
+        const books = bookState.payload ?? [];
         const filteredResults = books.filter(item =>
             item.title.toLowerCase().includes(searchValue.toLowerCase())
         );
         setSearchResults(filteredResults);
         updatePagination(filteredResults.length);
-    }, [books]);
+    }, [bookState.payload]);
 
     const debouncedSearch = debounce(handleSearch, 300);
 
@@ -83,15 +58,13 @@ export const SearchBooksPage = () => {
         setCurrentPage(1);
     };
 
-    const currentBooks = searchResults.slice((currentPage - 1) * booksPerPage, currentPage * booksPerPage);
-
     const paginate = (pageNumber: number) => setCurrentPage(pageNumber);
     const indexOfLastBook = currentPage * booksPerPage;
     const indexOfFirstBook = indexOfLastBook - booksPerPage;
 
 
-    if (isLoading) return <SpinnerLoading/>;
-    if (httpError) return <div className='container m-5'><p>{httpError}</p></div>;
+    if (bookState.state === AsyncActionType.Loading) return <SpinnerLoading />;
+    if (bookState.state === AsyncActionType.Error) return <div className='container m-5'><p>An error occurred while fetching book data.</p></div>;
 
 
     return (
@@ -119,8 +92,8 @@ export const SearchBooksPage = () => {
                         {indexOfFirstBook + 1} to {indexOfFirstBook + currentBooks.length} of{' '}
                         {totalAmountOfBooks} items:
                     </p>
-                    {currentBooks.map((book: BookData) => (
-                        <SearchBook books={book} key={book.id}/>
+                    {currentBooks.map((book: Book) => (
+                        <SearchBook books={book} key={book.id} />
                     ))}
                 </>
             ) : (
@@ -131,7 +104,7 @@ export const SearchBooksPage = () => {
                     </Link>
                 </div>
             )}
-            {totalPages > 1 && <Pagination currentPage={currentPage} totalPages={totalPages} paginate={paginate}/>}
+            {totalPages > 1 && <Pagination currentPage={currentPage} totalPages={totalPages} paginate={paginate} />}
         </div>
     );
 };

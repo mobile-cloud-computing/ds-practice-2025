@@ -15,10 +15,13 @@ _FRAUD_DETECTION_SERVICE = "fraud_detection:50051"
 
 
 def greet(name="you"):
-    with grpc.insecure_channel(_FRAUD_DETECTION_SERVICE) as channel:
-        stub = fraud_detection_grpc.HelloServiceStub(channel)
-        response = stub.SayHello(fraud_detection.HelloRequest(name=name))
-    return response.greeting
+    try:
+        with grpc.insecure_channel(_FRAUD_DETECTION_SERVICE) as channel:
+            stub = fraud_detection_grpc.HelloServiceStub(channel)
+            response = stub.SayHello(fraud_detection.HelloRequest(name=name))
+        return response.greeting
+    except Exception as e:
+        return f"Unhealthy: {e}"
 
 
 def health_check():
@@ -26,3 +29,10 @@ def health_check():
         stub = fraud_detection_grpc.FraudDetectionServiceStub(channel)
         response = stub.HealthCheck(fraud_detection.HealthCheckRequest())
     return response.status
+
+
+def check_fraud(transaction):
+    with grpc.insecure_channel(_FRAUD_DETECTION_SERVICE) as channel:
+        stub = fraud_detection_grpc.FraudDetectionServiceStub(channel)
+        response = stub.CheckFraud(fraud_detection.FraudRequest(**transaction))
+    return response

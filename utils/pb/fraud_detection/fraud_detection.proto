@@ -7,12 +7,58 @@ service FraudDetectionService {
     rpc HealthCheck (HealthCheckRequest) returns (HealthCheckResponse);
 }
 
-message FraudRequest {
+message User {
     string name = 1;
-    string email = 2;
-    string address = 3;
-    string phone = 4;
-    string ssn = 5;
+    string contact = 2;
+}
+
+message CreditCard {
+    string number = 1;
+    string expirationDate = 2;
+    string cvv = 3;
+}
+
+message Item {
+    string name = 1;
+    int32 quantity = 2;
+}
+
+message BillingAddress {
+    string street = 1;
+    string city = 2;
+    string state = 3;
+    string zip = 4;
+    string country = 5;
+}
+
+message Device {
+    string type = 1;
+    string model = 2;
+    string os = 3;
+}
+
+message Browser {
+    string name = 1;
+    string version = 2;
+}
+
+message FraudRequest {
+    User user = 1;
+    CreditCard creditCard = 2;
+    string userComment = 3;
+    repeated Item items = 4;
+    string discountCode = 5;
+    string shippingMethod = 6;
+    string giftMessage = 7;
+    BillingAddress billingAddress = 8;
+    bool termsAndConditionsAccepted = 9;
+    repeated string notificationPreferences = 10;
+    Device device = 11;
+    Browser browser = 12;
+    string appVersion = 13;
+    string screenResolution = 14;
+    string referrer = 15;
+    string deviceLanguage = 16;
 }
 
 message FraudResponse {

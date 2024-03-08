@@ -17,9 +17,12 @@ _TRANSACTION_VERIFICATION_SERVICE = "transaction_verification:50052"
 
 
 def health_check():
-    with grpc.insecure_channel(_TRANSACTION_VERIFICATION_SERVICE) as channel:
-        stub = transaction_verification_grpc.TransactionServiceStub(channel)
-        print("Sending health check request to transaction_verification service")
-        response = stub.HealthCheck(transaction_verification.HealthCheckRequest())
+    try:
+        with grpc.insecure_channel(_TRANSACTION_VERIFICATION_SERVICE) as channel:
+            stub = transaction_verification_grpc.TransactionServiceStub(channel)
+            print("Sending health check request to transaction_verification service")
+            response = stub.HealthCheck(transaction_verification.HealthCheckRequest())
 
-    return response.status
+        return response.status
+    except Exception as e:
+        return f"Unhealthy: {e}"

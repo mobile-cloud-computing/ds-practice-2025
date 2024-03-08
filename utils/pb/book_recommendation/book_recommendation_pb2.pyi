@@ -18,13 +18,13 @@ class GetRecommendationsResponse(_message.Message):
     def __init__(self, recommendations: _Optional[_Iterable[_Union[Recommendation, _Mapping]]] = ...) -> None: ...
 
 class Recommendation(_message.Message):
-    __slots__ = ("id", "title", "author", "description", "copies", "copies_available", "category", "image_url", "price", "tags")
+    __slots__ = ("id", "title", "author", "description", "copies", "copiesAvailable", "category", "image_url", "price", "tags")
     ID_FIELD_NUMBER: _ClassVar[int]
     TITLE_FIELD_NUMBER: _ClassVar[int]
     AUTHOR_FIELD_NUMBER: _ClassVar[int]
     DESCRIPTION_FIELD_NUMBER: _ClassVar[int]
     COPIES_FIELD_NUMBER: _ClassVar[int]
-    COPIES_AVAILABLE_FIELD_NUMBER: _ClassVar[int]
+    COPIESAVAILABLE_FIELD_NUMBER: _ClassVar[int]
     CATEGORY_FIELD_NUMBER: _ClassVar[int]
     IMAGE_URL_FIELD_NUMBER: _ClassVar[int]
     PRICE_FIELD_NUMBER: _ClassVar[int]
@@ -33,13 +33,13 @@ class Recommendation(_message.Message):
     title: str
     author: str
     description: str
-    copies: str
-    copies_available: str
+    copies: int
+    copiesAvailable: int
     category: str
     image_url: str
     price: float
     tags: _containers.RepeatedScalarFieldContainer[str]
-    def __init__(self, id: _Optional[str] = ..., title: _Optional[str] = ..., author: _Optional[str] = ..., description: _Optional[str] = ..., copies: _Optional[str] = ..., copies_available: _Optional[str] = ..., category: _Optional[str] = ..., image_url: _Optional[str] = ..., price: _Optional[float] = ..., tags: _Optional[_Iterable[str]] = ...) -> None: ...
+    def __init__(self, id: _Optional[str] = ..., title: _Optional[str] = ..., author: _Optional[str] = ..., description: _Optional[str] = ..., copies: _Optional[int] = ..., copiesAvailable: _Optional[int] = ..., category: _Optional[str] = ..., image_url: _Optional[str] = ..., price: _Optional[float] = ..., tags: _Optional[_Iterable[str]] = ...) -> None: ...
 
 class HealthCheckRequest(_message.Message):
     __slots__ = ()
