@@ -9,6 +9,7 @@ export interface Book {
     copiesAvailable: number;
     category: string;
     image_url: string;
+    imageUrl?: string;
     price: number;
     tags: string[];
 }

@@ -2,6 +2,13 @@ import os
 import sys
 
 FILE = __file__ if "__file__" in globals() else os.getenv("PYTHONFILE", "")
+
+relative_modules_path = os.path.abspath(
+    os.path.join(FILE, "../../../fraud_detection/src")
+)
+sys.path.insert(0, relative_modules_path)
+from model import FraudDetectionModel
+
 utils_path = os.path.abspath(os.path.join(FILE, "../../../utils/pb/fraud_detection"))
 sys.path.insert(0, utils_path)
 # ruff : noqa: E402
@@ -11,17 +18,22 @@ import fraud_detection_pb2 as fraud_detection
 import fraud_detection_pb2_grpc as fraud_detection_grpc
 import grpc
 
+fraud_detection_model = FraudDetectionModel()
+
+
+def fraud_check(input):
+    return fraud_detection_model.check_fraud(input)
+
 
 class FraudDetectionService(fraud_detection_grpc.FraudDetectionServiceServicer):
     def CheckFraud(self, request, context):
         response = fraud_detection.FraudResponse()
-        response.isFraud = False
-        response.message = "Transaction is not fraud"
-        print(
-            "============================ Fraud Request: ====================================="
+        cardInfo = request.creditCard.number
+        fraud = fraud_check(cardInfo)
+        response.isFraud = fraud["is_fraud"]
+        response.message = (
+            "Fraud Detected" if fraud["is_fraud"] else "No Fraud Detected"
         )
-        print(request)
-        print(f"Fraud: {response}")
         return response
 
     def HealthCheck(self, request, context):
@@ -29,6 +41,8 @@ class FraudDetectionService(fraud_detection_grpc.FraudDetectionServiceServicer):
 
 
 def serve():
+    sample = fraud_detection_model.check_fraud("1234567890")
+    print(f"fraud detection model is ready check: {sample}")
     server = grpc.server(futures.ThreadPoolExecutor())
     fraud_detection_grpc.add_FraudDetectionServiceServicer_to_server(
         FraudDetectionService(), server

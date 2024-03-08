@@ -61,6 +61,10 @@ def get_book_by_id(book_id):
     return None
 
 
+def get_books_by_titles(book_titles):
+    return [book for book in _BOOKS_ if book["title"] in book_titles]
+
+
 def filter_books(author=None, title=None):
     books = _BOOKS_[:]
     if author:

@@ -6,7 +6,7 @@ export const SearchBook: React.FC<{ books: Book }> = (props) => {
         <div className='card mt-3 shadow-lg p-3 mb-3 bg-body rounded'>
             <div className='row g-0'>
                 <div className='col-md-2'>
-                    <img src={props.books.image_url || require('../../../Images/BooksImages/book-luv2code-1000.png')}
+                    <img src={props.books.image_url || props.books.imageUrl || require('../../../Images/BooksImages/book-luv2code-1000.png')}
                          className='img-fluid rounded-start'
                          alt='Book'
                     />
