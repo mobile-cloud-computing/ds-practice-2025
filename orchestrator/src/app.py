@@ -139,16 +139,15 @@ def checkout():
     Responds with a JSON object containing the order ID, status, and suggested books.
     """
 
-    fraud_res = fraud_detection.check_fraud(request.json)
-    if fraud_res.isFraud:
-        raise FraudActivityException()
-
     jsonRequest = request.json
     bookNames = [book["name"] for book in jsonRequest["items"]]
     books = store.get_books_by_names(bookNames)
     bookIds = [book["id"] for book in books]
     if bookIds is None or len(bookIds) == 0:
         raise Exception("No books found")
+
+    def check_for_fraud():
+        return fraud_detection.check_fraud(request.json)
 
     def verify_transaction():
         return transaction_verification.verify_transaction(
@@ -165,9 +164,14 @@ def checkout():
     with ThreadPoolExecutor() as executor:
         future_transaction = executor.submit(verify_transaction)
         future_recommendation = executor.submit(get_recommendations)
+        fraud_detection = executor.submit(check_for_fraud)
 
     transaction = future_transaction.result()
     book_res = future_recommendation.result()
+    fraud_res = fraud_detection.result()
+
+    if fraud_res.isFraud:
+        raise FraudActivityException()
 
     msg_obj = json.loads(MessageToJson(book_res))
     order_status_response = {
