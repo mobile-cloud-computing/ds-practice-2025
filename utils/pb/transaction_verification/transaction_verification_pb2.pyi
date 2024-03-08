@@ -5,14 +5,20 @@ from typing import ClassVar as _ClassVar, Optional as _Optional
 DESCRIPTOR: _descriptor.FileDescriptor
 
 class TransactionRequest(_message.Message):
+    __slots__ = ("cardNumber", "expirationDate", "cvv")
+    CARDNUMBER_FIELD_NUMBER: _ClassVar[int]
+    EXPIRATIONDATE_FIELD_NUMBER: _ClassVar[int]
+    CVV_FIELD_NUMBER: _ClassVar[int]
+    cardNumber: str
+    expirationDate: str
+    cvv: str
+    def __init__(self, cardNumber: _Optional[str] = ..., expirationDate: _Optional[str] = ..., cvv: _Optional[str] = ...) -> None: ...
+
+class TransactionResponse(_message.Message):
     __slots__ = ("transactionId",)
     TRANSACTIONID_FIELD_NUMBER: _ClassVar[int]
     transactionId: str
     def __init__(self, transactionId: _Optional[str] = ...) -> None: ...
-
-class TransactionResponse(_message.Message):
-    __slots__ = ()
-    def __init__(self) -> None: ...
 
 class HealthCheckRequest(_message.Message):
     __slots__ = ()

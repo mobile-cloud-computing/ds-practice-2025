@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useLocation, useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
+import { AsyncActionType, useCheckout } from '../hooks/bookstore.hook';
 
 const countries = ["Estonia", "Finland"];
 
@@ -46,10 +47,22 @@ const CheckoutPage: React.FC = () => {
         billingAddressCountry: 'Select a country',
         giftWrapping: false,
         termsAndConditionsAccepted: false
-    });    
+    });
+
+    const { state: checkoutState, actions } = useCheckout()
+
+    useEffect(() => {
+        if (checkoutState.state === AsyncActionType.Success && checkoutState.payload) {
+            navigate('confirmation', { state: { orderStatusResponse: checkoutState.payload } });
+            return;
+        }
+        if (checkoutState.state === AsyncActionType.Error) {
+            alert('An error occurred while processing your order. Please try again later.');
+        }
+    }, [checkoutState, navigate]);
 
     const handleInputChange = (event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
-        const {name, value, type, checked} = event.target as HTMLInputElement;
+        const { name, value, type, checked } = event.target as HTMLInputElement;
         setFormData({
             ...formData,
             [name]: type === 'checkbox' ? checked : value,
@@ -58,66 +71,50 @@ const CheckoutPage: React.FC = () => {
 
     const handleCheckout = async (event: React.FormEvent) => {
         event.preventDefault();
+        actions.checkout({
+            user: {
+                name: formData.userName,
+                contact: formData.userContact,
+            },
+            creditCard: {
+                number: formData.creditCardNumber,
+                expirationDate: formData.creditCardExpirationDate,
+                cvv: formData.creditCardCVV,
+            },
+            userComment: formData.userComment,
+            items: [
+                {
+                    name: book.title,
+                    quantity: 1,
+                },
+            ],
+            discountCode: formData.discountCode,
+            shippingMethod: formData.shippingMethod,
+            giftMessage: formData.giftMessage,
+            billingAddress: {
+                street: formData.billingAddressStreet,
+                city: formData.billingAddressCity,
+                state: formData.billingAddressState,
+                zip: formData.billingAddressZip,
+                country: formData.billingAddressCountry,
+            },
+            termsAndConditionsAccepted: formData.termsAndConditionsAccepted,
+            notificationPreferences: ['email'],
+            device: {
+                type: 'Smartphone',
+                model: 'Samsung Galaxy S10',
+                os: 'Android 10.0.0',
+            },
+            browser: {
+                name: 'Chrome',
+                version: '85.0.4183.127',
+            },
+            appVersion: '3.0.0',
+            screenResolution: '1440x3040',
+            referrer: 'https://www.google.com',
+            deviceLanguage: 'en-US',
+        });
 
-        try {
-
-            const response = await axios.post('http://0.0.0.0:8081/checkout', {
-                user: {
-                    name: formData.userName,
-                    contact: formData.userContact,
-                },
-                creditCard: {
-                    number: formData.creditCardNumber,
-                    expirationDate: formData.creditCardExpirationDate,
-                    cvv: formData.creditCardCVV,
-                },
-                userComment: formData.userComment,
-                items: [
-                    {
-                        name: book.title,
-                        quantity: 1,
-                    },
-                ],
-                discountCode: formData.discountCode,
-                shippingMethod: formData.shippingMethod,
-                giftMessage: formData.giftMessage,
-                billingAddress: {
-                    street: formData.billingAddressStreet,
-                    city: formData.billingAddressCity,
-                    state: formData.billingAddressState,
-                    zip: formData.billingAddressZip,
-                    country: formData.billingAddressCountry,
-                },
-                giftWrapping: formData.giftWrapping,
-                termsAndConditionsAccepted: formData.termsAndConditionsAccepted,
-                notificationPreferences: ['email'],
-                device: {
-                    type: 'Smartphone',
-                    model: 'Samsung Galaxy S10',
-                    os: 'Android 10.0.0',
-                },
-                browser: {
-                    name: 'Chrome',
-                    version: '85.0.4183.127',
-                },
-                appVersion: '3.0.0',
-                screenResolution: '1440x3040',
-                referrer: 'https://www.google.com',
-                deviceLanguage: 'en-US',
-            });
-
-            navigate('confirmation', { state: { orderStatusResponse: response.data } });
-            console.log(response.data);
-
-        } catch (error) {
-            if (axios.isAxiosError(error)) {
-                console.error('Error response:', error);
-                alert(`An error occurred: ${error}`);
-            } else {
-                console.error('Unexpected error:', error);
-                alert('An unexpected error occurred');
-            }
-        }
     };
 
 

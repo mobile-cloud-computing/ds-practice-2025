@@ -1,5 +1,6 @@
 import React from 'react';
 import { useLocation } from 'react-router-dom';
+import { SearchBook } from '../layouts/SearchBooksPage/components/SearchBook';
 
 const ConfirmationPage: React.FC = () => {
     const location = useLocation();
@@ -15,11 +16,7 @@ const ConfirmationPage: React.FC = () => {
                     <h3>Suggested Books</h3>
                     <ul>
                         {orderStatusResponse.suggestedBooks.map((book: any, index: number) => (
-                            <li key={index}>
-                                <h4>{book.title}</h4>
-                                <p>Book ID: {book.bookId}<br />
-                                Author: {book.author}</p>
-                            </li>
+                           <SearchBook books={book} key={book.id} />
                         ))}
                     </ul>
                 </div>

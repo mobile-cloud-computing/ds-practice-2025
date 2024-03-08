@@ -8,11 +8,13 @@ service TransactionService {
 }
 
 message TransactionRequest {
-    string transactionId = 1;
+    string cardNumber = 1;
+    string expirationDate = 2;
+    string cvv = 3;
 }
 
 message TransactionResponse {
-
+    string transactionId = 1;
 }
 
 message HealthCheckRequest {

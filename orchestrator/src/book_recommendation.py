@@ -17,9 +17,19 @@ _BOOK_RECOMMENDATION_SERVICE = "book_recommendation:50053"
 
 
 def health_check():
+    try:
+        with grpc.insecure_channel(_BOOK_RECOMMENDATION_SERVICE) as channel:
+            stub = book_recommendation_grpc.RecommendationServiceStub(channel)
+            response = stub.HealthCheck(book_recommendation.HealthCheckRequest())
+        return response.status
+    except Exception as e:
+        return f"Unhealthy: {e}"
+
+
+def get_recommendations(bookIds):
     with grpc.insecure_channel(_BOOK_RECOMMENDATION_SERVICE) as channel:
         stub = book_recommendation_grpc.RecommendationServiceStub(channel)
-        print("Sending health check request to book_recommendation service")
-        response = stub.HealthCheck(book_recommendation.HealthCheckRequest())
-
-    return response.status
+        response = stub.GetRecommendations(
+            book_recommendation.GetRecommendationsRequest(bookIds=bookIds)
+        )
+    return response
