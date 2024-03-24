@@ -57,19 +57,31 @@ def index():
 def fraud_detection_service(data, vector_clock):
     with grpc.insecure_channel('fraud_detection:50051') as channel:
         stub = fraud_detection_grpc.FraudDetectionServiceStub(channel)
-        response = stub.DetectFraud(fraud_detection.FraudDetectionRequest(user=data['user'], creditCard = data['creditCard'], vectorClock = vector_clock))
+        response = stub.DetectFraud(fraud_detection.FraudDetectionRequest(
+            user=data['user'],
+            creditCard=data['creditCard'],
+            vectorClock=vector_clock
+        ))
         return response.is_fraudulent
 
-def transaction_verification_service(data):
+def transaction_verification_service(data, vector_clock):
     with grpc.insecure_channel('transaction_verification:50052') as channel:
         stub = transaction_verification_grpc.TransactionVerificationServiceStub(channel)
-        response = stub.VerifyTransaction(transaction_verification.TransactionVerificationRequest(user=data['user'], creditCard = data['creditCard'], item = data['items'][0]))
+        response = stub.VerifyTransaction(transaction_verification.TransactionVerificationRequest(
+            user=data['user'],
+            creditCard=data['creditCard'],
+            item=data['items'][0],
+            vectorClock=vector_clock
+        ))
         return response.is_valid
 
-def book_suggestion_service(data):
+def book_suggestion_service(data, vector_clock):
     with grpc.insecure_channel('book_suggestion:50053') as channel:
         stub = book_suggestion_grpc.BookSuggestionServiceStub(channel)
-        response = stub.SuggestBook(book_suggestion.BookSuggestionRequest(item=data['items'][0]))
+        response = stub.SuggestBook(book_suggestion.BookSuggestionRequest(
+            item=data['items'][0],
+            vectorClock=vector_clock
+        ))
         return response.books
     
 def transform_suggested_book_response(suggested_books):
@@ -118,8 +130,8 @@ def checkout():
 
     with futures.ThreadPoolExecutor() as executor:
         fraud_future = executor.submit(fraud_detection_service, data, vector_clock)
-        transaction_future = executor.submit(transaction_verification_service, data)
-        suggestion_future = executor.submit(book_suggestion_service, data)
+        transaction_future = executor.submit(transaction_verification_service, data, vector_clock)
+        suggestion_future = executor.submit(book_suggestion_service, data, vector_clock)
 
         futures.wait([fraud_future, transaction_future, suggestion_future], return_when=futures.ALL_COMPLETED)
 

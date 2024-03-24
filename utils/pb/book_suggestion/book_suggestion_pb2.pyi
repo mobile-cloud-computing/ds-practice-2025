@@ -6,10 +6,20 @@ from typing import ClassVar as _ClassVar, Iterable as _Iterable, Mapping as _Map
 DESCRIPTOR: _descriptor.FileDescriptor
 
 class BookSuggestionRequest(_message.Message):
-    __slots__ = ("item",)
+    __slots__ = ("item", "vectorClock")
     ITEM_FIELD_NUMBER: _ClassVar[int]
+    VECTORCLOCK_FIELD_NUMBER: _ClassVar[int]
     item: Item
-    def __init__(self, item: _Optional[_Union[Item, _Mapping]] = ...) -> None: ...
+    vectorClock: VectorClock
+    def __init__(self, item: _Optional[_Union[Item, _Mapping]] = ..., vectorClock: _Optional[_Union[VectorClock, _Mapping]] = ...) -> None: ...
+
+class VectorClock(_message.Message):
+    __slots__ = ("vcArray", "timestamp")
+    VCARRAY_FIELD_NUMBER: _ClassVar[int]
+    TIMESTAMP_FIELD_NUMBER: _ClassVar[int]
+    vcArray: _containers.RepeatedScalarFieldContainer[int]
+    timestamp: float
+    def __init__(self, vcArray: _Optional[_Iterable[int]] = ..., timestamp: _Optional[float] = ...) -> None: ...
 
 class Item(_message.Message):
     __slots__ = ("name", "quantity")

@@ -4,6 +4,12 @@ package book_suggestion;
 
 message BookSuggestionRequest {
     Item item = 1;
+    VectorClock vectorClock = 2;
+}
+
+message VectorClock {
+  repeated int32 vcArray = 1;
+  double timestamp = 2;
 }
 
 message Item {

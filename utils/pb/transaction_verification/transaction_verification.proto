@@ -6,6 +6,7 @@ message TransactionVerificationRequest {
   User user = 1;
   CreditCard creditCard = 2;
   Item item = 3;
+  VectorClock vectorClock = 4;
 }
 
 message User {
@@ -22,6 +23,11 @@ message CreditCard {
 message Item {
     string name = 1;
     int32 quantity = 2;
+}
+
+message VectorClock {
+  repeated int32 vcArray = 1;
+  double timestamp = 2;
 }
 
 message TransactionVerificationResponse {

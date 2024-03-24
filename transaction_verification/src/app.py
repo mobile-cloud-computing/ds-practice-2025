@@ -1,5 +1,6 @@
 import sys
 import os
+from datetime import datetime
 
 # This set of lines are needed to import the gRPC stubs.
 # The path of the stubs is relative to the current file, or absolute inside the container.
@@ -13,11 +14,33 @@ import transaction_verification_pb2_grpc as transaction_verification_grpc
 from concurrent import futures
 import grpc
 
+# Get the server index for the vector clock.
+SERVER_INDEX = int(os.getenv("SERVER_INDEX_FOR_VECTOR_CLOCK"))
 
 class TransactionVerificationService(transaction_verification_grpc.TransactionVerificationServiceServicer):
+    # Increment the value in the server index.
+    # If the index isn't in the vc_array, append 0 until the index.
+    def increment_vector_clock(self, vc_array):
+        if SERVER_INDEX <= len(vc_array) - 1:
+            vc_array[SERVER_INDEX] += 1
+        else:
+            while len(vc_array) != SERVER_INDEX:
+                vc_array.append(0)
+            vc_array.append(1)
+    
     def VerifyTransaction(self, request, context):
         print("Transaction verification request received")
-        
+        print(f"[Transaction verification] Server index: {SERVER_INDEX}")
+        vector_clock = request.vectorClock
+        vc_array = vector_clock.vcArray
+        timestamp = vector_clock.timestamp
+
+        print(f"[Transaction verification] VCArray from orchestrator: {vc_array}")
+        print(f"[Transaction verification] Timestamp from orchestrator: {timestamp}")
+
+        self.increment_vector_clock(vc_array)
+        print(f"[Transaction verification] VCArray in Transaction verification: {vc_array}")
+        print(f"[Transaction verification] Timestamp in Transaction verification: {datetime.now().timestamp()}")
         # order items empty?
         item_name = request.item.name
         item_quantity = request.item.quantity

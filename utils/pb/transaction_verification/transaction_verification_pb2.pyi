@@ -1,18 +1,21 @@
+from google.protobuf.internal import containers as _containers
 from google.protobuf import descriptor as _descriptor
 from google.protobuf import message as _message
-from typing import ClassVar as _ClassVar, Mapping as _Mapping, Optional as _Optional, Union as _Union
+from typing import ClassVar as _ClassVar, Iterable as _Iterable, Mapping as _Mapping, Optional as _Optional, Union as _Union
 
 DESCRIPTOR: _descriptor.FileDescriptor
 
 class TransactionVerificationRequest(_message.Message):
-    __slots__ = ("user", "creditCard", "item")
+    __slots__ = ("user", "creditCard", "item", "vectorClock")
     USER_FIELD_NUMBER: _ClassVar[int]
     CREDITCARD_FIELD_NUMBER: _ClassVar[int]
     ITEM_FIELD_NUMBER: _ClassVar[int]
+    VECTORCLOCK_FIELD_NUMBER: _ClassVar[int]
     user: User
     creditCard: CreditCard
     item: Item
-    def __init__(self, user: _Optional[_Union[User, _Mapping]] = ..., creditCard: _Optional[_Union[CreditCard, _Mapping]] = ..., item: _Optional[_Union[Item, _Mapping]] = ...) -> None: ...
+    vectorClock: VectorClock
+    def __init__(self, user: _Optional[_Union[User, _Mapping]] = ..., creditCard: _Optional[_Union[CreditCard, _Mapping]] = ..., item: _Optional[_Union[Item, _Mapping]] = ..., vectorClock: _Optional[_Union[VectorClock, _Mapping]] = ...) -> None: ...
 
 class User(_message.Message):
     __slots__ = ("name", "contact")
@@ -39,6 +42,14 @@ class Item(_message.Message):
     name: str
     quantity: int
     def __init__(self, name: _Optional[str] = ..., quantity: _Optional[int] = ...) -> None: ...
+
+class VectorClock(_message.Message):
+    __slots__ = ("vcArray", "timestamp")
+    VCARRAY_FIELD_NUMBER: _ClassVar[int]
+    TIMESTAMP_FIELD_NUMBER: _ClassVar[int]
+    vcArray: _containers.RepeatedScalarFieldContainer[int]
+    timestamp: float
+    def __init__(self, vcArray: _Optional[_Iterable[int]] = ..., timestamp: _Optional[float] = ...) -> None: ...
 
 class TransactionVerificationResponse(_message.Message):
     __slots__ = ("is_valid",)
