@@ -43,17 +43,29 @@ class VectorClock(_message.Message):
     timestamp: float
     def __init__(self, vcArray: _Optional[_Iterable[int]] = ..., timestamp: _Optional[float] = ...) -> None: ...
 
-class FraudDetectionRequest(_message.Message):
-    __slots__ = ("user", "creditCard", "vectorClock")
+class UserdataFraudDetectionRequest(_message.Message):
+    __slots__ = ("user", "vectorClock")
     USER_FIELD_NUMBER: _ClassVar[int]
-    CREDITCARD_FIELD_NUMBER: _ClassVar[int]
     VECTORCLOCK_FIELD_NUMBER: _ClassVar[int]
     user: User
+    vectorClock: VectorClock
+    def __init__(self, user: _Optional[_Union[User, _Mapping]] = ..., vectorClock: _Optional[_Union[VectorClock, _Mapping]] = ...) -> None: ...
+
+class CardinfoFraudDetectionRequest(_message.Message):
+    __slots__ = ("creditCard", "vectorClock")
+    CREDITCARD_FIELD_NUMBER: _ClassVar[int]
+    VECTORCLOCK_FIELD_NUMBER: _ClassVar[int]
     creditCard: CreditCard
     vectorClock: VectorClock
-    def __init__(self, user: _Optional[_Union[User, _Mapping]] = ..., creditCard: _Optional[_Union[CreditCard, _Mapping]] = ..., vectorClock: _Optional[_Union[VectorClock, _Mapping]] = ...) -> None: ...
+    def __init__(self, creditCard: _Optional[_Union[CreditCard, _Mapping]] = ..., vectorClock: _Optional[_Union[VectorClock, _Mapping]] = ...) -> None: ...
 
-class FraudDetectionResponse(_message.Message):
+class UserdataFraudDetectionResponse(_message.Message):
+    __slots__ = ("is_fraudulent",)
+    IS_FRAUDULENT_FIELD_NUMBER: _ClassVar[int]
+    is_fraudulent: bool
+    def __init__(self, is_fraudulent: bool = ...) -> None: ...
+
+class CardinfoFraudDetectionResponse(_message.Message):
     __slots__ = ("is_fraudulent",)
     IS_FRAUDULENT_FIELD_NUMBER: _ClassVar[int]
     is_fraudulent: bool

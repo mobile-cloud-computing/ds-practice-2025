@@ -31,7 +31,7 @@ class HelloService(fraud_detection_grpc.HelloServiceServicer):
         # Return the response object
         return response
     
-class FraudDetectionService(fraud_detection_grpc.FraudDetectionServiceServicer):
+class UserdataFraudDetectionService(fraud_detection_grpc.UserdataFraudDetectionServiceServicer):
     # Increment the value in the server index.
     # If the index isn't in the vc_array, append 0 until the index.
     def increment_vector_clock(self, vc_array):
@@ -42,7 +42,7 @@ class FraudDetectionService(fraud_detection_grpc.FraudDetectionServiceServicer):
                 vc_array.append(0)
             vc_array.append(1)
 
-    def DetectFraud(self, request, context):
+    def DetectUserdataFraud(self, request, context):
         print("Fraud dectection request received")
         print(f"[Fraud detection] Server index: {SERVER_INDEX}")
 
@@ -60,23 +60,57 @@ class FraudDetectionService(fraud_detection_grpc.FraudDetectionServiceServicer):
         # a simple dummy check of is user name and contact exist
         user_name = request.user.name
         contact_number = request.user.contact
+
         user_data_filled = bool(user_name and contact_number)
-        card_number = request.creditCard.number
-
-         # a simple dummy check if contact is between 7 and 15 inclusive, and if they are all digits
+        # a simple dummy check if contact is between 7 and 15 inclusive, and if they are all digits
         contact_is_number = (len(contact_number) >= 7 and len(contact_number) <= 15 )and contact_number.isdigit()
-
-        is_fraudulent = not user_data_filled or not contact_is_number or not card_number.isdigit()
+         
+        is_fraudulent = not user_data_filled or not contact_is_number
 
         print(f"Fraud check response: {'Fraudulent' if is_fraudulent else 'Not Fraudulent'}")
-        return fraud_detection.FraudDetectionResponse(is_fraudulent=is_fraudulent)
+        return fraud_detection.UserdataFraudDetectionResponse(is_fraudulent=is_fraudulent)
+    
+
+class CardinfoFraudDetectionService(fraud_detection_grpc.CardinfoFraudDetectionServiceServicer):
+    # Increment the value in the server index.
+    # If the index isn't in the vc_array, append 0 until the index.
+    def increment_vector_clock(self, vc_array):
+        if SERVER_INDEX <= len(vc_array) - 1:
+            vc_array[SERVER_INDEX] += 1
+        else:
+            while len(vc_array) != SERVER_INDEX:
+                vc_array.append(0)
+            vc_array.append(1)
+    
+    def DetectCardinfoFraud(self, request, context):
+        print("Fraud dectection request received")
+        print(f"[Fraud detection] Server index: {SERVER_INDEX}")
+
+        vector_clock = request.vectorClock
+        vc_array = vector_clock.vcArray
+        timestamp = vector_clock.timestamp
+
+        print(f"[Fraud detection] VCArray from orchestrator: {vc_array}")
+        print(f"[Fraud detection] Timestamp from orchestrator: {timestamp}")
+
+        self.increment_vector_clock(vc_array)
+        print(f"[Fraud detection] VCArray in Fraud detection: {vc_array}")
+        print(f"[Fraud detection] Timestamp in Fraud detection: {datetime.now().timestamp()}")
+        
+        card_number = request.creditCard.number
+
+        is_fraudulent = not card_number.isdigit()
+
+        print(f"Fraud check response: {'Fraudulent' if is_fraudulent else 'Not Fraudulent'}")
+        return fraud_detection.CardinfoFraudDetectionResponse(is_fraudulent=is_fraudulent)
 
 def serve():
     # Create a gRPC server
     server = grpc.server(futures.ThreadPoolExecutor())
     # Add HelloService
     fraud_detection_grpc.add_HelloServiceServicer_to_server(HelloService(), server)
-    fraud_detection_grpc.add_FraudDetectionServiceServicer_to_server(FraudDetectionService(), server)
+    fraud_detection_grpc.add_UserdataFraudDetectionServiceServicer_to_server(UserdataFraudDetectionService(), server)
+    fraud_detection_grpc.add_CardinfoFraudDetectionServiceServicer_to_server(CardinfoFraudDetectionService(), server)
     # Listen on port 50051
     port = "50051"
     server.add_insecure_port("[::]:" + port)

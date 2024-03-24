@@ -14,7 +14,7 @@ _sym_db = _symbol_database.Default()
 
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n.utils/pb/fraud_detection/fraud_detection.proto\x12\x05hello\"\x1c\n\x0cHelloRequest\x12\x0c\n\x04name\x18\x01 \x01(\t\"!\n\rHelloResponse\x12\x10\n\x08greeting\x18\x01 \x01(\t\"%\n\x04User\x12\x0c\n\x04name\x18\x01 \x01(\t\x12\x0f\n\x07\x63ontact\x18\x02 \x01(\t\"A\n\nCreditCard\x12\x0e\n\x06number\x18\x01 \x01(\t\x12\x16\n\x0e\x65xpirationDate\x18\x02 \x01(\t\x12\x0b\n\x03\x63vv\x18\x03 \x01(\t\"1\n\x0bVectorClock\x12\x0f\n\x07vcArray\x18\x01 \x03(\x05\x12\x11\n\ttimestamp\x18\x02 \x01(\x01\"\x82\x01\n\x15\x46raudDetectionRequest\x12\x19\n\x04user\x18\x01 \x01(\x0b\x32\x0b.hello.User\x12%\n\ncreditCard\x18\x02 \x01(\x0b\x32\x11.hello.CreditCard\x12\'\n\x0bvectorClock\x18\x03 \x01(\x0b\x32\x12.hello.VectorClock\"/\n\x16\x46raudDetectionResponse\x12\x15\n\ris_fraudulent\x18\x01 \x01(\x08\x32\x45\n\x0cHelloService\x12\x35\n\x08SayHello\x12\x13.hello.HelloRequest\x1a\x14.hello.HelloResponse2c\n\x15\x46raudDetectionService\x12J\n\x0b\x44\x65tectFraud\x12\x1c.hello.FraudDetectionRequest\x1a\x1d.hello.FraudDetectionResponseb\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n.utils/pb/fraud_detection/fraud_detection.proto\x12\x05hello\"\x1c\n\x0cHelloRequest\x12\x0c\n\x04name\x18\x01 \x01(\t\"!\n\rHelloResponse\x12\x10\n\x08greeting\x18\x01 \x01(\t\"%\n\x04User\x12\x0c\n\x04name\x18\x01 \x01(\t\x12\x0f\n\x07\x63ontact\x18\x02 \x01(\t\"A\n\nCreditCard\x12\x0e\n\x06number\x18\x01 \x01(\t\x12\x16\n\x0e\x65xpirationDate\x18\x02 \x01(\t\x12\x0b\n\x03\x63vv\x18\x03 \x01(\t\"1\n\x0bVectorClock\x12\x0f\n\x07vcArray\x18\x01 \x03(\x05\x12\x11\n\ttimestamp\x18\x02 \x01(\x01\"c\n\x1dUserdataFraudDetectionRequest\x12\x19\n\x04user\x18\x01 \x01(\x0b\x32\x0b.hello.User\x12\'\n\x0bvectorClock\x18\x02 \x01(\x0b\x32\x12.hello.VectorClock\"o\n\x1d\x43\x61rdinfoFraudDetectionRequest\x12%\n\ncreditCard\x18\x01 \x01(\x0b\x32\x11.hello.CreditCard\x12\'\n\x0bvectorClock\x18\x02 \x01(\x0b\x32\x12.hello.VectorClock\"7\n\x1eUserdataFraudDetectionResponse\x12\x15\n\ris_fraudulent\x18\x01 \x01(\x08\"7\n\x1e\x43\x61rdinfoFraudDetectionResponse\x12\x15\n\ris_fraudulent\x18\x01 \x01(\x08\x32\x45\n\x0cHelloService\x12\x35\n\x08SayHello\x12\x13.hello.HelloRequest\x1a\x14.hello.HelloResponse2\x83\x01\n\x1dUserdataFraudDetectionService\x12\x62\n\x13\x44\x65tectUserdataFraud\x12$.hello.UserdataFraudDetectionRequest\x1a%.hello.UserdataFraudDetectionResponse2\x83\x01\n\x1d\x43\x61rdinfoFraudDetectionService\x12\x62\n\x13\x44\x65tectCardinfoFraud\x12$.hello.CardinfoFraudDetectionRequest\x1a%.hello.CardinfoFraudDetectionResponseb\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
@@ -31,12 +31,18 @@ if _descriptor._USE_C_DESCRIPTORS == False:
   _globals['_CREDITCARD']._serialized_end=226
   _globals['_VECTORCLOCK']._serialized_start=228
   _globals['_VECTORCLOCK']._serialized_end=277
-  _globals['_FRAUDDETECTIONREQUEST']._serialized_start=280
-  _globals['_FRAUDDETECTIONREQUEST']._serialized_end=410
-  _globals['_FRAUDDETECTIONRESPONSE']._serialized_start=412
-  _globals['_FRAUDDETECTIONRESPONSE']._serialized_end=459
-  _globals['_HELLOSERVICE']._serialized_start=461
-  _globals['_HELLOSERVICE']._serialized_end=530
-  _globals['_FRAUDDETECTIONSERVICE']._serialized_start=532
-  _globals['_FRAUDDETECTIONSERVICE']._serialized_end=631
+  _globals['_USERDATAFRAUDDETECTIONREQUEST']._serialized_start=279
+  _globals['_USERDATAFRAUDDETECTIONREQUEST']._serialized_end=378
+  _globals['_CARDINFOFRAUDDETECTIONREQUEST']._serialized_start=380
+  _globals['_CARDINFOFRAUDDETECTIONREQUEST']._serialized_end=491
+  _globals['_USERDATAFRAUDDETECTIONRESPONSE']._serialized_start=493
+  _globals['_USERDATAFRAUDDETECTIONRESPONSE']._serialized_end=548
+  _globals['_CARDINFOFRAUDDETECTIONRESPONSE']._serialized_start=550
+  _globals['_CARDINFOFRAUDDETECTIONRESPONSE']._serialized_end=605
+  _globals['_HELLOSERVICE']._serialized_start=607
+  _globals['_HELLOSERVICE']._serialized_end=676
+  _globals['_USERDATAFRAUDDETECTIONSERVICE']._serialized_start=679
+  _globals['_USERDATAFRAUDDETECTIONSERVICE']._serialized_end=810
+  _globals['_CARDINFOFRAUDDETECTIONSERVICE']._serialized_start=813
+  _globals['_CARDINFOFRAUDDETECTIONSERVICE']._serialized_end=944
 # @@protoc_insertion_point(module_scope)

@@ -30,16 +30,28 @@ message VectorClock {
   double timestamp = 2;
 }
 
-message FraudDetectionRequest {
+message UserdataFraudDetectionRequest {
   User user = 1;
-  CreditCard creditCard = 2;
-  VectorClock vectorClock = 3;
+  VectorClock vectorClock = 2;
 }
 
-message FraudDetectionResponse {
+message CardinfoFraudDetectionRequest {
+  CreditCard creditCard = 1;
+  VectorClock vectorClock = 2;
+}
+
+message UserdataFraudDetectionResponse {
   bool is_fraudulent = 1;
 }
 
-service FraudDetectionService {
-  rpc DetectFraud(FraudDetectionRequest) returns (FraudDetectionResponse);
+message CardinfoFraudDetectionResponse {
+  bool is_fraudulent = 1;
+}
+
+service UserdataFraudDetectionService {
+  rpc DetectUserdataFraud(UserdataFraudDetectionRequest) returns (UserdataFraudDetectionResponse);
+}
+
+service CardinfoFraudDetectionService {
+  rpc DetectCardinfoFraud(CardinfoFraudDetectionRequest) returns (CardinfoFraudDetectionResponse);
 }

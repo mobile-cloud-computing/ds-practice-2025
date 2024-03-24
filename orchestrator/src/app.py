@@ -54,11 +54,19 @@ def index():
     # Return the response.
     return response
 
-def fraud_detection_service(data, vector_clock):
+def userdata_fraud_detection_service(data, vector_clock):
     with grpc.insecure_channel('fraud_detection:50051') as channel:
-        stub = fraud_detection_grpc.FraudDetectionServiceStub(channel)
-        response = stub.DetectFraud(fraud_detection.FraudDetectionRequest(
+        stub = fraud_detection_grpc.UserdataFraudDetectionServiceStub(channel)
+        response = stub.DetectUserdataFraud(fraud_detection.UserdataFraudDetectionRequest(
             user=data['user'],
+            vectorClock=vector_clock
+        ))
+        return response.is_fraudulent
+    
+def cardinfo_fraud_detection_service(data, vector_clock):
+    with grpc.insecure_channel('fraud_detection:50051') as channel:
+        stub = fraud_detection_grpc.CardinfoFraudDetectionServiceStub(channel)
+        response = stub.DetectCardinfoFraud(fraud_detection.CardinfoFraudDetectionRequest(
             creditCard=data['creditCard'],
             vectorClock=vector_clock
         ))
@@ -137,14 +145,15 @@ def checkout():
     vector_clock["timestamp"] = current_timestamp
 
     with futures.ThreadPoolExecutor() as executor:
-        fraud_future = executor.submit(fraud_detection_service, data, vector_clock)
+        userdata_fraud_future = executor.submit(userdata_fraud_detection_service, data, vector_clock)
+        cardinfo_fraud_future = executor.submit(cardinfo_fraud_detection_service, data, vector_clock)
         item_and_userdata_future = executor.submit(item_and_userdata_verification_service, data, vector_clock)
         cardinfo_future = executor.submit(cardinfo_verification_service, data, vector_clock)
         suggestion_future = executor.submit(book_suggestion_service, data, vector_clock)
 
-        futures.wait([fraud_future, item_and_userdata_future, cardinfo_future, suggestion_future], return_when=futures.ALL_COMPLETED)
+        futures.wait([userdata_fraud_future, cardinfo_fraud_future, item_and_userdata_future, cardinfo_future, suggestion_future], return_when=futures.ALL_COMPLETED)
 
-        if fraud_future.result():
+        if userdata_fraud_future.result() and cardinfo_fraud_future.result():
             print("Checkout rejected for fraudulent reasons")
             order_status_response = {'orderId': '12345', "status": "Order Rejected because fraud was detected. Please provide a valid user name or contact."}
             return order_status_response
