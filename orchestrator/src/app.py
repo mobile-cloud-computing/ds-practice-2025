@@ -1,5 +1,6 @@
 import sys
 import os
+from datetime import datetime
 
 # This set of lines are needed to import the gRPC stubs.
 # The path of the stubs is relative to the current file, or absolute inside the container.
@@ -17,6 +18,9 @@ from book_suggestion import book_suggestion_pb2_grpc as book_suggestion_grpc
 
 import grpc
 from concurrent import futures
+
+# Get the server index for the vector clock.
+SERVER_INDEX = int(os.getenv("SERVER_INDEX_FOR_VECTOR_CLOCK"))
 
 def greet(name='you'):
     # Establish a connection with the fraud-detection gRPC service.
@@ -50,10 +54,10 @@ def index():
     # Return the response.
     return response
 
-def fraud_detection_service(data):
+def fraud_detection_service(data, vector_clock):
     with grpc.insecure_channel('fraud_detection:50051') as channel:
         stub = fraud_detection_grpc.FraudDetectionServiceStub(channel)
-        response = stub.DetectFraud(fraud_detection.FraudDetectionRequest(user=data['user'], creditCard = data['creditCard']))
+        response = stub.DetectFraud(fraud_detection.FraudDetectionRequest(user=data['user'], creditCard = data['creditCard'], vectorClock = vector_clock))
         return response.is_fraudulent
 
 def transaction_verification_service(data):
@@ -79,11 +83,22 @@ def transform_suggested_book_response(suggested_books):
 
     return book_array # key: [bookId, title, author]
 
+# Increment the value in the server index.
+# If the index isn't in the vc_array, append 0 until the index.
+def increment_vector_clock(vc_array):
+    if SERVER_INDEX <= len(vc_array) - 1:
+        vc_array[SERVER_INDEX] += 1
+    else:
+        while len(vc_array) != SERVER_INDEX:
+            vc_array.append(0)
+        vc_array.append(1)
+
 @app.route('/checkout', methods=['POST'])
 def checkout():
     """
     Responds with a JSON object containing the order ID, status, and suggested books.
     """
+    print(f"[Orchestrator] Server index: {SERVER_INDEX}")
     # Print request object data
     print("Request Data:", request.json)
 
@@ -91,8 +106,18 @@ def checkout():
 
     print("Checkout data recieved:", data)
 
+    vector_clock = {}
+    vc_array = []
+    increment_vector_clock(vc_array)
+    print(f"[Orchestrator] Vector Clock Array: {vc_array}")
+    vector_clock["vcArray"] = vc_array
+
+    current_timestamp = datetime.now().timestamp()
+    print(f"[Orchestrator] Timestamp: {current_timestamp}")
+    vector_clock["timestamp"] = current_timestamp
+
     with futures.ThreadPoolExecutor() as executor:
-        fraud_future = executor.submit(fraud_detection_service, data)
+        fraud_future = executor.submit(fraud_detection_service, data, vector_clock)
         transaction_future = executor.submit(transaction_verification_service, data)
         suggestion_future = executor.submit(book_suggestion_service, data)
 

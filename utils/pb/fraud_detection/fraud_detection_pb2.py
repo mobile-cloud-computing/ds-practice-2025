@@ -14,7 +14,7 @@ _sym_db = _symbol_database.Default()
 
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n.utils/pb/fraud_detection/fraud_detection.proto\x12\x05hello\"\x1c\n\x0cHelloRequest\x12\x0c\n\x04name\x18\x01 \x01(\t\"!\n\rHelloResponse\x12\x10\n\x08greeting\x18\x01 \x01(\t\"%\n\x04User\x12\x0c\n\x04name\x18\x01 \x01(\t\x12\x0f\n\x07\x63ontact\x18\x02 \x01(\t\"A\n\nCreditCard\x12\x0e\n\x06number\x18\x01 \x01(\t\x12\x16\n\x0e\x65xpirationDate\x18\x02 \x01(\t\x12\x0b\n\x03\x63vv\x18\x03 \x01(\t\"Y\n\x15\x46raudDetectionRequest\x12\x19\n\x04user\x18\x01 \x01(\x0b\x32\x0b.hello.User\x12%\n\ncreditCard\x18\x02 \x01(\x0b\x32\x11.hello.CreditCard\"/\n\x16\x46raudDetectionResponse\x12\x15\n\ris_fraudulent\x18\x01 \x01(\x08\x32\x45\n\x0cHelloService\x12\x35\n\x08SayHello\x12\x13.hello.HelloRequest\x1a\x14.hello.HelloResponse2c\n\x15\x46raudDetectionService\x12J\n\x0b\x44\x65tectFraud\x12\x1c.hello.FraudDetectionRequest\x1a\x1d.hello.FraudDetectionResponseb\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n.utils/pb/fraud_detection/fraud_detection.proto\x12\x05hello\"\x1c\n\x0cHelloRequest\x12\x0c\n\x04name\x18\x01 \x01(\t\"!\n\rHelloResponse\x12\x10\n\x08greeting\x18\x01 \x01(\t\"%\n\x04User\x12\x0c\n\x04name\x18\x01 \x01(\t\x12\x0f\n\x07\x63ontact\x18\x02 \x01(\t\"A\n\nCreditCard\x12\x0e\n\x06number\x18\x01 \x01(\t\x12\x16\n\x0e\x65xpirationDate\x18\x02 \x01(\t\x12\x0b\n\x03\x63vv\x18\x03 \x01(\t\"1\n\x0bVectorClock\x12\x0f\n\x07vcArray\x18\x01 \x03(\x05\x12\x11\n\ttimestamp\x18\x02 \x01(\x01\"\x82\x01\n\x15\x46raudDetectionRequest\x12\x19\n\x04user\x18\x01 \x01(\x0b\x32\x0b.hello.User\x12%\n\ncreditCard\x18\x02 \x01(\x0b\x32\x11.hello.CreditCard\x12\'\n\x0bvectorClock\x18\x03 \x01(\x0b\x32\x12.hello.VectorClock\"/\n\x16\x46raudDetectionResponse\x12\x15\n\ris_fraudulent\x18\x01 \x01(\x08\x32\x45\n\x0cHelloService\x12\x35\n\x08SayHello\x12\x13.hello.HelloRequest\x1a\x14.hello.HelloResponse2c\n\x15\x46raudDetectionService\x12J\n\x0b\x44\x65tectFraud\x12\x1c.hello.FraudDetectionRequest\x1a\x1d.hello.FraudDetectionResponseb\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
@@ -29,12 +29,14 @@ if _descriptor._USE_C_DESCRIPTORS == False:
   _globals['_USER']._serialized_end=159
   _globals['_CREDITCARD']._serialized_start=161
   _globals['_CREDITCARD']._serialized_end=226
-  _globals['_FRAUDDETECTIONREQUEST']._serialized_start=228
-  _globals['_FRAUDDETECTIONREQUEST']._serialized_end=317
-  _globals['_FRAUDDETECTIONRESPONSE']._serialized_start=319
-  _globals['_FRAUDDETECTIONRESPONSE']._serialized_end=366
-  _globals['_HELLOSERVICE']._serialized_start=368
-  _globals['_HELLOSERVICE']._serialized_end=437
-  _globals['_FRAUDDETECTIONSERVICE']._serialized_start=439
-  _globals['_FRAUDDETECTIONSERVICE']._serialized_end=538
+  _globals['_VECTORCLOCK']._serialized_start=228
+  _globals['_VECTORCLOCK']._serialized_end=277
+  _globals['_FRAUDDETECTIONREQUEST']._serialized_start=280
+  _globals['_FRAUDDETECTIONREQUEST']._serialized_end=410
+  _globals['_FRAUDDETECTIONRESPONSE']._serialized_start=412
+  _globals['_FRAUDDETECTIONRESPONSE']._serialized_end=459
+  _globals['_HELLOSERVICE']._serialized_start=461
+  _globals['_HELLOSERVICE']._serialized_end=530
+  _globals['_FRAUDDETECTIONSERVICE']._serialized_start=532
+  _globals['_FRAUDDETECTIONSERVICE']._serialized_end=631
 # @@protoc_insertion_point(module_scope)

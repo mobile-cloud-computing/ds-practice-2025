@@ -1,5 +1,6 @@
 import sys
 import os
+from datetime import datetime
 
 # This set of lines are needed to import the gRPC stubs.
 # The path of the stubs is relative to the current file, or absolute inside the container.
@@ -12,6 +13,9 @@ import fraud_detection_pb2_grpc as fraud_detection_grpc
 
 import grpc
 from concurrent import futures
+
+# Get the server index for the vector clock.
+SERVER_INDEX = int(os.getenv("SERVER_INDEX_FOR_VECTOR_CLOCK"))
 
 # Create a class to define the server functions, derived from
 # fraud_detection_pb2_grpc.HelloServiceServicer
@@ -28,8 +32,30 @@ class HelloService(fraud_detection_grpc.HelloServiceServicer):
         return response
     
 class FraudDetectionService(fraud_detection_grpc.FraudDetectionServiceServicer):
+    # Increment the value in the server index.
+    # If the index isn't in the vc_array, append 0 until the index.
+    def increment_vector_clock(self, vc_array):
+        if SERVER_INDEX <= len(vc_array) - 1:
+            vc_array[SERVER_INDEX] += 1
+        else:
+            while len(vc_array) != SERVER_INDEX:
+                vc_array.append(0)
+            vc_array.append(1)
+
     def DetectFraud(self, request, context):
         print("Fraud dectection request received")
+        print(f"[Fraud detection] Server index: {SERVER_INDEX}")
+
+        vector_clock = request.vectorClock
+        vc_array = vector_clock.vcArray
+        timestamp = vector_clock.timestamp
+
+        print(f"[Fraud detection] VCArray from orchestrator: {vc_array}")
+        print(f"[Fraud detection] Timestamp from orchestrator: {timestamp}")
+
+        self.increment_vector_clock(vc_array)
+        print(f"[Fraud detection] VCArray in Fraud detection: {vc_array}")
+        print(f"[Fraud detection] Timestamp in Fraud detection: {datetime.now().timestamp()}")
         
         # a simple dummy check of is user name and contact exist
         user_name = request.user.name

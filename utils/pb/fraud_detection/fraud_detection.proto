@@ -25,9 +25,15 @@ message CreditCard {
     string cvv = 3;
 }
 
+message VectorClock {
+  repeated int32 vcArray = 1;
+  double timestamp = 2;
+}
+
 message FraudDetectionRequest {
   User user = 1;
   CreditCard creditCard = 2;
+  VectorClock vectorClock = 3;
 }
 
 message FraudDetectionResponse {
