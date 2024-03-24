@@ -2,11 +2,15 @@ syntax = "proto3";
 
 package transaction_verification;
 
-message TransactionVerificationRequest {
+message ItemAndUserdataVerificationRequest {
   User user = 1;
-  CreditCard creditCard = 2;
-  Item item = 3;
-  VectorClock vectorClock = 4;
+  Item item = 2;
+  VectorClock vectorClock = 3;
+}
+
+message CardinfoVerificationRequest {
+  CreditCard creditCard = 1;
+  VectorClock vectorClock = 2;
 }
 
 message User {
@@ -30,10 +34,19 @@ message VectorClock {
   double timestamp = 2;
 }
 
-message TransactionVerificationResponse {
+message ItemAndUserdataVerificationResponse {
   bool is_valid = 1;
 }
 
-service TransactionVerificationService {
-  rpc VerifyTransaction(TransactionVerificationRequest) returns (TransactionVerificationResponse);
+message CardinfoVerificationResponse {
+  bool is_valid = 1;
 }
+
+service ItemAndUserdataVerificationService {
+  rpc VerifyItemAndUserdata(ItemAndUserdataVerificationRequest) returns (ItemAndUserdataVerificationResponse);
+}
+
+service CardinfoVerificationService {
+  rpc VerifyCardinfo(CardinfoVerificationRequest) returns (CardinfoVerificationResponse);
+}
+

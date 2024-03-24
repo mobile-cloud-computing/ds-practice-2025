@@ -64,13 +64,21 @@ def fraud_detection_service(data, vector_clock):
         ))
         return response.is_fraudulent
 
-def transaction_verification_service(data, vector_clock):
+def item_and_userdata_verification_service(data, vector_clock):
     with grpc.insecure_channel('transaction_verification:50052') as channel:
-        stub = transaction_verification_grpc.TransactionVerificationServiceStub(channel)
-        response = stub.VerifyTransaction(transaction_verification.TransactionVerificationRequest(
+        stub = transaction_verification_grpc.ItemAndUserdataVerificationServiceStub(channel)
+        response = stub.VerifyItemAndUserdata(transaction_verification.ItemAndUserdataVerificationRequest(
             user=data['user'],
-            creditCard=data['creditCard'],
             item=data['items'][0],
+            vectorClock=vector_clock
+        ))
+        return response.is_valid
+    
+def cardinfo_verification_service(data, vector_clock):
+    with grpc.insecure_channel('transaction_verification:50052') as channel:
+        stub = transaction_verification_grpc.CardinfoVerificationServiceStub(channel)
+        response = stub.VerifyCardinfo(transaction_verification.CardinfoVerificationRequest(
+            creditCard=data['creditCard'],
             vectorClock=vector_clock
         ))
         return response.is_valid
@@ -130,17 +138,18 @@ def checkout():
 
     with futures.ThreadPoolExecutor() as executor:
         fraud_future = executor.submit(fraud_detection_service, data, vector_clock)
-        transaction_future = executor.submit(transaction_verification_service, data, vector_clock)
+        item_and_userdata_future = executor.submit(item_and_userdata_verification_service, data, vector_clock)
+        cardinfo_future = executor.submit(cardinfo_verification_service, data, vector_clock)
         suggestion_future = executor.submit(book_suggestion_service, data, vector_clock)
 
-        futures.wait([fraud_future, transaction_future, suggestion_future], return_when=futures.ALL_COMPLETED)
+        futures.wait([fraud_future, item_and_userdata_future, cardinfo_future, suggestion_future], return_when=futures.ALL_COMPLETED)
 
         if fraud_future.result():
             print("Checkout rejected for fraudulent reasons")
             order_status_response = {'orderId': '12345', "status": "Order Rejected because fraud was detected. Please provide a valid user name or contact."}
             return order_status_response
-        
-        if not transaction_future.result():
+
+        if not (item_and_userdata_future.result() and cardinfo_future.result()):
             print("Checkout rejected. Transaction verification failed")
             order_status_response = {'orderId': '12345', "status": "Transaction Invalid. Check your order and card details."}
             return order_status_response

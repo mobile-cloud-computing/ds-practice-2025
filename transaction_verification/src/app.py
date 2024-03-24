@@ -17,7 +17,7 @@ import grpc
 # Get the server index for the vector clock.
 SERVER_INDEX = int(os.getenv("SERVER_INDEX_FOR_VECTOR_CLOCK"))
 
-class TransactionVerificationService(transaction_verification_grpc.TransactionVerificationServiceServicer):
+class ItemAndUserdataVerificationService(transaction_verification_grpc.ItemAndUserdataVerificationServiceServicer):
     # Increment the value in the server index.
     # If the index isn't in the vc_array, append 0 until the index.
     def increment_vector_clock(self, vc_array):
@@ -27,8 +27,8 @@ class TransactionVerificationService(transaction_verification_grpc.TransactionVe
             while len(vc_array) != SERVER_INDEX:
                 vc_array.append(0)
             vc_array.append(1)
-    
-    def VerifyTransaction(self, request, context):
+
+    def VerifyItemAndUserdata(self, request, context):
         print("Transaction verification request received")
         print(f"[Transaction verification] Server index: {SERVER_INDEX}")
         vector_clock = request.vectorClock
@@ -51,6 +51,32 @@ class TransactionVerificationService(transaction_verification_grpc.TransactionVe
         contact_number = request.user.contact
         user_data_filled = bool(user_name and contact_number)
 
+        is_valid = user_data_filled and items_exist
+
+        print(f"Transaction verification about item and userdata response: {'Valid' if is_valid else 'Invalid'}")
+        return transaction_verification.ItemAndUserdataVerificationResponse(is_valid=is_valid )
+    
+class CardinfoVerificationService(transaction_verification_grpc.CardinfoVerificationServiceServicer):
+    # Increment the value in the server index.
+    # If the index isn't in the vc_array, append 0 until the index.
+    def increment_vector_clock(self, vc_array):
+        if SERVER_INDEX <= len(vc_array) - 1:
+            vc_array[SERVER_INDEX] += 1
+        else:
+            while len(vc_array) != SERVER_INDEX:
+                vc_array.append(0)
+            vc_array.append(1)
+
+    def VerifyCardinfo(self, request, context):
+        print("Transaction verification request received")
+        print(f"[Transaction verification] Server index: {SERVER_INDEX}")
+        vector_clock = request.vectorClock
+        vc_array = vector_clock.vcArray
+        timestamp = vector_clock.timestamp
+
+        print(f"[Transaction verification] VCArray from orchestrator: {vc_array}")
+        print(f"[Transaction verification] Timestamp from orchestrator: {timestamp}")
+
         # card info is correct format?
         card_number = request.creditCard.number
         card_expiration_date = request.creditCard.expirationDate
@@ -67,15 +93,16 @@ class TransactionVerificationService(transaction_verification_grpc.TransactionVe
             and ((len(card_cvv) == 3 or len(card_cvv) == 4) and card_cvv.isdigit())
 
 
-        is_valid = user_data_filled and items_exist and correct_card_format
+        is_valid = correct_card_format
         
-        print(f"Transaction verification response: {'Valid' if is_valid else 'Invalid'}")
-        return transaction_verification.TransactionVerificationResponse(is_valid=is_valid )
+        print(f"Transaction verification about cardinfo response: {'Valid' if is_valid else 'Invalid'}")
+        return transaction_verification.CardinfoVerificationResponse(is_valid=is_valid )
 
     
 def serve():
     server = grpc.server(futures.ThreadPoolExecutor())
-    transaction_verification_grpc.add_TransactionVerificationServiceServicer_to_server(TransactionVerificationService(), server)
+    transaction_verification_grpc.add_ItemAndUserdataVerificationServiceServicer_to_server(ItemAndUserdataVerificationService(), server)
+    transaction_verification_grpc.add_CardinfoVerificationServiceServicer_to_server(CardinfoVerificationService(), server)
     server.add_insecure_port('[::]:50052')
     server.start()
     print("Transaction Verification Service started on port 50052")

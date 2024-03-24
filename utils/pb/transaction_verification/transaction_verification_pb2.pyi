@@ -5,17 +5,23 @@ from typing import ClassVar as _ClassVar, Iterable as _Iterable, Mapping as _Map
 
 DESCRIPTOR: _descriptor.FileDescriptor
 
-class TransactionVerificationRequest(_message.Message):
-    __slots__ = ("user", "creditCard", "item", "vectorClock")
+class ItemAndUserdataVerificationRequest(_message.Message):
+    __slots__ = ("user", "item", "vectorClock")
     USER_FIELD_NUMBER: _ClassVar[int]
-    CREDITCARD_FIELD_NUMBER: _ClassVar[int]
     ITEM_FIELD_NUMBER: _ClassVar[int]
     VECTORCLOCK_FIELD_NUMBER: _ClassVar[int]
     user: User
-    creditCard: CreditCard
     item: Item
     vectorClock: VectorClock
-    def __init__(self, user: _Optional[_Union[User, _Mapping]] = ..., creditCard: _Optional[_Union[CreditCard, _Mapping]] = ..., item: _Optional[_Union[Item, _Mapping]] = ..., vectorClock: _Optional[_Union[VectorClock, _Mapping]] = ...) -> None: ...
+    def __init__(self, user: _Optional[_Union[User, _Mapping]] = ..., item: _Optional[_Union[Item, _Mapping]] = ..., vectorClock: _Optional[_Union[VectorClock, _Mapping]] = ...) -> None: ...
+
+class CardinfoVerificationRequest(_message.Message):
+    __slots__ = ("creditCard", "vectorClock")
+    CREDITCARD_FIELD_NUMBER: _ClassVar[int]
+    VECTORCLOCK_FIELD_NUMBER: _ClassVar[int]
+    creditCard: CreditCard
+    vectorClock: VectorClock
+    def __init__(self, creditCard: _Optional[_Union[CreditCard, _Mapping]] = ..., vectorClock: _Optional[_Union[VectorClock, _Mapping]] = ...) -> None: ...
 
 class User(_message.Message):
     __slots__ = ("name", "contact")
@@ -51,7 +57,13 @@ class VectorClock(_message.Message):
     timestamp: float
     def __init__(self, vcArray: _Optional[_Iterable[int]] = ..., timestamp: _Optional[float] = ...) -> None: ...
 
-class TransactionVerificationResponse(_message.Message):
+class ItemAndUserdataVerificationResponse(_message.Message):
+    __slots__ = ("is_valid",)
+    IS_VALID_FIELD_NUMBER: _ClassVar[int]
+    is_valid: bool
+    def __init__(self, is_valid: bool = ...) -> None: ...
+
+class CardinfoVerificationResponse(_message.Message):
     __slots__ = ("is_valid",)
     IS_VALID_FIELD_NUMBER: _ClassVar[int]
     is_valid: bool

@@ -5,7 +5,7 @@ import grpc
 from utils.pb.transaction_verification import transaction_verification_pb2 as utils_dot_pb_dot_transaction__verification_dot_transaction__verification__pb2
 
 
-class TransactionVerificationServiceStub(object):
+class ItemAndUserdataVerificationServiceStub(object):
     """Missing associated documentation comment in .proto file."""
 
     def __init__(self, channel):
@@ -14,42 +14,42 @@ class TransactionVerificationServiceStub(object):
         Args:
             channel: A grpc.Channel.
         """
-        self.VerifyTransaction = channel.unary_unary(
-                '/transaction_verification.TransactionVerificationService/VerifyTransaction',
-                request_serializer=utils_dot_pb_dot_transaction__verification_dot_transaction__verification__pb2.TransactionVerificationRequest.SerializeToString,
-                response_deserializer=utils_dot_pb_dot_transaction__verification_dot_transaction__verification__pb2.TransactionVerificationResponse.FromString,
+        self.VerifyItemAndUserdata = channel.unary_unary(
+                '/transaction_verification.ItemAndUserdataVerificationService/VerifyItemAndUserdata',
+                request_serializer=utils_dot_pb_dot_transaction__verification_dot_transaction__verification__pb2.ItemAndUserdataVerificationRequest.SerializeToString,
+                response_deserializer=utils_dot_pb_dot_transaction__verification_dot_transaction__verification__pb2.ItemAndUserdataVerificationResponse.FromString,
                 )
 
 
-class TransactionVerificationServiceServicer(object):
+class ItemAndUserdataVerificationServiceServicer(object):
     """Missing associated documentation comment in .proto file."""
 
-    def VerifyTransaction(self, request, context):
+    def VerifyItemAndUserdata(self, request, context):
         """Missing associated documentation comment in .proto file."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
 
-def add_TransactionVerificationServiceServicer_to_server(servicer, server):
+def add_ItemAndUserdataVerificationServiceServicer_to_server(servicer, server):
     rpc_method_handlers = {
-            'VerifyTransaction': grpc.unary_unary_rpc_method_handler(
-                    servicer.VerifyTransaction,
-                    request_deserializer=utils_dot_pb_dot_transaction__verification_dot_transaction__verification__pb2.TransactionVerificationRequest.FromString,
-                    response_serializer=utils_dot_pb_dot_transaction__verification_dot_transaction__verification__pb2.TransactionVerificationResponse.SerializeToString,
+            'VerifyItemAndUserdata': grpc.unary_unary_rpc_method_handler(
+                    servicer.VerifyItemAndUserdata,
+                    request_deserializer=utils_dot_pb_dot_transaction__verification_dot_transaction__verification__pb2.ItemAndUserdataVerificationRequest.FromString,
+                    response_serializer=utils_dot_pb_dot_transaction__verification_dot_transaction__verification__pb2.ItemAndUserdataVerificationResponse.SerializeToString,
             ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
-            'transaction_verification.TransactionVerificationService', rpc_method_handlers)
+            'transaction_verification.ItemAndUserdataVerificationService', rpc_method_handlers)
     server.add_generic_rpc_handlers((generic_handler,))
 
 
  # This class is part of an EXPERIMENTAL API.
-class TransactionVerificationService(object):
+class ItemAndUserdataVerificationService(object):
     """Missing associated documentation comment in .proto file."""
 
     @staticmethod
-    def VerifyTransaction(request,
+    def VerifyItemAndUserdata(request,
             target,
             options=(),
             channel_credentials=None,
@@ -59,8 +59,69 @@ class TransactionVerificationService(object):
             wait_for_ready=None,
             timeout=None,
             metadata=None):
-        return grpc.experimental.unary_unary(request, target, '/transaction_verification.TransactionVerificationService/VerifyTransaction',
-            utils_dot_pb_dot_transaction__verification_dot_transaction__verification__pb2.TransactionVerificationRequest.SerializeToString,
-            utils_dot_pb_dot_transaction__verification_dot_transaction__verification__pb2.TransactionVerificationResponse.FromString,
+        return grpc.experimental.unary_unary(request, target, '/transaction_verification.ItemAndUserdataVerificationService/VerifyItemAndUserdata',
+            utils_dot_pb_dot_transaction__verification_dot_transaction__verification__pb2.ItemAndUserdataVerificationRequest.SerializeToString,
+            utils_dot_pb_dot_transaction__verification_dot_transaction__verification__pb2.ItemAndUserdataVerificationResponse.FromString,
+            options, channel_credentials,
+            insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
+
+
+class CardinfoVerificationServiceStub(object):
+    """Missing associated documentation comment in .proto file."""
+
+    def __init__(self, channel):
+        """Constructor.
+
+        Args:
+            channel: A grpc.Channel.
+        """
+        self.VerifyCardinfo = channel.unary_unary(
+                '/transaction_verification.CardinfoVerificationService/VerifyCardinfo',
+                request_serializer=utils_dot_pb_dot_transaction__verification_dot_transaction__verification__pb2.CardinfoVerificationRequest.SerializeToString,
+                response_deserializer=utils_dot_pb_dot_transaction__verification_dot_transaction__verification__pb2.CardinfoVerificationResponse.FromString,
+                )
+
+
+class CardinfoVerificationServiceServicer(object):
+    """Missing associated documentation comment in .proto file."""
+
+    def VerifyCardinfo(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+
+def add_CardinfoVerificationServiceServicer_to_server(servicer, server):
+    rpc_method_handlers = {
+            'VerifyCardinfo': grpc.unary_unary_rpc_method_handler(
+                    servicer.VerifyCardinfo,
+                    request_deserializer=utils_dot_pb_dot_transaction__verification_dot_transaction__verification__pb2.CardinfoVerificationRequest.FromString,
+                    response_serializer=utils_dot_pb_dot_transaction__verification_dot_transaction__verification__pb2.CardinfoVerificationResponse.SerializeToString,
+            ),
+    }
+    generic_handler = grpc.method_handlers_generic_handler(
+            'transaction_verification.CardinfoVerificationService', rpc_method_handlers)
+    server.add_generic_rpc_handlers((generic_handler,))
+
+
+ # This class is part of an EXPERIMENTAL API.
+class CardinfoVerificationService(object):
+    """Missing associated documentation comment in .proto file."""
+
+    @staticmethod
+    def VerifyCardinfo(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(request, target, '/transaction_verification.CardinfoVerificationService/VerifyCardinfo',
+            utils_dot_pb_dot_transaction__verification_dot_transaction__verification__pb2.CardinfoVerificationRequest.SerializeToString,
+            utils_dot_pb_dot_transaction__verification_dot_transaction__verification__pb2.CardinfoVerificationResponse.FromString,
             options, channel_credentials,
             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
