@@ -1,0 +1,29 @@
+syntax = "proto3";
+
+package mq;
+
+service MQService {
+    rpc enqueue (CheckoutRequest) returns (Response);
+    rpc dequeue (Empty) returns (CheckoutRequest);
+}
+
+message CheckoutRequest {
+    int32 priority = 1;
+    CreditCard creditcard = 3;
+}
+
+// A new message type for encapsulating credit card details.
+message CreditCard {
+    string number = 1; // Credit card number
+    string expirationDate = 2; // Expiration date in MM/YYYY format
+    string cvv = 3; // CVV code
+}
+
+message Response {
+    bool error = 1; // Error or not
+    string error_message = 2; // The error message
+}
+
+message Empty {
+    // Empty message
+}
