@@ -19,8 +19,10 @@ from book_suggestion import book_suggestion_pb2_grpc as book_suggestion_grpc
 import grpc
 from concurrent import futures
 
-# Get the server index for the vector clock.
-SERVER_INDEX = int(os.getenv("SERVER_INDEX_FOR_VECTOR_CLOCK"))
+# Set the server index for the vector clock.
+# Frontend: 0, Orchestrator: 1, TransactionVerification: 2, FraudDetection: 3, BookSuggestion: 4
+SERVER_INDEX = 1
+NUM_SERVERS = 5
 
 def greet(name='you'):
     # Establish a connection with the fraud-detection gRPC service.
@@ -79,15 +81,10 @@ def transform_suggested_book_response(suggested_books):
 # Increment the value in the server index, and update the timestamp.
 # If the index isn't in the vc_array, append 0 until the index.
 def increment_vector_clock(vector_clock):
-    vc_array = []
+    vc_array = [0 for _ in range(NUM_SERVERS)] if not "vcArray" in vector_clock else vector_clock["vcArray"]
     timestamp = datetime.now().timestamp()
 
-    if SERVER_INDEX <= len(vc_array) - 1:
-        vc_array[SERVER_INDEX] += 1
-    else:
-        while len(vc_array) != SERVER_INDEX:
-            vc_array.append(0)
-        vc_array.append(1)
+    vc_array[SERVER_INDEX] += 1
 
     return {"vcArray": vc_array, "timestamp": timestamp}
 

@@ -19,8 +19,17 @@ from book_suggestion import book_suggestion_pb2_grpc as book_suggestion_grpc
 import grpc
 from concurrent import futures
 
-# Get the server index for the vector clock.
-SERVER_INDEX = int(os.getenv("SERVER_INDEX_FOR_VECTOR_CLOCK"))
+# Set the server index for the vector clock.
+# Frontend: 0, Orchestrator: 1, TransactionVerification: 2, FraudDetection: 3, BookSuggestion: 4
+SERVER_INDEX = 3
+NUM_SERVERS = 5
+LOCAL_VC_CORRECT_AFTER_USERDATA_VERIFICATION = [0, 0, 0, 0, 0]
+VC_CORRECT_AFTER_USERDATA_VERIFICATION = [0, 1, 2, 0, 0]
+LOCAL_VC_CORRECT_AFTER_CREDITCARD_VERIFICATION = [0, 0, 0, 1, 0]
+VC_CORRECT_AFTER_CREDITCARD_VERIFICATION = [0, 1, 3, 1, 0]
+
+# Create the global local vector clock.
+local_vector_clock = {}
 
 def cardinfo_verification_service(data, vector_clock):
     with grpc.insecure_channel('transaction_verification:50052') as channel:
@@ -41,15 +50,10 @@ def book_suggestion_service(data, vector_clock):
 # Increment the value in the server index, and update the timestamp.
 # If the index isn't in the vc_array, append 0 until the index.
 def increment_vector_clock(vector_clock):
-    vc_array = vector_clock.vcArray
+    vc_array = [0 for _ in range(NUM_SERVERS)] if not "vcArray" in vector_clock else vector_clock["vcArray"]
     timestamp = datetime.now().timestamp()
 
-    if SERVER_INDEX <= len(vc_array) - 1:
-        vc_array[SERVER_INDEX] += 1
-    else:
-        while len(vc_array) != SERVER_INDEX:
-            vc_array.append(0)
-        vc_array.append(1)
+    vc_array[SERVER_INDEX] += 1
 
     return {"vcArray": vc_array, "timestamp": timestamp}
 
@@ -70,25 +74,44 @@ class HelloService(fraud_detection_grpc.HelloServiceServicer):
     
 class UserdataFraudDetectionService(fraud_detection_grpc.UserdataFraudDetectionServiceServicer):
 
+    def __init__(self):
+        global local_vector_clock
+        local_vector_clock = {"vcArray": [0 for _ in range(NUM_SERVERS)], "timestamp": datetime.now().timestamp()}
+
+    def check_vc_after_userdata_verification(self, vector_clock, local_vector_clock):
+        request_vc_check = bool(vector_clock['vcArray'] == VC_CORRECT_AFTER_USERDATA_VERIFICATION)
+        local_vc_check = bool(local_vector_clock['vcArray'] == LOCAL_VC_CORRECT_AFTER_USERDATA_VERIFICATION)
+        timestamp_check = bool(vector_clock['timestamp'] < datetime.now().timestamp())
+        return request_vc_check and local_vc_check and timestamp_check
+    
+    def is_userdata_fraudulent(self, user_name, contact_number):
+        # a simple dummy check if contact is between 7 and 15 inclusive, and if they are all digits
+        contact_is_number = (len(contact_number) >= 7 and len(contact_number) <= 15 )and contact_number.isdigit()
+
+        is_fraudulent = not contact_is_number
+        return is_fraudulent
+
     def DetectUserdataFraud(self, request, context):
+        global local_vector_clock
         print("Fraud dectection request received")
         print(f"[Fraud detection] Server index: {SERVER_INDEX}")
 
-        vector_clock = request.vectorClock
-        vector_clock = increment_vector_clock(vector_clock)
+        is_fraudulent = True
 
-        print(f"[Fraud detection] VCArray updated in Fraud detection: {vector_clock['vcArray']}")
-        print(f"[Fraud detection] Timestamp updated in Fraud detection: {vector_clock['timestamp']}")
-
+        vector_clock = MessageToDict(request.vectorClock)
         user_name = request.user.name
         contact_number = request.user.contact
 
-        # a simple dummy check of is user name and contact exist
-        user_data_filled = bool(user_name and contact_number)
-        # a simple dummy check if contact is between 7 and 15 inclusive, and if they are all digits
-        contact_is_number = (len(contact_number) >= 7 and len(contact_number) <= 15 )and contact_number.isdigit()
-         
-        is_fraudulent = not user_data_filled or not contact_is_number
+        if self.check_vc_after_userdata_verification(vector_clock, local_vector_clock):
+            print('[Fraud detection] VC is correct after userdata verification.')
+
+            # d: is userdata flaudulent?
+            is_fraudulent = self.is_userdata_fraudulent(user_name, contact_number)
+            if not is_fraudulent:
+                local_vector_clock = increment_vector_clock(local_vector_clock)
+                vector_clock = increment_vector_clock(vector_clock)
+                print(f"[Fraud detection] VCArray updated (no fraud in userdata) in Fraud detection: {vector_clock['vcArray']}")
+                # print(f"[Fraud detection] Timestamp updated in Fraud detection: {vector_clock['timestamp']}")
 
         print(f"Fraud check response: {'Fraudulent' if is_fraudulent else 'Not Fraudulent'}")
         if not is_fraudulent:
@@ -106,20 +129,38 @@ class UserdataFraudDetectionService(fraud_detection_grpc.UserdataFraudDetectionS
     
 
 class CardinfoFraudDetectionService(fraud_detection_grpc.CardinfoFraudDetectionServiceServicer):
+
+    def check_vc_after_creditcard_verification(self, vector_clock, local_vector_clock):
+        request_vc_check = bool(vector_clock['vcArray'] == VC_CORRECT_AFTER_CREDITCARD_VERIFICATION)
+        local_vc_check = bool(local_vector_clock['vcArray'] == LOCAL_VC_CORRECT_AFTER_CREDITCARD_VERIFICATION)
+        timestamp_check = bool(vector_clock['timestamp'] < datetime.now().timestamp())
+        return request_vc_check and local_vc_check and timestamp_check
+    
+    def is_creditcard_fraudulent(self, credit_card):
+        is_fraudulent = not credit_card.number.isdigit()
+
+        return is_fraudulent
     
     def DetectCardinfoFraud(self, request, context):
+        global local_vector_clock
         print("Fraud dectection request received")
         print(f"[Fraud detection] Server index: {SERVER_INDEX}")
 
-        vector_clock = request.vectorClock
-        vector_clock = increment_vector_clock(vector_clock)
+        is_fraudulent = True
 
-        print(f"[Fraud detection] VCArray updated in Fraud detection: {vector_clock['vcArray']}")
-        print(f"[Fraud detection] Timestamp updated in Fraud detection: {vector_clock['timestamp']}")
-        
-        card_number = request.creditCard.number
+        local_vector_clock = globals()['local_vector_clock']
+        vector_clock = MessageToDict(request.vectorClock)
+        credit_card = request.creditCard
 
-        is_fraudulent = not card_number.isdigit()
+        if self.check_vc_after_creditcard_verification(vector_clock, local_vector_clock):
+            
+            # e: is creditcard flaudulent?
+            is_fraudulent = self.is_creditcard_fraudulent(credit_card)
+            if not is_fraudulent:
+                local_vector_clock = increment_vector_clock(local_vector_clock)
+                vector_clock = increment_vector_clock(vector_clock)
+                print(f"[Fraud detection] VCArray updated (no fraud in creditcard) in Fraud detection: {vector_clock['vcArray']}")
+                # print(f"[Fraud detection] Timestamp updated (no fraud in creditcard) in Fraud detection: {vector_clock['timestamp']}")
 
         print(f"Fraud check response: {'Fraudulent' if is_fraudulent else 'Not Fraudulent'}")
         if not is_fraudulent:

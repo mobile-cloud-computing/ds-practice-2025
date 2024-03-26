@@ -35,8 +35,6 @@ services:
       # The PYTHONFILE environment variable specifies the absolute entry point of the application
       # Check app.py in the orchestrator directory to see how this is used
       - PYTHONFILE=/app/orchestrator/src/app.py
-      # Set the server index to create a vector clock
-      - SERVER_INDEX_FOR_VECTOR_CLOCK=1
     volumes:
       # Mount the utils directory in the current directory to the /app/utils directory in the container
       - ./utils:/app/utils
@@ -59,8 +57,6 @@ services:
       # The PYTHONFILE environment variable specifies the absolute entry point of the application
       # Check app.py in the fraud_detection directory to see how this is used
       - PYTHONFILE=/app/fraud_detection/src/app.py
-      # Set the server index to create a vector clock
-      - SERVER_INDEX_FOR_VECTOR_CLOCK=2
     volumes:
       # Mount the utils directory in the current directory to the /app/utils directory in the container
       - ./utils:/app/utils
@@ -83,8 +79,6 @@ services:
       # The PYTHONFILE environment variable specifies the absolute entry point of the application
       # Check app.py in the fraud_detection directory to see how this is used
       - PYTHONFILE=/app/transaction_verification/src/app.py
-      # Set the server index to create a vector clock
-      - SERVER_INDEX_FOR_VECTOR_CLOCK=3
     volumes:
       # Mount the utils directory in the current directory to the /app/utils directory in the container
       - ./utils:/app/utils
@@ -107,8 +101,6 @@ services:
       # The PYTHONFILE environment variable specifies the absolute entry point of the application
       # Check app.py in the fraud_detection directory to see how this is used
       - PYTHONFILE=/app/book_suggestion/src/app.py
-      # Set the server index to create a vector clock
-      - SERVER_INDEX_FOR_VECTOR_CLOCK=4
     volumes:
       # Mount the utils directory in the current directory to the /app/utils directory in the container
       - ./utils:/app/utils
