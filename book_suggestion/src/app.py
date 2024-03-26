@@ -6,10 +6,10 @@ from datetime import datetime
 # The path of the stubs is relative to the current file, or absolute inside the container.
 # Change these lines only if strictly needed.
 FILE = __file__ if '__file__' in globals() else os.getenv("PYTHONFILE", "")
-utils_path = os.path.abspath(os.path.join(FILE, '../../../utils/pb/book_suggestion'))
+utils_path = os.path.abspath(os.path.join(FILE, '../../../utils/pb'))
 sys.path.insert(0, utils_path)
-import book_suggestion_pb2 as book_suggestion
-import book_suggestion_pb2_grpc as book_suggestion_grpc
+from book_suggestion import book_suggestion_pb2 as book_suggestion
+from book_suggestion import book_suggestion_pb2_grpc as book_suggestion_grpc
 
 from concurrent import futures
 import grpc
@@ -23,36 +23,42 @@ with open(os.path.abspath(os.path.join(FILE, '../book_list.json'))) as f:
     book_list_json = json.load(f)
     book_list = [book_list_json[key] for key in book_list_json]
 
+# Increment the value in the server index, and update the timestamp.
+# If the index isn't in the vc_array, append 0 until the index.
+def increment_vector_clock(vector_clock):
+    vc_array = vector_clock.vcArray
+    timestamp = datetime.now().timestamp()
+
+    if SERVER_INDEX <= len(vc_array) - 1:
+        vc_array[SERVER_INDEX] += 1
+    else:
+        while len(vc_array) != SERVER_INDEX:
+            vc_array.append(0)
+        vc_array.append(1)
+
+    return {"vcArray": vc_array, "timestamp": timestamp}
+
 class BookSuggestionService(book_suggestion_grpc.BookSuggestionServiceServicer):
-    # Increment the value in the server index.
-    # If the index isn't in the vc_array, append 0 until the index.
-    def increment_vector_clock(self, vc_array):
-        if SERVER_INDEX <= len(vc_array) - 1:
-            vc_array[SERVER_INDEX] += 1
-        else:
-            while len(vc_array) != SERVER_INDEX:
-                vc_array.append(0)
-            vc_array.append(1)
 
     def SuggestBook(self, request, context):
         print("Boook Suggestion request received")
         print(f"[Book suggestion] Server index: {SERVER_INDEX}")
 
         vector_clock = request.vectorClock
-        vc_array = vector_clock.vcArray
-        timestamp = vector_clock.timestamp
+        vector_clock = increment_vector_clock(vector_clock)
 
-        print(f"[Book suggestion] VCArray from orchestrator: {vc_array}")
-        print(f"[Book suggestion] Timestamp from orchestrator: {timestamp}")
-
-        self.increment_vector_clock(vc_array)
-        print(f"[Book suggestion] VCArray in Book suggestion: {vc_array}")
-        print(f"[Book suggestion] Timestamp in Book suggestion: {datetime.now().timestamp()}")
+        print(f"[Book suggestion] VCArray updated in Book suggestion: {vector_clock['vcArray']}")
+        print(f"[Book suggestion] Timestamp updated in Book suggestion: {vector_clock['timestamp']}")
 
         print(f"Ordered Book: {request.item}")
         suggest_books = random.sample(book_list, 2)
         
-        return book_suggestion.BookSuggestionResponse(books=suggest_books)
+        response = {
+            "isValid": True,
+            "errorMessage": None,
+            "books": suggest_books
+        }
+        return book_suggestion.BookSuggestionResponse(**response)
 
     
 def serve():

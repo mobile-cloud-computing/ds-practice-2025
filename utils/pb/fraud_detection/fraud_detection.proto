@@ -3,26 +3,45 @@ syntax = "proto3";
 package hello;
 
 service HelloService {
-    rpc SayHello (HelloRequest) returns (HelloResponse);
+  rpc SayHello (HelloRequest) returns (HelloResponse);
 }
 
 message HelloRequest {
-    string name = 1;
+  string name = 1;
 }
 
 message HelloResponse {
-    string greeting = 1;
+  string greeting = 1;
+}
+
+message UserdataFraudDetectionRequest {
+  User user = 1;
+  Item item = 2;
+  CreditCard creditCard = 3;
+  VectorClock vectorClock = 4;
+}
+
+message CardinfoFraudDetectionRequest {
+  User user = 1;
+  Item item = 2;
+  CreditCard creditCard = 3;
+  VectorClock vectorClock = 4;
 }
 
 message User {
-    string name = 1;
-    string contact = 2;
+  string name = 1;
+  string contact = 2;
+}
+
+message Item {
+  string name = 1;
+  int32 quantity = 2;
 }
 
 message CreditCard {
-    string number = 1;
-    string expirationDate = 2;
-    string cvv = 3;
+  string number = 1;
+  string expirationDate = 2;
+  string cvv = 3;
 }
 
 message VectorClock {
@@ -30,22 +49,28 @@ message VectorClock {
   double timestamp = 2;
 }
 
-message UserdataFraudDetectionRequest {
-  User user = 1;
-  VectorClock vectorClock = 2;
-}
-
-message CardinfoFraudDetectionRequest {
-  CreditCard creditCard = 1;
-  VectorClock vectorClock = 2;
+message Book {
+  string id = 1;
+  string title = 2;
+  string author = 3;
+  string description = 4;
+  int32 copies= 5;
+  int32 copiesAvailable = 6;
+  string category = 7;
+  string img = 8;
+  float price = 9;
 }
 
 message UserdataFraudDetectionResponse {
-  bool is_fraudulent = 1;
+  bool isValid = 1;
+  string errorMessage = 2;
+  repeated Book books = 3;
 }
 
 message CardinfoFraudDetectionResponse {
-  bool is_fraudulent = 1;
+  bool isValid = 1;
+  string errorMessage = 2;
+  repeated Book books = 3;
 }
 
 service UserdataFraudDetectionService {

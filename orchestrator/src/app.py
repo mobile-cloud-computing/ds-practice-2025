@@ -54,51 +54,16 @@ def index():
     # Return the response.
     return response
 
-def userdata_fraud_detection_service(data, vector_clock):
-    with grpc.insecure_channel('fraud_detection:50051') as channel:
-        stub = fraud_detection_grpc.UserdataFraudDetectionServiceStub(channel)
-        response = stub.DetectUserdataFraud(fraud_detection.UserdataFraudDetectionRequest(
-            user=data['user'],
-            vectorClock=vector_clock
-        ))
-        return response.is_fraudulent
-    
-def cardinfo_fraud_detection_service(data, vector_clock):
-    with grpc.insecure_channel('fraud_detection:50051') as channel:
-        stub = fraud_detection_grpc.CardinfoFraudDetectionServiceStub(channel)
-        response = stub.DetectCardinfoFraud(fraud_detection.CardinfoFraudDetectionRequest(
-            creditCard=data['creditCard'],
-            vectorClock=vector_clock
-        ))
-        return response.is_fraudulent
-
 def item_and_userdata_verification_service(data, vector_clock):
     with grpc.insecure_channel('transaction_verification:50052') as channel:
         stub = transaction_verification_grpc.ItemAndUserdataVerificationServiceStub(channel)
         response = stub.VerifyItemAndUserdata(transaction_verification.ItemAndUserdataVerificationRequest(
             user=data['user'],
             item=data['items'][0],
-            vectorClock=vector_clock
-        ))
-        return response.is_valid
-    
-def cardinfo_verification_service(data, vector_clock):
-    with grpc.insecure_channel('transaction_verification:50052') as channel:
-        stub = transaction_verification_grpc.CardinfoVerificationServiceStub(channel)
-        response = stub.VerifyCardinfo(transaction_verification.CardinfoVerificationRequest(
             creditCard=data['creditCard'],
             vectorClock=vector_clock
         ))
-        return response.is_valid
-
-def book_suggestion_service(data, vector_clock):
-    with grpc.insecure_channel('book_suggestion:50053') as channel:
-        stub = book_suggestion_grpc.BookSuggestionServiceStub(channel)
-        response = stub.SuggestBook(book_suggestion.BookSuggestionRequest(
-            item=data['items'][0],
-            vectorClock=vector_clock
-        ))
-        return response.books
+        return response
     
 def transform_suggested_book_response(suggested_books):
     book_array = []
@@ -111,15 +76,20 @@ def transform_suggested_book_response(suggested_books):
 
     return book_array # key: [bookId, title, author]
 
-# Increment the value in the server index.
+# Increment the value in the server index, and update the timestamp.
 # If the index isn't in the vc_array, append 0 until the index.
-def increment_vector_clock(vc_array):
+def increment_vector_clock(vector_clock):
+    vc_array = []
+    timestamp = datetime.now().timestamp()
+
     if SERVER_INDEX <= len(vc_array) - 1:
         vc_array[SERVER_INDEX] += 1
     else:
         while len(vc_array) != SERVER_INDEX:
             vc_array.append(0)
         vc_array.append(1)
+
+    return {"vcArray": vc_array, "timestamp": timestamp}
 
 @app.route('/checkout', methods=['POST'])
 def checkout():
@@ -135,43 +105,30 @@ def checkout():
     print("Checkout data recieved:", data)
 
     vector_clock = {}
-    vc_array = []
-    increment_vector_clock(vc_array)
-    print(f"[Orchestrator] Vector Clock Array: {vc_array}")
-    vector_clock["vcArray"] = vc_array
-
-    current_timestamp = datetime.now().timestamp()
-    print(f"[Orchestrator] Timestamp: {current_timestamp}")
-    vector_clock["timestamp"] = current_timestamp
+    vector_clock = increment_vector_clock(vector_clock)
+    print(f"[Orchestrator] Vector Clock Array: {vector_clock['vcArray']}")
+    print(f"[Orchestrator] Timestamp: {vector_clock['timestamp']}")
 
     with futures.ThreadPoolExecutor() as executor:
-        userdata_fraud_future = executor.submit(userdata_fraud_detection_service, data, vector_clock)
-        cardinfo_fraud_future = executor.submit(cardinfo_fraud_detection_service, data, vector_clock)
+        # Triger the flow of events and recieve the end result.
         item_and_userdata_future = executor.submit(item_and_userdata_verification_service, data, vector_clock)
-        cardinfo_future = executor.submit(cardinfo_verification_service, data, vector_clock)
-        suggestion_future = executor.submit(book_suggestion_service, data, vector_clock)
-
-        futures.wait([userdata_fraud_future, cardinfo_fraud_future, item_and_userdata_future, cardinfo_future, suggestion_future], return_when=futures.ALL_COMPLETED)
-
-        if userdata_fraud_future.result() and cardinfo_fraud_future.result():
-            print("Checkout rejected for fraudulent reasons")
-            order_status_response = {'orderId': '12345', "status": "Order Rejected because fraud was detected. Please provide a valid user name or contact."}
-            return order_status_response
-
-        if not (item_and_userdata_future.result() and cardinfo_future.result()):
-            print("Checkout rejected. Transaction verification failed")
-            order_status_response = {'orderId': '12345', "status": "Transaction Invalid. Check your order and card details."}
-            return order_status_response
         
-    suggested_books = suggestion_future.result()
+    checkout_result = item_and_userdata_future.result()
     
-    order_status_response = {
-        'orderId': '12345',
-        'status': 'Order Approved',
-        'suggestedBooks': transform_suggested_book_response(suggested_books)
-    }
+    if checkout_result.isValid:
+        suggested_books = checkout_result.books
+        order_status_response = {
+            'orderId': '12345',
+            'status': 'Order Approved',
+            'suggestedBooks': transform_suggested_book_response(suggested_books)
+        }
+        return order_status_response
+    else:
+        print(checkout_result.errorMessage)
+        order_status_response = {'orderId': '404', "status": "Transaction Invalid. Check your order and card details."}
+        return order_status_response
 
-    return order_status_response
+    
 
 
 if __name__ == '__main__':

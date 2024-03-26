@@ -14,7 +14,7 @@ _sym_db = _symbol_database.Default()
 
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n@utils/pb/transaction_verification/transaction_verification.proto\x12\x18transaction_verification\"\xbc\x01\n\"ItemAndUserdataVerificationRequest\x12,\n\x04user\x18\x01 \x01(\x0b\x32\x1e.transaction_verification.User\x12,\n\x04item\x18\x02 \x01(\x0b\x32\x1e.transaction_verification.Item\x12:\n\x0bvectorClock\x18\x03 \x01(\x0b\x32%.transaction_verification.VectorClock\"\x93\x01\n\x1b\x43\x61rdinfoVerificationRequest\x12\x38\n\ncreditCard\x18\x01 \x01(\x0b\x32$.transaction_verification.CreditCard\x12:\n\x0bvectorClock\x18\x02 \x01(\x0b\x32%.transaction_verification.VectorClock\"%\n\x04User\x12\x0c\n\x04name\x18\x01 \x01(\t\x12\x0f\n\x07\x63ontact\x18\x02 \x01(\t\"A\n\nCreditCard\x12\x0e\n\x06number\x18\x01 \x01(\t\x12\x16\n\x0e\x65xpirationDate\x18\x02 \x01(\t\x12\x0b\n\x03\x63vv\x18\x03 \x01(\t\"&\n\x04Item\x12\x0c\n\x04name\x18\x01 \x01(\t\x12\x10\n\x08quantity\x18\x02 \x01(\x05\"1\n\x0bVectorClock\x12\x0f\n\x07vcArray\x18\x01 \x03(\x05\x12\x11\n\ttimestamp\x18\x02 \x01(\x01\"7\n#ItemAndUserdataVerificationResponse\x12\x10\n\x08is_valid\x18\x01 \x01(\x08\"0\n\x1c\x43\x61rdinfoVerificationResponse\x12\x10\n\x08is_valid\x18\x01 \x01(\x08\x32\xbb\x01\n\"ItemAndUserdataVerificationService\x12\x94\x01\n\x15VerifyItemAndUserdata\x12<.transaction_verification.ItemAndUserdataVerificationRequest\x1a=.transaction_verification.ItemAndUserdataVerificationResponse2\x9e\x01\n\x1b\x43\x61rdinfoVerificationService\x12\x7f\n\x0eVerifyCardinfo\x12\x35.transaction_verification.CardinfoVerificationRequest\x1a\x36.transaction_verification.CardinfoVerificationResponseb\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n@utils/pb/transaction_verification/transaction_verification.proto\x12\x18transaction_verification\"\xf6\x01\n\"ItemAndUserdataVerificationRequest\x12,\n\x04user\x18\x01 \x01(\x0b\x32\x1e.transaction_verification.User\x12,\n\x04item\x18\x02 \x01(\x0b\x32\x1e.transaction_verification.Item\x12\x38\n\ncreditCard\x18\x03 \x01(\x0b\x32$.transaction_verification.CreditCard\x12:\n\x0bvectorClock\x18\x04 \x01(\x0b\x32%.transaction_verification.VectorClock\"\xef\x01\n\x1b\x43\x61rdinfoVerificationRequest\x12,\n\x04user\x18\x01 \x01(\x0b\x32\x1e.transaction_verification.User\x12,\n\x04item\x18\x02 \x01(\x0b\x32\x1e.transaction_verification.Item\x12\x38\n\ncreditCard\x18\x03 \x01(\x0b\x32$.transaction_verification.CreditCard\x12:\n\x0bvectorClock\x18\x04 \x01(\x0b\x32%.transaction_verification.VectorClock\"%\n\x04User\x12\x0c\n\x04name\x18\x01 \x01(\t\x12\x0f\n\x07\x63ontact\x18\x02 \x01(\t\"&\n\x04Item\x12\x0c\n\x04name\x18\x01 \x01(\t\x12\x10\n\x08quantity\x18\x02 \x01(\x05\"A\n\nCreditCard\x12\x0e\n\x06number\x18\x01 \x01(\t\x12\x16\n\x0e\x65xpirationDate\x18\x02 \x01(\t\x12\x0b\n\x03\x63vv\x18\x03 \x01(\t\"1\n\x0bVectorClock\x12\x0f\n\x07vcArray\x18\x01 \x03(\x05\x12\x11\n\ttimestamp\x18\x02 \x01(\x01\"\x9d\x01\n\x04\x42ook\x12\n\n\x02id\x18\x01 \x01(\t\x12\r\n\x05title\x18\x02 \x01(\t\x12\x0e\n\x06\x61uthor\x18\x03 \x01(\t\x12\x13\n\x0b\x64\x65scription\x18\x04 \x01(\t\x12\x0e\n\x06\x63opies\x18\x05 \x01(\x05\x12\x17\n\x0f\x63opiesAvailable\x18\x06 \x01(\x05\x12\x10\n\x08\x63\x61tegory\x18\x07 \x01(\t\x12\x0b\n\x03img\x18\x08 \x01(\t\x12\r\n\x05price\x18\t \x01(\x02\"{\n#ItemAndUserdataVerificationResponse\x12\x0f\n\x07isValid\x18\x01 \x01(\x08\x12\x14\n\x0c\x65rrorMessage\x18\x02 \x01(\t\x12-\n\x05\x62ooks\x18\x03 \x03(\x0b\x32\x1e.transaction_verification.Book\"t\n\x1c\x43\x61rdinfoVerificationResponse\x12\x0f\n\x07isValid\x18\x01 \x01(\x08\x12\x14\n\x0c\x65rrorMessage\x18\x02 \x01(\t\x12-\n\x05\x62ooks\x18\x03 \x03(\x0b\x32\x1e.transaction_verification.Book2\xbb\x01\n\"ItemAndUserdataVerificationService\x12\x94\x01\n\x15VerifyItemAndUserdata\x12<.transaction_verification.ItemAndUserdataVerificationRequest\x1a=.transaction_verification.ItemAndUserdataVerificationResponse2\x9e\x01\n\x1b\x43\x61rdinfoVerificationService\x12\x7f\n\x0eVerifyCardinfo\x12\x35.transaction_verification.CardinfoVerificationRequest\x1a\x36.transaction_verification.CardinfoVerificationResponseb\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
@@ -22,23 +22,25 @@ _builder.BuildTopDescriptorsAndMessages(DESCRIPTOR, 'utils.pb.transaction_verifi
 if _descriptor._USE_C_DESCRIPTORS == False:
   DESCRIPTOR._options = None
   _globals['_ITEMANDUSERDATAVERIFICATIONREQUEST']._serialized_start=95
-  _globals['_ITEMANDUSERDATAVERIFICATIONREQUEST']._serialized_end=283
-  _globals['_CARDINFOVERIFICATIONREQUEST']._serialized_start=286
-  _globals['_CARDINFOVERIFICATIONREQUEST']._serialized_end=433
-  _globals['_USER']._serialized_start=435
-  _globals['_USER']._serialized_end=472
-  _globals['_CREDITCARD']._serialized_start=474
-  _globals['_CREDITCARD']._serialized_end=539
-  _globals['_ITEM']._serialized_start=541
-  _globals['_ITEM']._serialized_end=579
-  _globals['_VECTORCLOCK']._serialized_start=581
-  _globals['_VECTORCLOCK']._serialized_end=630
-  _globals['_ITEMANDUSERDATAVERIFICATIONRESPONSE']._serialized_start=632
-  _globals['_ITEMANDUSERDATAVERIFICATIONRESPONSE']._serialized_end=687
-  _globals['_CARDINFOVERIFICATIONRESPONSE']._serialized_start=689
-  _globals['_CARDINFOVERIFICATIONRESPONSE']._serialized_end=737
-  _globals['_ITEMANDUSERDATAVERIFICATIONSERVICE']._serialized_start=740
-  _globals['_ITEMANDUSERDATAVERIFICATIONSERVICE']._serialized_end=927
-  _globals['_CARDINFOVERIFICATIONSERVICE']._serialized_start=930
-  _globals['_CARDINFOVERIFICATIONSERVICE']._serialized_end=1088
+  _globals['_ITEMANDUSERDATAVERIFICATIONREQUEST']._serialized_end=341
+  _globals['_CARDINFOVERIFICATIONREQUEST']._serialized_start=344
+  _globals['_CARDINFOVERIFICATIONREQUEST']._serialized_end=583
+  _globals['_USER']._serialized_start=585
+  _globals['_USER']._serialized_end=622
+  _globals['_ITEM']._serialized_start=624
+  _globals['_ITEM']._serialized_end=662
+  _globals['_CREDITCARD']._serialized_start=664
+  _globals['_CREDITCARD']._serialized_end=729
+  _globals['_VECTORCLOCK']._serialized_start=731
+  _globals['_VECTORCLOCK']._serialized_end=780
+  _globals['_BOOK']._serialized_start=783
+  _globals['_BOOK']._serialized_end=940
+  _globals['_ITEMANDUSERDATAVERIFICATIONRESPONSE']._serialized_start=942
+  _globals['_ITEMANDUSERDATAVERIFICATIONRESPONSE']._serialized_end=1065
+  _globals['_CARDINFOVERIFICATIONRESPONSE']._serialized_start=1067
+  _globals['_CARDINFOVERIFICATIONRESPONSE']._serialized_end=1183
+  _globals['_ITEMANDUSERDATAVERIFICATIONSERVICE']._serialized_start=1186
+  _globals['_ITEMANDUSERDATAVERIFICATIONSERVICE']._serialized_end=1373
+  _globals['_CARDINFOVERIFICATIONSERVICE']._serialized_start=1376
+  _globals['_CARDINFOVERIFICATIONSERVICE']._serialized_end=1534
 # @@protoc_insertion_point(module_scope)

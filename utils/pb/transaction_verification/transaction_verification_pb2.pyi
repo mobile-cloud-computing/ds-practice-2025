@@ -6,22 +6,28 @@ from typing import ClassVar as _ClassVar, Iterable as _Iterable, Mapping as _Map
 DESCRIPTOR: _descriptor.FileDescriptor
 
 class ItemAndUserdataVerificationRequest(_message.Message):
-    __slots__ = ("user", "item", "vectorClock")
+    __slots__ = ("user", "item", "creditCard", "vectorClock")
     USER_FIELD_NUMBER: _ClassVar[int]
     ITEM_FIELD_NUMBER: _ClassVar[int]
+    CREDITCARD_FIELD_NUMBER: _ClassVar[int]
     VECTORCLOCK_FIELD_NUMBER: _ClassVar[int]
     user: User
     item: Item
-    vectorClock: VectorClock
-    def __init__(self, user: _Optional[_Union[User, _Mapping]] = ..., item: _Optional[_Union[Item, _Mapping]] = ..., vectorClock: _Optional[_Union[VectorClock, _Mapping]] = ...) -> None: ...
-
-class CardinfoVerificationRequest(_message.Message):
-    __slots__ = ("creditCard", "vectorClock")
-    CREDITCARD_FIELD_NUMBER: _ClassVar[int]
-    VECTORCLOCK_FIELD_NUMBER: _ClassVar[int]
     creditCard: CreditCard
     vectorClock: VectorClock
-    def __init__(self, creditCard: _Optional[_Union[CreditCard, _Mapping]] = ..., vectorClock: _Optional[_Union[VectorClock, _Mapping]] = ...) -> None: ...
+    def __init__(self, user: _Optional[_Union[User, _Mapping]] = ..., item: _Optional[_Union[Item, _Mapping]] = ..., creditCard: _Optional[_Union[CreditCard, _Mapping]] = ..., vectorClock: _Optional[_Union[VectorClock, _Mapping]] = ...) -> None: ...
+
+class CardinfoVerificationRequest(_message.Message):
+    __slots__ = ("user", "item", "creditCard", "vectorClock")
+    USER_FIELD_NUMBER: _ClassVar[int]
+    ITEM_FIELD_NUMBER: _ClassVar[int]
+    CREDITCARD_FIELD_NUMBER: _ClassVar[int]
+    VECTORCLOCK_FIELD_NUMBER: _ClassVar[int]
+    user: User
+    item: Item
+    creditCard: CreditCard
+    vectorClock: VectorClock
+    def __init__(self, user: _Optional[_Union[User, _Mapping]] = ..., item: _Optional[_Union[Item, _Mapping]] = ..., creditCard: _Optional[_Union[CreditCard, _Mapping]] = ..., vectorClock: _Optional[_Union[VectorClock, _Mapping]] = ...) -> None: ...
 
 class User(_message.Message):
     __slots__ = ("name", "contact")
@@ -30,6 +36,14 @@ class User(_message.Message):
     name: str
     contact: str
     def __init__(self, name: _Optional[str] = ..., contact: _Optional[str] = ...) -> None: ...
+
+class Item(_message.Message):
+    __slots__ = ("name", "quantity")
+    NAME_FIELD_NUMBER: _ClassVar[int]
+    QUANTITY_FIELD_NUMBER: _ClassVar[int]
+    name: str
+    quantity: int
+    def __init__(self, name: _Optional[str] = ..., quantity: _Optional[int] = ...) -> None: ...
 
 class CreditCard(_message.Message):
     __slots__ = ("number", "expirationDate", "cvv")
@@ -41,14 +55,6 @@ class CreditCard(_message.Message):
     cvv: str
     def __init__(self, number: _Optional[str] = ..., expirationDate: _Optional[str] = ..., cvv: _Optional[str] = ...) -> None: ...
 
-class Item(_message.Message):
-    __slots__ = ("name", "quantity")
-    NAME_FIELD_NUMBER: _ClassVar[int]
-    QUANTITY_FIELD_NUMBER: _ClassVar[int]
-    name: str
-    quantity: int
-    def __init__(self, name: _Optional[str] = ..., quantity: _Optional[int] = ...) -> None: ...
-
 class VectorClock(_message.Message):
     __slots__ = ("vcArray", "timestamp")
     VCARRAY_FIELD_NUMBER: _ClassVar[int]
@@ -57,14 +63,44 @@ class VectorClock(_message.Message):
     timestamp: float
     def __init__(self, vcArray: _Optional[_Iterable[int]] = ..., timestamp: _Optional[float] = ...) -> None: ...
 
+class Book(_message.Message):
+    __slots__ = ("id", "title", "author", "description", "copies", "copiesAvailable", "category", "img", "price")
+    ID_FIELD_NUMBER: _ClassVar[int]
+    TITLE_FIELD_NUMBER: _ClassVar[int]
+    AUTHOR_FIELD_NUMBER: _ClassVar[int]
+    DESCRIPTION_FIELD_NUMBER: _ClassVar[int]
+    COPIES_FIELD_NUMBER: _ClassVar[int]
+    COPIESAVAILABLE_FIELD_NUMBER: _ClassVar[int]
+    CATEGORY_FIELD_NUMBER: _ClassVar[int]
+    IMG_FIELD_NUMBER: _ClassVar[int]
+    PRICE_FIELD_NUMBER: _ClassVar[int]
+    id: str
+    title: str
+    author: str
+    description: str
+    copies: int
+    copiesAvailable: int
+    category: str
+    img: str
+    price: float
+    def __init__(self, id: _Optional[str] = ..., title: _Optional[str] = ..., author: _Optional[str] = ..., description: _Optional[str] = ..., copies: _Optional[int] = ..., copiesAvailable: _Optional[int] = ..., category: _Optional[str] = ..., img: _Optional[str] = ..., price: _Optional[float] = ...) -> None: ...
+
 class ItemAndUserdataVerificationResponse(_message.Message):
-    __slots__ = ("is_valid",)
-    IS_VALID_FIELD_NUMBER: _ClassVar[int]
-    is_valid: bool
-    def __init__(self, is_valid: bool = ...) -> None: ...
+    __slots__ = ("isValid", "errorMessage", "books")
+    ISVALID_FIELD_NUMBER: _ClassVar[int]
+    ERRORMESSAGE_FIELD_NUMBER: _ClassVar[int]
+    BOOKS_FIELD_NUMBER: _ClassVar[int]
+    isValid: bool
+    errorMessage: str
+    books: _containers.RepeatedCompositeFieldContainer[Book]
+    def __init__(self, isValid: bool = ..., errorMessage: _Optional[str] = ..., books: _Optional[_Iterable[_Union[Book, _Mapping]]] = ...) -> None: ...
 
 class CardinfoVerificationResponse(_message.Message):
-    __slots__ = ("is_valid",)
-    IS_VALID_FIELD_NUMBER: _ClassVar[int]
-    is_valid: bool
-    def __init__(self, is_valid: bool = ...) -> None: ...
+    __slots__ = ("isValid", "errorMessage", "books")
+    ISVALID_FIELD_NUMBER: _ClassVar[int]
+    ERRORMESSAGE_FIELD_NUMBER: _ClassVar[int]
+    BOOKS_FIELD_NUMBER: _ClassVar[int]
+    isValid: bool
+    errorMessage: str
+    books: _containers.RepeatedCompositeFieldContainer[Book]
+    def __init__(self, isValid: bool = ..., errorMessage: _Optional[str] = ..., books: _Optional[_Iterable[_Union[Book, _Mapping]]] = ...) -> None: ...

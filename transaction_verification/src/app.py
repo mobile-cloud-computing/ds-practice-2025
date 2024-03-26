@@ -1,15 +1,18 @@
 import sys
 import os
 from datetime import datetime
+from google.protobuf.json_format import MessageToDict
 
 # This set of lines are needed to import the gRPC stubs.
 # The path of the stubs is relative to the current file, or absolute inside the container.
 # Change these lines only if strictly needed.
 FILE = __file__ if '__file__' in globals() else os.getenv("PYTHONFILE", "")
-utils_path = os.path.abspath(os.path.join(FILE, '../../../utils/pb/transaction_verification'))
+utils_path = os.path.abspath(os.path.join(FILE, '../../../utils/pb'))
 sys.path.insert(0, utils_path)
-import transaction_verification_pb2 as transaction_verification
-import transaction_verification_pb2_grpc as transaction_verification_grpc
+from fraud_detection import fraud_detection_pb2 as fraud_detection
+from fraud_detection import fraud_detection_pb2_grpc as fraud_detection_grpc
+from transaction_verification import transaction_verification_pb2 as transaction_verification
+from transaction_verification import transaction_verification_pb2_grpc as transaction_verification_grpc
 
 from concurrent import futures
 import grpc
@@ -17,70 +20,87 @@ import grpc
 # Get the server index for the vector clock.
 SERVER_INDEX = int(os.getenv("SERVER_INDEX_FOR_VECTOR_CLOCK"))
 
-class ItemAndUserdataVerificationService(transaction_verification_grpc.ItemAndUserdataVerificationServiceServicer):
-    # Increment the value in the server index.
-    # If the index isn't in the vc_array, append 0 until the index.
-    def increment_vector_clock(self, vc_array):
-        if SERVER_INDEX <= len(vc_array) - 1:
-            vc_array[SERVER_INDEX] += 1
-        else:
-            while len(vc_array) != SERVER_INDEX:
-                vc_array.append(0)
-            vc_array.append(1)
+def userdata_fraud_detection_service(data, vector_clock):
+    with grpc.insecure_channel('fraud_detection:50051') as channel:
+        stub = fraud_detection_grpc.UserdataFraudDetectionServiceStub(channel)
+        attr = MessageToDict(data)
+        attr["vectorClock"] = vector_clock
+        response = stub.DetectUserdataFraud(fraud_detection.UserdataFraudDetectionRequest(**attr))
+        return response
 
+def cardinfo_fraud_detection_service(data, vector_clock):
+    with grpc.insecure_channel('fraud_detection:50051') as channel:
+        stub = fraud_detection_grpc.CardinfoFraudDetectionServiceStub(channel)
+        attr = MessageToDict(data)
+        attr["vectorClock"] = vector_clock
+        response = stub.DetectCardinfoFraud(fraud_detection.CardinfoFraudDetectionRequest(**attr))
+        return response
+    
+# Increment the value in the server index, and update the timestamp.
+# If the index isn't in the vc_array, append 0 until the index.
+def increment_vector_clock(vector_clock):
+    vc_array = vector_clock.vcArray
+    timestamp = datetime.now().timestamp()
+
+    if SERVER_INDEX <= len(vc_array) - 1:
+        vc_array[SERVER_INDEX] += 1
+    else:
+        while len(vc_array) != SERVER_INDEX:
+            vc_array.append(0)
+        vc_array.append(1)
+
+    return {"vcArray": vc_array, "timestamp": timestamp}
+
+class ItemAndUserdataVerificationService(transaction_verification_grpc.ItemAndUserdataVerificationServiceServicer):
+    
     def VerifyItemAndUserdata(self, request, context):
         print("Transaction verification request received")
         print(f"[Transaction verification] Server index: {SERVER_INDEX}")
         vector_clock = request.vectorClock
-        vc_array = vector_clock.vcArray
-        timestamp = vector_clock.timestamp
+        vector_clock = increment_vector_clock(vector_clock)
+        print(f"[Transaction verification] VCArray updated in Transaction verification: {vector_clock['vcArray']}")
+        print(f"[Transaction verification] Timestamp updated in Transaction verification: {vector_clock['timestamp']}")
 
-        print(f"[Transaction verification] VCArray from orchestrator: {vc_array}")
-        print(f"[Transaction verification] Timestamp from orchestrator: {timestamp}")
+        user = request.user
+        item = request.item
 
-        self.increment_vector_clock(vc_array)
-        print(f"[Transaction verification] VCArray in Transaction verification: {vc_array}")
-        print(f"[Transaction verification] Timestamp in Transaction verification: {datetime.now().timestamp()}")
         # order items empty?
-        item_name = request.item.name
-        item_quantity = request.item.quantity
-        items_exist = bool(item_name) and (item_quantity >0)
-
+        items_exist = bool(item.name) and (item.quantity > 0)
         # user data filled?
-        user_name = request.user.name
-        contact_number = request.user.contact
-        user_data_filled = bool(user_name and contact_number)
+        user_data_filled = bool(user.name and user.contact)
 
         is_valid = user_data_filled and items_exist
 
         print(f"Transaction verification about item and userdata response: {'Valid' if is_valid else 'Invalid'}")
-        return transaction_verification.ItemAndUserdataVerificationResponse(is_valid=is_valid )
+        if is_valid:
+            with futures.ThreadPoolExecutor() as executor:
+                userdata_fraud_future = executor.submit(userdata_fraud_detection_service, request, vector_clock)
+            message = userdata_fraud_future.result()
+            response = MessageToDict(message)
+        else:
+            response = {
+                "isValid": False,
+                "errorMessage": "Transaction Invalid. Couldn't verify your order and user information.",
+                "books": None
+            }
+        return transaction_verification.ItemAndUserdataVerificationResponse(**response)
     
 class CardinfoVerificationService(transaction_verification_grpc.CardinfoVerificationServiceServicer):
-    # Increment the value in the server index.
-    # If the index isn't in the vc_array, append 0 until the index.
-    def increment_vector_clock(self, vc_array):
-        if SERVER_INDEX <= len(vc_array) - 1:
-            vc_array[SERVER_INDEX] += 1
-        else:
-            while len(vc_array) != SERVER_INDEX:
-                vc_array.append(0)
-            vc_array.append(1)
-
+    
     def VerifyCardinfo(self, request, context):
         print("Transaction verification request received")
         print(f"[Transaction verification] Server index: {SERVER_INDEX}")
         vector_clock = request.vectorClock
-        vc_array = vector_clock.vcArray
-        timestamp = vector_clock.timestamp
+        vector_clock = increment_vector_clock(vector_clock)
+        print(f"[Transaction verification] VCArray updated in Transaction verification: {vector_clock['vcArray']}")
+        print(f"[Transaction verification] Timestamp updated in Transaction verification: {vector_clock['timestamp']}")
 
-        print(f"[Transaction verification] VCArray from orchestrator: {vc_array}")
-        print(f"[Transaction verification] Timestamp from orchestrator: {timestamp}")
+        credit_card = request.creditCard
 
         # card info is correct format?
-        card_number = request.creditCard.number
-        card_expiration_date = request.creditCard.expirationDate
-        card_cvv = request.creditCard.cvv
+        card_number = credit_card.number
+        card_expiration_date = credit_card.expirationDate
+        card_cvv = credit_card.cvv
         
         is_valid_date = True
         if "/" not in card_expiration_date:
@@ -92,11 +112,22 @@ class CardinfoVerificationService(transaction_verification_grpc.CardinfoVerifica
         correct_card_format = is_valid_date and ((len(card_number) >= 10 and len(card_number) <= 19) and card_number.isdigit()) \
             and ((len(card_cvv) == 3 or len(card_cvv) == 4) and card_cvv.isdigit())
 
-
-        is_valid = correct_card_format
         
+        is_valid = correct_card_format
+
         print(f"Transaction verification about cardinfo response: {'Valid' if is_valid else 'Invalid'}")
-        return transaction_verification.CardinfoVerificationResponse(is_valid=is_valid )
+        if is_valid:
+            with futures.ThreadPoolExecutor() as executor:
+                cardinfo_fraud_future = executor.submit(cardinfo_fraud_detection_service, request, vector_clock)
+            message = cardinfo_fraud_future.result()
+            response = MessageToDict(message)
+        else:
+            response = {
+                "isValid": False,
+                "errorMessage": "Transaction Invalid. Couldn't verify your payment details.",
+                "books": None
+            }
+        return transaction_verification.CardinfoVerificationResponse(**response)
 
     
 def serve():
