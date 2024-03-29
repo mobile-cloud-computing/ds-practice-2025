@@ -5,6 +5,7 @@ package mq;
 service MQService {
     rpc enqueue (CheckoutRequest) returns (Response);
     rpc dequeue (Empty) returns (CheckoutRequest);
+    rpc info (Empty) returns (QueueStatus);
 }
 
 message CheckoutRequest {
@@ -17,6 +18,11 @@ message CreditCard {
     string number = 1; // Credit card number
     string expirationDate = 2; // Expiration date in MM/YYYY format
     string cvv = 3; // CVV code
+}
+
+message QueueStatus {
+    int32 length = 1;
+    string queue = 2;
 }
 
 message Response {

@@ -2,7 +2,7 @@
 """Client and server classes corresponding to protobuf-defined services."""
 import grpc
 
-import mq_pb2 as mq__pb2
+import utils.pb.mq.mq_pb2 as mq__pb2
 
 
 class MQServiceStub(object):
@@ -24,6 +24,11 @@ class MQServiceStub(object):
                 request_serializer=mq__pb2.Empty.SerializeToString,
                 response_deserializer=mq__pb2.CheckoutRequest.FromString,
                 )
+        self.info = channel.unary_unary(
+                '/mq.MQService/info',
+                request_serializer=mq__pb2.Empty.SerializeToString,
+                response_deserializer=mq__pb2.QueueStatus.FromString,
+                )
 
 
 class MQServiceServicer(object):
@@ -41,6 +46,12 @@ class MQServiceServicer(object):
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
+    def info(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
 
 def add_MQServiceServicer_to_server(servicer, server):
     rpc_method_handlers = {
@@ -53,6 +64,11 @@ def add_MQServiceServicer_to_server(servicer, server):
                     servicer.dequeue,
                     request_deserializer=mq__pb2.Empty.FromString,
                     response_serializer=mq__pb2.CheckoutRequest.SerializeToString,
+            ),
+            'info': grpc.unary_unary_rpc_method_handler(
+                    servicer.info,
+                    request_deserializer=mq__pb2.Empty.FromString,
+                    response_serializer=mq__pb2.QueueStatus.SerializeToString,
             ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
@@ -95,5 +111,22 @@ class MQService(object):
         return grpc.experimental.unary_unary(request, target, '/mq.MQService/dequeue',
             mq__pb2.Empty.SerializeToString,
             mq__pb2.CheckoutRequest.FromString,
+            options, channel_credentials,
+            insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
+
+    @staticmethod
+    def info(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(request, target, '/mq.MQService/info',
+            mq__pb2.Empty.SerializeToString,
+            mq__pb2.QueueStatus.FromString,
             options, channel_credentials,
             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)

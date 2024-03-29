@@ -22,6 +22,14 @@ class CreditCard(_message.Message):
     cvv: str
     def __init__(self, number: _Optional[str] = ..., expirationDate: _Optional[str] = ..., cvv: _Optional[str] = ...) -> None: ...
 
+class QueueStatus(_message.Message):
+    __slots__ = ("length", "queue")
+    LENGTH_FIELD_NUMBER: _ClassVar[int]
+    QUEUE_FIELD_NUMBER: _ClassVar[int]
+    length: int
+    queue: str
+    def __init__(self, length: _Optional[int] = ..., queue: _Optional[str] = ...) -> None: ...
+
 class Response(_message.Message):
     __slots__ = ("error", "error_message")
     ERROR_FIELD_NUMBER: _ClassVar[int]
