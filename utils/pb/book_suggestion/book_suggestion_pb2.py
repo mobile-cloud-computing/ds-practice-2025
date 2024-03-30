@@ -14,27 +14,33 @@ _sym_db = _symbol_database.Default()
 
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n.utils/pb/book_suggestion/book_suggestion.proto\x12\x0f\x62ook_suggestion\"\xc5\x01\n\x15\x42ookSuggestionRequest\x12#\n\x04user\x18\x01 \x01(\x0b\x32\x15.book_suggestion.User\x12#\n\x04item\x18\x02 \x01(\x0b\x32\x15.book_suggestion.Item\x12/\n\ncreditCard\x18\x03 \x01(\x0b\x32\x1b.book_suggestion.CreditCard\x12\x31\n\x0bvectorClock\x18\x04 \x01(\x0b\x32\x1c.book_suggestion.VectorClock\"%\n\x04User\x12\x0c\n\x04name\x18\x01 \x01(\t\x12\x0f\n\x07\x63ontact\x18\x02 \x01(\t\"&\n\x04Item\x12\x0c\n\x04name\x18\x01 \x01(\t\x12\x10\n\x08quantity\x18\x02 \x01(\x05\"A\n\nCreditCard\x12\x0e\n\x06number\x18\x01 \x01(\t\x12\x16\n\x0e\x65xpirationDate\x18\x02 \x01(\t\x12\x0b\n\x03\x63vv\x18\x03 \x01(\t\"1\n\x0bVectorClock\x12\x0f\n\x07vcArray\x18\x01 \x03(\x05\x12\x11\n\ttimestamp\x18\x02 \x01(\x01\"\x9d\x01\n\x04\x42ook\x12\n\n\x02id\x18\x01 \x01(\t\x12\r\n\x05title\x18\x02 \x01(\t\x12\x0e\n\x06\x61uthor\x18\x03 \x01(\t\x12\x13\n\x0b\x64\x65scription\x18\x04 \x01(\t\x12\x0e\n\x06\x63opies\x18\x05 \x01(\x05\x12\x17\n\x0f\x63opiesAvailable\x18\x06 \x01(\x05\x12\x10\n\x08\x63\x61tegory\x18\x07 \x01(\t\x12\x0b\n\x03img\x18\x08 \x01(\t\x12\r\n\x05price\x18\t \x01(\x02\"e\n\x16\x42ookSuggestionResponse\x12\x0f\n\x07isValid\x18\x01 \x01(\x08\x12\x14\n\x0c\x65rrorMessage\x18\x02 \x01(\t\x12$\n\x05\x62ooks\x18\x03 \x03(\x0b\x32\x15.book_suggestion.Book2w\n\x15\x42ookSuggestionService\x12^\n\x0bSuggestBook\x12&.book_suggestion.BookSuggestionRequest\x1a\'.book_suggestion.BookSuggestionResponseb\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n.utils/pb/book_suggestion/book_suggestion.proto\x12\x0f\x62ook_suggestion\"(\n\x15OrderIdStorageRequest\x12\x0f\n\x07orderId\x18\x01 \x01(\t\"\xd6\x01\n\x15\x42ookSuggestionRequest\x12\x0f\n\x07orderId\x18\x01 \x01(\t\x12#\n\x04user\x18\x02 \x01(\x0b\x32\x15.book_suggestion.User\x12#\n\x04item\x18\x03 \x01(\x0b\x32\x15.book_suggestion.Item\x12/\n\ncreditCard\x18\x04 \x01(\x0b\x32\x1b.book_suggestion.CreditCard\x12\x31\n\x0bvectorClock\x18\x05 \x01(\x0b\x32\x1c.book_suggestion.VectorClock\"%\n\x04User\x12\x0c\n\x04name\x18\x01 \x01(\t\x12\x0f\n\x07\x63ontact\x18\x02 \x01(\t\"&\n\x04Item\x12\x0c\n\x04name\x18\x01 \x01(\t\x12\x10\n\x08quantity\x18\x02 \x01(\x05\"A\n\nCreditCard\x12\x0e\n\x06number\x18\x01 \x01(\t\x12\x16\n\x0e\x65xpirationDate\x18\x02 \x01(\t\x12\x0b\n\x03\x63vv\x18\x03 \x01(\t\"1\n\x0bVectorClock\x12\x0f\n\x07vcArray\x18\x01 \x03(\x05\x12\x11\n\ttimestamp\x18\x02 \x01(\x01\"\x9d\x01\n\x04\x42ook\x12\n\n\x02id\x18\x01 \x01(\t\x12\r\n\x05title\x18\x02 \x01(\t\x12\x0e\n\x06\x61uthor\x18\x03 \x01(\t\x12\x13\n\x0b\x64\x65scription\x18\x04 \x01(\t\x12\x0e\n\x06\x63opies\x18\x05 \x01(\x05\x12\x17\n\x0f\x63opiesAvailable\x18\x06 \x01(\x05\x12\x10\n\x08\x63\x61tegory\x18\x07 \x01(\t\x12\x0b\n\x03img\x18\x08 \x01(\t\x12\r\n\x05price\x18\t \x01(\x02\")\n\x16OrderIdStorageResponse\x12\x0f\n\x07isValid\x18\x01 \x01(\x08\"e\n\x16\x42ookSuggestionResponse\x12\x0f\n\x07isValid\x18\x01 \x01(\x08\x12\x14\n\x0c\x65rrorMessage\x18\x02 \x01(\t\x12$\n\x05\x62ooks\x18\x03 \x03(\x0b\x32\x15.book_suggestion.Book2z\n\x15OrderIdStorageService\x12\x61\n\x0eStorageOrderId\x12&.book_suggestion.OrderIdStorageRequest\x1a\'.book_suggestion.OrderIdStorageResponse2w\n\x15\x42ookSuggestionService\x12^\n\x0bSuggestBook\x12&.book_suggestion.BookSuggestionRequest\x1a\'.book_suggestion.BookSuggestionResponseb\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
 _builder.BuildTopDescriptorsAndMessages(DESCRIPTOR, 'utils.pb.book_suggestion.book_suggestion_pb2', _globals)
 if _descriptor._USE_C_DESCRIPTORS == False:
   DESCRIPTOR._options = None
-  _globals['_BOOKSUGGESTIONREQUEST']._serialized_start=68
-  _globals['_BOOKSUGGESTIONREQUEST']._serialized_end=265
-  _globals['_USER']._serialized_start=267
-  _globals['_USER']._serialized_end=304
-  _globals['_ITEM']._serialized_start=306
-  _globals['_ITEM']._serialized_end=344
-  _globals['_CREDITCARD']._serialized_start=346
-  _globals['_CREDITCARD']._serialized_end=411
-  _globals['_VECTORCLOCK']._serialized_start=413
-  _globals['_VECTORCLOCK']._serialized_end=462
-  _globals['_BOOK']._serialized_start=465
-  _globals['_BOOK']._serialized_end=622
-  _globals['_BOOKSUGGESTIONRESPONSE']._serialized_start=624
-  _globals['_BOOKSUGGESTIONRESPONSE']._serialized_end=725
-  _globals['_BOOKSUGGESTIONSERVICE']._serialized_start=727
-  _globals['_BOOKSUGGESTIONSERVICE']._serialized_end=846
+  _globals['_ORDERIDSTORAGEREQUEST']._serialized_start=67
+  _globals['_ORDERIDSTORAGEREQUEST']._serialized_end=107
+  _globals['_BOOKSUGGESTIONREQUEST']._serialized_start=110
+  _globals['_BOOKSUGGESTIONREQUEST']._serialized_end=324
+  _globals['_USER']._serialized_start=326
+  _globals['_USER']._serialized_end=363
+  _globals['_ITEM']._serialized_start=365
+  _globals['_ITEM']._serialized_end=403
+  _globals['_CREDITCARD']._serialized_start=405
+  _globals['_CREDITCARD']._serialized_end=470
+  _globals['_VECTORCLOCK']._serialized_start=472
+  _globals['_VECTORCLOCK']._serialized_end=521
+  _globals['_BOOK']._serialized_start=524
+  _globals['_BOOK']._serialized_end=681
+  _globals['_ORDERIDSTORAGERESPONSE']._serialized_start=683
+  _globals['_ORDERIDSTORAGERESPONSE']._serialized_end=724
+  _globals['_BOOKSUGGESTIONRESPONSE']._serialized_start=726
+  _globals['_BOOKSUGGESTIONRESPONSE']._serialized_end=827
+  _globals['_ORDERIDSTORAGESERVICE']._serialized_start=829
+  _globals['_ORDERIDSTORAGESERVICE']._serialized_end=951
+  _globals['_BOOKSUGGESTIONSERVICE']._serialized_start=953
+  _globals['_BOOKSUGGESTIONSERVICE']._serialized_end=1072
 # @@protoc_insertion_point(module_scope)

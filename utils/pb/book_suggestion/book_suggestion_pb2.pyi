@@ -5,17 +5,25 @@ from typing import ClassVar as _ClassVar, Iterable as _Iterable, Mapping as _Map
 
 DESCRIPTOR: _descriptor.FileDescriptor
 
+class OrderIdStorageRequest(_message.Message):
+    __slots__ = ("orderId",)
+    ORDERID_FIELD_NUMBER: _ClassVar[int]
+    orderId: str
+    def __init__(self, orderId: _Optional[str] = ...) -> None: ...
+
 class BookSuggestionRequest(_message.Message):
-    __slots__ = ("user", "item", "creditCard", "vectorClock")
+    __slots__ = ("orderId", "user", "item", "creditCard", "vectorClock")
+    ORDERID_FIELD_NUMBER: _ClassVar[int]
     USER_FIELD_NUMBER: _ClassVar[int]
     ITEM_FIELD_NUMBER: _ClassVar[int]
     CREDITCARD_FIELD_NUMBER: _ClassVar[int]
     VECTORCLOCK_FIELD_NUMBER: _ClassVar[int]
+    orderId: str
     user: User
     item: Item
     creditCard: CreditCard
     vectorClock: VectorClock
-    def __init__(self, user: _Optional[_Union[User, _Mapping]] = ..., item: _Optional[_Union[Item, _Mapping]] = ..., creditCard: _Optional[_Union[CreditCard, _Mapping]] = ..., vectorClock: _Optional[_Union[VectorClock, _Mapping]] = ...) -> None: ...
+    def __init__(self, orderId: _Optional[str] = ..., user: _Optional[_Union[User, _Mapping]] = ..., item: _Optional[_Union[Item, _Mapping]] = ..., creditCard: _Optional[_Union[CreditCard, _Mapping]] = ..., vectorClock: _Optional[_Union[VectorClock, _Mapping]] = ...) -> None: ...
 
 class User(_message.Message):
     __slots__ = ("name", "contact")
@@ -72,6 +80,12 @@ class Book(_message.Message):
     img: str
     price: float
     def __init__(self, id: _Optional[str] = ..., title: _Optional[str] = ..., author: _Optional[str] = ..., description: _Optional[str] = ..., copies: _Optional[int] = ..., copiesAvailable: _Optional[int] = ..., category: _Optional[str] = ..., img: _Optional[str] = ..., price: _Optional[float] = ...) -> None: ...
+
+class OrderIdStorageResponse(_message.Message):
+    __slots__ = ("isValid",)
+    ISVALID_FIELD_NUMBER: _ClassVar[int]
+    isValid: bool
+    def __init__(self, isValid: bool = ...) -> None: ...
 
 class BookSuggestionResponse(_message.Message):
     __slots__ = ("isValid", "errorMessage", "books")

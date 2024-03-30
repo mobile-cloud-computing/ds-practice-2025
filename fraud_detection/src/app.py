@@ -31,6 +31,9 @@ VC_CORRECT_AFTER_CREDITCARD_VERIFICATION = [0, 1, 3, 1, 0]
 # Create the global local vector clock.
 local_vector_clock = {}
 
+# Transaction flow check by order id.
+order_id_from_orchestrator = ""
+
 def cardinfo_verification_service(data, vector_clock):
     with grpc.insecure_channel('transaction_verification:50052') as channel:
         stub = transaction_verification_grpc.CardinfoVerificationServiceStub(channel)
@@ -72,11 +75,19 @@ class HelloService(fraud_detection_grpc.HelloServiceServicer):
         # Return the response object
         return response
     
+class OrderIdStorageService(fraud_detection_grpc.OrderIdStorageServiceServicer):
+    
+    def StorageOrderId(self, request, context):
+        global order_id_from_orchestrator
+        order_id_from_orchestrator = request.orderId
+        return fraud_detection.OrderIdStorageResponse(isValid=True)
+
+    
 class UserdataFraudDetectionService(fraud_detection_grpc.UserdataFraudDetectionServiceServicer):
 
-    def __init__(self):
-        global local_vector_clock
-        local_vector_clock = {"vcArray": [0 for _ in range(NUM_SERVERS)], "timestamp": datetime.now().timestamp()}
+    def check_order_id(self, order_id):
+        is_valid = (order_id_from_orchestrator == order_id)
+        return is_valid
 
     def check_vc_after_userdata_verification(self, vector_clock, local_vector_clock):
         request_vc_check = bool(vector_clock['vcArray'] == VC_CORRECT_AFTER_USERDATA_VERIFICATION)
@@ -93,42 +104,59 @@ class UserdataFraudDetectionService(fraud_detection_grpc.UserdataFraudDetectionS
 
     def DetectUserdataFraud(self, request, context):
         global local_vector_clock
+        local_vector_clock = {"vcArray": [0 for _ in range(NUM_SERVERS)], "timestamp": datetime.now().timestamp()}
         print("Fraud dectection request received")
         print(f"[Fraud detection] Server index: {SERVER_INDEX}")
 
-        is_fraudulent = True
+        error_response = lambda error_message: {
+            "isValid": False,
+            "errorMessage": error_message,
+            "books": None
+        }
 
         vector_clock = MessageToDict(request.vectorClock)
         user_name = request.user.name
         contact_number = request.user.contact
+        order_id = request.orderId
 
-        if self.check_vc_after_userdata_verification(vector_clock, local_vector_clock):
-            print('[Fraud detection] VC is correct after userdata verification.')
+        ### Order Id Confirm ------------------------------------
+        if not self.check_order_id(order_id):
+            error_message = "Server Error. Please retry later."
+            return fraud_detection.UserdataFraudDetectionResponse(**error_response(error_message))
+        
+        print('[Fraud detection] Order Id is confirmed.')
 
-            # d: is userdata flaudulent?
-            is_fraudulent = self.is_userdata_fraudulent(user_name, contact_number)
-            if not is_fraudulent:
-                local_vector_clock = increment_vector_clock(local_vector_clock)
-                vector_clock = increment_vector_clock(vector_clock)
-                print(f"[Fraud detection] VCArray updated (no fraud in userdata) in Fraud detection: {vector_clock['vcArray']}")
-                # print(f"[Fraud detection] Timestamp updated in Fraud detection: {vector_clock['timestamp']}")
+        ### Vector Clock Confirm ------------------------------------
+        if not self.check_vc_after_userdata_verification(vector_clock, local_vector_clock):
+            error_message = "Server Error. Please retry later."
+            return fraud_detection.UserdataFraudDetectionResponse(**error_response(error_message))
+        
+        print('[Fraud detection] VC is correct after userdata verification.')
 
-        print(f"Fraud check response: {'Fraudulent' if is_fraudulent else 'Not Fraudulent'}")
-        if not is_fraudulent:
-            with futures.ThreadPoolExecutor() as executor:
-                cardinfo_future = executor.submit(cardinfo_verification_service, request, vector_clock)
-            message = cardinfo_future.result()
-            response = MessageToDict(message)
-        else:
-            response = {
-                "isValid": False,
-                "errorMessage": "Order Rejected because fraud was detected. Please provvide a valid user name or contact.",
-                "books": None
-            }
+        ### d: is userdata flaudulent? -------------------------------------
+        is_fraudulent = self.is_userdata_fraudulent(user_name, contact_number)
+        if is_fraudulent:
+            error_message = "Order Rejected because fraud was detected. Please provvide a valid user name or contact."
+            return fraud_detection.UserdataFraudDetectionResponse(**error_response(error_message))
+        
+        local_vector_clock = increment_vector_clock(local_vector_clock)
+        vector_clock = increment_vector_clock(vector_clock)
+        print(f"[Fraud detection] VCArray updated (no fraud in userdata) in Fraud detection: {vector_clock['vcArray']}")
+        # print(f"[Fraud detection] Timestamp updated in Fraud detection: {vector_clock['timestamp']}")
+
+        print(f"[Fraud detection] Fraud check response: Not Fraudulent")
+        with futures.ThreadPoolExecutor() as executor:
+            cardinfo_future = executor.submit(cardinfo_verification_service, request, vector_clock)
+        message = cardinfo_future.result()
+        response = MessageToDict(message)
         return fraud_detection.UserdataFraudDetectionResponse(**response)
     
 
 class CardinfoFraudDetectionService(fraud_detection_grpc.CardinfoFraudDetectionServiceServicer):
+
+    def check_order_id(self, order_id):
+        is_valid = (order_id_from_orchestrator == order_id)
+        return is_valid
 
     def check_vc_after_creditcard_verification(self, vector_clock, local_vector_clock):
         request_vc_check = bool(vector_clock['vcArray'] == VC_CORRECT_AFTER_CREDITCARD_VERIFICATION)
@@ -146,34 +174,45 @@ class CardinfoFraudDetectionService(fraud_detection_grpc.CardinfoFraudDetectionS
         print("Fraud dectection request received")
         print(f"[Fraud detection] Server index: {SERVER_INDEX}")
 
-        is_fraudulent = True
+        error_response = lambda error_message: {
+            "isValid": False,
+            "errorMessage": error_message,
+            "books": None
+        }
 
         local_vector_clock = globals()['local_vector_clock']
         vector_clock = MessageToDict(request.vectorClock)
         credit_card = request.creditCard
+        order_id = request.orderId
 
-        if self.check_vc_after_creditcard_verification(vector_clock, local_vector_clock):
+        ### Order Id Confirm ------------------------------------
+        if not self.check_order_id(order_id):
+            error_message = "Server Error. Please retry later."
+            return fraud_detection.CardinfoFraudDetectionResponse(**error_response(error_message))
+        
+        print('[Fraud detection] Order Id is confirmed.')
+
+        ### Vector Clock Confirm ------------------------------------
+        if not self.check_vc_after_creditcard_verification(vector_clock, local_vector_clock):
+            error_message = "Server Error. Please retry later."
+            return fraud_detection.CardinfoFraudDetectionResponse(**error_response(error_message))
             
-            # e: is creditcard flaudulent?
-            is_fraudulent = self.is_creditcard_fraudulent(credit_card)
-            if not is_fraudulent:
-                local_vector_clock = increment_vector_clock(local_vector_clock)
-                vector_clock = increment_vector_clock(vector_clock)
-                print(f"[Fraud detection] VCArray updated (no fraud in creditcard) in Fraud detection: {vector_clock['vcArray']}")
-                # print(f"[Fraud detection] Timestamp updated (no fraud in creditcard) in Fraud detection: {vector_clock['timestamp']}")
+        ### e: is creditcard flaudulent? --------------------------------
+        is_fraudulent = self.is_creditcard_fraudulent(credit_card)
+        if is_fraudulent:
+            error_message = "Order Rejected because fraud was detected. Please provvide a valid payment details."
+            return fraud_detection.CardinfoFraudDetectionResponse(**error_response(error_message))
+    
+        local_vector_clock = increment_vector_clock(local_vector_clock)
+        vector_clock = increment_vector_clock(vector_clock)
+        print(f"[Fraud detection] VCArray updated (no fraud in creditcard) in Fraud detection: {vector_clock['vcArray']}")
+        # print(f"[Fraud detection] Timestamp updated (no fraud in creditcard) in Fraud detection: {vector_clock['timestamp']}")
 
-        print(f"Fraud check response: {'Fraudulent' if is_fraudulent else 'Not Fraudulent'}")
-        if not is_fraudulent:
-            with futures.ThreadPoolExecutor() as executor:
-                suggestion_future = executor.submit(book_suggestion_service, request, vector_clock)
-            message = suggestion_future.result()
-            response = MessageToDict(message)
-        else:
-            response = {
-                "isValid": False,
-                "errorMessage": "Order Rejected because fraud was detected. Please provvide a valid payment details..",
-                "books": None
-            }
+        print(f"[Fraud detection] Fraud check response: Not Fraudulent")
+        with futures.ThreadPoolExecutor() as executor:
+            suggestion_future = executor.submit(book_suggestion_service, request, vector_clock)
+        message = suggestion_future.result()
+        response = MessageToDict(message)
         return fraud_detection.CardinfoFraudDetectionResponse(**response)
 
 def serve():
@@ -181,6 +220,7 @@ def serve():
     server = grpc.server(futures.ThreadPoolExecutor())
     # Add HelloService
     fraud_detection_grpc.add_HelloServiceServicer_to_server(HelloService(), server)
+    fraud_detection_grpc.add_OrderIdStorageServiceServicer_to_server(OrderIdStorageService(), server)
     fraud_detection_grpc.add_UserdataFraudDetectionServiceServicer_to_server(UserdataFraudDetectionService(), server)
     fraud_detection_grpc.add_CardinfoFraudDetectionServiceServicer_to_server(CardinfoFraudDetectionService(), server)
     # Listen on port 50051

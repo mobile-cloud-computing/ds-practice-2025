@@ -31,6 +31,9 @@ VC_CORRECT_AFTER_USERDATA_FRAUD_DETECTION = [0, 1, 2, 1, 0]
 # Create the global local vector clock.
 local_vector_clock = {}
 
+# Transaction flow check by order id.
+order_id_from_orchestrator = ""
+
 def userdata_fraud_detection_service(data, vector_clock):
     with grpc.insecure_channel('fraud_detection:50051') as channel:
         stub = fraud_detection_grpc.UserdataFraudDetectionServiceStub(channel)
@@ -57,11 +60,18 @@ def increment_vector_clock(vector_clock):
 
     return {"vcArray": vc_array, "timestamp": timestamp}
 
+class OrderIdStorageService(transaction_verification_grpc.OrderIdStorageServiceServicer):
+    
+    def StorageOrderId(self, request, context):
+        global order_id_from_orchestrator
+        order_id_from_orchestrator = request.orderId
+        return transaction_verification.OrderIdStorageResponse(isValid=True)
+
 class ItemAndUserdataVerificationService(transaction_verification_grpc.ItemAndUserdataVerificationServiceServicer):
 
-    def __init__(self):
-        global local_vector_clock
-        local_vector_clock = {"vcArray": [0 for _ in range(NUM_SERVERS)], "timestamp": datetime.now().timestamp()}
+    def check_order_id(self, order_id):
+        is_valid = (order_id_from_orchestrator == order_id)
+        return is_valid
 
     def check_vc_after_orchestrator(self, vector_clock, local_vector_clock):
         request_vc_check = bool(vector_clock['vcArray'] == VC_CORRECT_AFTER_ORCHESTRATOR)
@@ -77,59 +87,78 @@ class ItemAndUserdataVerificationService(transaction_verification_grpc.ItemAndUs
     
     def VerifyItemAndUserdata(self, request, context):
         global local_vector_clock
+        local_vector_clock = {"vcArray": [0 for _ in range(NUM_SERVERS)], "timestamp": datetime.now().timestamp()}
         print("Transaction verification request received")
         print(f"[Transaction verification] Server index: {SERVER_INDEX}")
         
-        is_valid = False
-        error_message = "Transaction Invalid. Couldn't verify your order and user information."
+        error_response = lambda error_message: {
+            "isValid": False,
+            "errorMessage": error_message,
+            "books": None
+        }
         
         vector_clock = MessageToDict(request.vectorClock)
         user = request.user
         item = request.item
+        order_id = request.orderId
 
-        if self.check_vc_after_orchestrator(vector_clock, local_vector_clock):
-            print('[Transaction verification] VC is correct after orchestrator.')
+        ### Order Id Confirm ------------------------------------
+        if not self.check_order_id(order_id):
+            error_message = "Server Error. Please retry later."
+            return transaction_verification.ItemAndUserdataVerificationResponse(**error_response(error_message))
 
-            # a: order items empty?
-            item_exist = bool(item.name) and (item.quantity > 0)
-            if item_exist:
-                local_vector_clock = increment_vector_clock(local_vector_clock)
-                vector_clock = increment_vector_clock(vector_clock)
-                print(f"[Transaction verification] VCArray updated (item exists) in Transaction verification: {vector_clock['vcArray']}")
-                # print(f"[Transaction verification] Timestamp updated (item exists) in Transaction verification: {vector_clock['timestamp']}")
-            else:
-                error_message = "Transaction Invalid. Couldn't verify your order information.",
-
-        if self.check_vc_after_item_verification(vector_clock, local_vector_clock):
-            print('[Transaction verification] VC is correct after item verification.')
-
-            # b: user data filled?
-            user_data_filled = bool(user.name and user.contact)
-            if user_data_filled:
-                local_vector_clock = increment_vector_clock(local_vector_clock)
-                vector_clock = increment_vector_clock(vector_clock)
-                print(f"[Transaction verification] VCArray updated (userdata exists) in Transaction verification: {vector_clock['vcArray']}")
-                # print(f"[Transaction verification] Timestamp updated (userdata exists) in Transaction verification: {vector_clock['timestamp']}")
-                is_valid = True
-            else:
-                error_message = "Transaction Invalid. Couldn't verify your user information."
-    
-        print(f"Transaction verification about item and userdata response: {'Valid' if is_valid else 'Invalid'}")
-        if is_valid:
-            with futures.ThreadPoolExecutor() as executor:
-                userdata_fraud_future = executor.submit(userdata_fraud_detection_service, request, vector_clock)
-            message = userdata_fraud_future.result()
-            response = MessageToDict(message)
-        else:
-            response = {
-                "isValid": False,
-                "errorMessage": {error_message},
-                "books": None
-            }
+        print('[Transaction verification] Order Id is confirmed.')
             
+        ### Vector Clock Confirm ------------------------------------
+        print(local_vector_clock)
+        if not self.check_vc_after_orchestrator(vector_clock, local_vector_clock):
+            error_message = "Server Error. Please retry later."
+            return transaction_verification.ItemAndUserdataVerificationResponse(**error_response(error_message))
+        
+        print('[Transaction verification] VC is correct after orchestrator.')
+
+        ### a: order items empty? -----------------------------------
+        item_exist = bool(item.name) and (item.quantity > 0)
+        if not item_exist:
+            error_message = "Transaction Invalid. Couldn't verify your order information.",
+            return transaction_verification.ItemAndUserdataVerificationResponse(**error_response(error_message))
+        
+        local_vector_clock = increment_vector_clock(local_vector_clock)
+        vector_clock = increment_vector_clock(vector_clock)
+        print(f"[Transaction verification] VCArray updated (item exists) in Transaction verification: {vector_clock['vcArray']}")
+        # print(f"[Transaction verification] Timestamp updated (item exists) in Transaction verification: {vector_clock['timestamp']}")
+
+        ### Vector Clock Confirm ------------------------------------
+        if not self.check_vc_after_item_verification(vector_clock, local_vector_clock):
+            error_message = "Server Error. Please retry later."
+            return transaction_verification.ItemAndUserdataVerificationResponse(**error_response(error_message))
+
+        print('[Transaction verification] VC is correct after item verification.')
+
+        ### b: user data filled? -----------------------------------
+        user_data_filled = bool(user.name and user.contact)
+        if not user_data_filled:
+            error_message = "Transaction Invalid. Couldn't verify your user information."
+            return transaction_verification.ItemAndUserdataVerificationResponse(**error_response(error_message))
+        
+        local_vector_clock = increment_vector_clock(local_vector_clock)
+        vector_clock = increment_vector_clock(vector_clock)
+        print(f"[Transaction verification] VCArray updated (userdata exists) in Transaction verification: {vector_clock['vcArray']}")
+        # print(f"[Transaction verification] Timestamp updated (userdata exists) in Transaction verification: {vector_clock['timestamp']}")
+                
+        print(f"[Transaction verification] Item and Userdata verification response: Valid")
+        with futures.ThreadPoolExecutor() as executor:
+            userdata_fraud_future = executor.submit(userdata_fraud_detection_service, request, vector_clock)
+        message = userdata_fraud_future.result()
+        response = MessageToDict(message)
         return transaction_verification.ItemAndUserdataVerificationResponse(**response)
     
+    
 class CardinfoVerificationService(transaction_verification_grpc.CardinfoVerificationServiceServicer):
+
+    def check_order_id(self, order_id):
+        is_valid = (order_id_from_orchestrator == order_id)
+        return is_valid
 
     def check_vc_after_usredata_fraud_detection(self, vector_clock, local_vector_clock):
         request_vc_check = bool(vector_clock['vcArray'] == VC_CORRECT_AFTER_USERDATA_FRAUD_DETECTION)
@@ -159,41 +188,53 @@ class CardinfoVerificationService(transaction_verification_grpc.CardinfoVerifica
         print("Transaction verification request received")
         print(f"[Transaction verification] Server index: {SERVER_INDEX}")
 
-        is_creditcard_valid = False
+        error_response = lambda error_message: {
+            "isValid": False,
+            "errorMessage": error_message,
+            "books": None
+        }
 
         vector_clock = MessageToDict(request.vectorClock)
         credit_card = request.creditCard
-        
+        order_id = request.orderId
 
-        if self.check_vc_after_usredata_fraud_detection(vector_clock, local_vector_clock):
-            print('[Transaction verification] VC is correct after userdata fraud detection.')
+        ### Order Id Confirm ------------------------------------
+        if not self.check_order_id(order_id):
+            error_message = "Server Error. Please retry later."
+            return transaction_verification.CardinfoVerificationResponse(**error_response(error_message))
 
-            # c: card info is correct format?
-            is_creditcard_valid = self.is_creditcard_valid(credit_card)
-            if is_creditcard_valid:
-                local_vector_clock = increment_vector_clock(local_vector_clock)
-                vector_clock = increment_vector_clock(vector_clock)
-                print(f"[Transaction verification] VCArray updated (valid creditcard) in Transaction verification: {vector_clock['vcArray']}")
-                # print(f"[Transaction verification] Timestamp updated (valid creditcard) in Transaction verification: {vector_clock['timestamp']}")
-    
+        print('[Transaction verification] Order Id is confirmed.')
+
+        ### Order Id Confirm ------------------------------------
+        if not self.check_vc_after_usredata_fraud_detection(vector_clock, local_vector_clock):
+            error_message = "Server Error. Please retry later."
+            return transaction_verification.CardinfoVerificationResponse(**error_response(error_message))
+
+        print('[Transaction verification] VC is correct after userdata fraud detection.')
+
+        ### c: card info is correct format? -------------------------------
+        is_creditcard_valid = self.is_creditcard_valid(credit_card)
+        if not is_creditcard_valid:
+            error_message = "Transaction Invalid. Couldn't verify your payment details."
+            return transaction_verification.CardinfoVerificationResponse(**error_response(error_message))
         
-        print(f"Transaction verification about cardinfo response: {'Valid' if is_creditcard_valid else 'Invalid'}")
-        if is_creditcard_valid:
-            with futures.ThreadPoolExecutor() as executor:
-                cardinfo_fraud_future = executor.submit(cardinfo_fraud_detection_service, request, vector_clock)
-            message = cardinfo_fraud_future.result()
-            response = MessageToDict(message)
-        else:
-            response = {
-                "isValid": False,
-                "errorMessage": "Transaction Invalid. Couldn't verify your payment details.",
-                "books": None
-            }
+        local_vector_clock = increment_vector_clock(local_vector_clock)
+        vector_clock = increment_vector_clock(vector_clock)
+        print(f"[Transaction verification] VCArray updated (valid creditcard) in Transaction verification: {vector_clock['vcArray']}")
+        # print(f"[Transaction verification] Timestamp updated (valid creditcard) in Transaction verification: {vector_clock['timestamp']}")
+
+        
+        print(f"[Transaction verification] cardinfo verification response: Valid")
+        with futures.ThreadPoolExecutor() as executor:
+            cardinfo_fraud_future = executor.submit(cardinfo_fraud_detection_service, request, vector_clock)
+        message = cardinfo_fraud_future.result()
+        response = MessageToDict(message)
         return transaction_verification.CardinfoVerificationResponse(**response)
 
     
 def serve():
     server = grpc.server(futures.ThreadPoolExecutor())
+    transaction_verification_grpc.add_OrderIdStorageServiceServicer_to_server(OrderIdStorageService(), server)
     transaction_verification_grpc.add_ItemAndUserdataVerificationServiceServicer_to_server(ItemAndUserdataVerificationService(), server)
     transaction_verification_grpc.add_CardinfoVerificationServiceServicer_to_server(CardinfoVerificationService(), server)
     server.add_insecure_port('[::]:50052')

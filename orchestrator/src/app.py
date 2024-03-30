@@ -1,5 +1,6 @@
 import sys
 import os
+import uuid
 from datetime import datetime
 
 # This set of lines are needed to import the gRPC stubs.
@@ -56,17 +57,42 @@ def index():
     # Return the response.
     return response
 
-def item_and_userdata_verification_service(data, vector_clock):
+def orderid_storage_fraud_service(order_id):
+    with grpc.insecure_channel('fraud_detection:50051') as channel:
+        stub = fraud_detection_grpc.OrderIdStorageServiceStub(channel)
+        response = stub.StorageOrderId(fraud_detection.OrderIdStorageRequest(
+            orderId=order_id
+        ))
+        return response.isValid
+    
+def orderid_storage_transaction_service(order_id):
+    with grpc.insecure_channel('transaction_verification:50052') as channel:
+        stub = transaction_verification_grpc.OrderIdStorageServiceStub(channel)
+        response = stub.StorageOrderId(transaction_verification.OrderIdStorageRequest(
+            orderId=order_id
+        ))
+        return response.isValid
+    
+def orderid_storage_suggestion_service(order_id):
+    with grpc.insecure_channel('book_suggestion:50053') as channel:
+        stub = book_suggestion_grpc.OrderIdStorageServiceStub(channel)
+        response = stub.StorageOrderId(book_suggestion.OrderIdStorageRequest(
+            orderId=order_id
+        ))
+        return response.isValid
+
+def item_and_userdata_verification_service(data, order_id, vector_clock):
     with grpc.insecure_channel('transaction_verification:50052') as channel:
         stub = transaction_verification_grpc.ItemAndUserdataVerificationServiceStub(channel)
         response = stub.VerifyItemAndUserdata(transaction_verification.ItemAndUserdataVerificationRequest(
+            orderId=order_id,
             user=data['user'],
             item=data['items'][0],
             creditCard=data['creditCard'],
             vectorClock=vector_clock
         ))
         return response
-    
+
 def transform_suggested_book_response(suggested_books):
     book_array = []
     for book in suggested_books:
@@ -96,33 +122,46 @@ def checkout():
     print(f"[Orchestrator] Server index: {SERVER_INDEX}")
     # Print request object data
     print("Request Data:", request.json)
-
     data = request.json
-
-    print("Checkout data recieved:", data)
 
     vector_clock = {}
     vector_clock = increment_vector_clock(vector_clock)
     print(f"[Orchestrator] Vector Clock Array: {vector_clock['vcArray']}")
     print(f"[Orchestrator] Timestamp: {vector_clock['timestamp']}")
 
+    order_id = str(uuid.uuid4())
+    print(f'[Orchestrator] Order id: {order_id}')
+
+    # Send the order id before requesting.
     with futures.ThreadPoolExecutor() as executor:
-        # Triger the flow of events and recieve the end result.
-        item_and_userdata_future = executor.submit(item_and_userdata_verification_service, data, vector_clock)
+        orderid_storage_fraud_future = executor.submit(orderid_storage_fraud_service, order_id)
+        orderid_storage_transaction_future = executor.submit(orderid_storage_transaction_service, order_id)
+        orderid_storage_suggestion_future = executor.submit(orderid_storage_suggestion_service, order_id)
+
+        futures.wait([orderid_storage_fraud_future, orderid_storage_transaction_future, orderid_storage_suggestion_future], return_when=futures.ALL_COMPLETED)
+
+    if not (orderid_storage_fraud_future.result() and orderid_storage_transaction_future.result() and orderid_storage_suggestion_future.result()):
+        order_status_response = {'orderId': '404', "status": "Server Error. Please try later."}
+        return order_status_response
+
+
+    # Triger the flow of events and recieve the end result.
+    with futures.ThreadPoolExecutor() as executor:
+        item_and_userdata_future = executor.submit(item_and_userdata_verification_service, data, order_id, vector_clock)
         
     checkout_result = item_and_userdata_future.result()
     
     if checkout_result.isValid:
         suggested_books = checkout_result.books
         order_status_response = {
-            'orderId': '12345',
+            'orderId': order_id,
             'status': 'Order Approved',
             'suggestedBooks': transform_suggested_book_response(suggested_books)
         }
         return order_status_response
     else:
         print(checkout_result.errorMessage)
-        order_status_response = {'orderId': '404', "status": "Transaction Invalid. Check your order and card details."}
+        order_status_response = {'orderId': '404', "status": checkout_result.errorMessage}
         return order_status_response
 
     

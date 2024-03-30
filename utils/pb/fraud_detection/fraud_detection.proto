@@ -14,18 +14,24 @@ message HelloResponse {
   string greeting = 1;
 }
 
+message OrderIdStorageRequest {
+  string orderId = 1;
+}
+
 message UserdataFraudDetectionRequest {
-  User user = 1;
-  Item item = 2;
-  CreditCard creditCard = 3;
-  VectorClock vectorClock = 4;
+  string orderId = 1;
+  User user = 2;
+  Item item = 3;
+  CreditCard creditCard = 4;
+  VectorClock vectorClock = 5;
 }
 
 message CardinfoFraudDetectionRequest {
-  User user = 1;
-  Item item = 2;
-  CreditCard creditCard = 3;
-  VectorClock vectorClock = 4;
+  string orderId = 1;
+  User user = 2;
+  Item item = 3;
+  CreditCard creditCard = 4;
+  VectorClock vectorClock = 5;
 }
 
 message User {
@@ -61,6 +67,10 @@ message Book {
   float price = 9;
 }
 
+message OrderIdStorageResponse {
+  bool isValid = 1;
+}
+
 message UserdataFraudDetectionResponse {
   bool isValid = 1;
   string errorMessage = 2;
@@ -71,6 +81,10 @@ message CardinfoFraudDetectionResponse {
   bool isValid = 1;
   string errorMessage = 2;
   repeated Book books = 3;
+}
+
+service OrderIdStorageService {
+  rpc StorageOrderId(OrderIdStorageRequest) returns (OrderIdStorageResponse);
 }
 
 service UserdataFraudDetectionService {
