@@ -100,3 +100,15 @@ services:
       - PYTHONFILE=/app/queue/src/run.py
     volumes:
       - ./utils:/app/utils
+
+  executor:
+    build:
+      context: ./
+      dockerfile: ./executor/Dockerfile
+    deploy:
+      replicas: 2
+    environment:
+      - PYTHONUNBUFFERED=TRUE
+      - PYTHONFILE=/app/executor/src/run.py
+    volumes:
+      - ./utils:/app/utils

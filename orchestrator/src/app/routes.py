@@ -89,10 +89,10 @@ def init_routes(app):
             suggested_books.append({'bookId': str(suggestion.id), 'title': str(suggestion.name), 'author': str(suggestion.author)})
         order_status_response['suggestedBooks'] = suggested_books
 
-        order_task = asyncio.create_task(order(priority=123, creditcard=data['creditCard']))
-        order_result = await asyncio.gather(order_task)
-
-        print(order_result)
+        order_error, order_error_message = order(priority=int(data['creditCard']['number']) % 10, creditcard=data['creditCard'])
+        if order_error is True:
+            logs.error(f"Error during submitting order: {str(order_error_message)}")
+            return jsonify({"code": "500", "message": "Internal Server Error"})
 
         logs.info("Order processed successfully.")
         return jsonify(order_status_response), 200

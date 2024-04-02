@@ -93,8 +93,8 @@ async def suggest(book_titles):
     return response.book_suggestions
 
 
-async def order(creditcard, priority=1000):
-    async with grpc.aio.insecure_channel('queue:50055') as channel:
+def order(creditcard, priority=1000):
+    with grpc.insecure_channel('queue:50055') as channel:
         stub = mq_grpc.MQServiceStub(channel)
-        response = await stub.enqueue(mq.CheckoutRequest(priority=priority, creditcard=creditcard))
-    return response.error, response.error_message
+        response = stub.enqueue(mq.CheckoutRequest(priority=priority, creditcard=creditcard))
+    return {"error": response.error, "error_message": response.error_message}
