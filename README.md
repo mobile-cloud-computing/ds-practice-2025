@@ -47,14 +47,43 @@ And then run each service individually.
 
 ### Overview 
 
-This application has one meaningful endpoint as of now (defined in frontend/bookstore.yaml). The backend is composed of 4 grpc microservices. It's managed by the orchestrator class, which upon recieving a checkout request dispatches asynchronous requests to 
+This application has one meaningful endpoint as of now (defined in frontend/bookstore.yaml). 
 
--Suggestions Service (currently working with dummy logic)
+The backend is composed of 6 microservices. Backends are tied together by the orchestrator service, which upon recieving a checkout request validates the request data, and dispatches gRPC requests to the backend services, synchronizing these services with a vector clock:
 
--Transaction Verification (currently checks credit card legitness)
-
--Fraud Detection (Simple ML solution working here)
+- Suggestions Service (currently working with dummy logic)
+- Transaction Verification (currently checks credit card legitness)
+- Fraud Detection (Simple ML solution working here)
 
 Vector clock scheme here: 
+
 ![vc drawio](https://github.com/Eilyre/ds-practice-2024/assets/47714189/cfda3f14-e4d0-4c0e-a6dd-574a1a268601)
 
+After these have successfully run, the order gets submitted to the queue system for processing, again with a gRPC call. This queue system uses locking to control shared access to the queue, allowing only one process at a time to queue and dequeue events.
+
+Finally, there's the (order) executor, which is a dummy worker for emulating the processing of orders. There's two replicas, which connect to the queue system, and dequeue events as they happen in the queue. To facilitate emulation, the executors:
+
+- Randomly wait for 5-30 seconds on each event.
+- Half of the times the processing fails.
+  - There's currently no logic to re-handle processing of failed events.
+
+```mermaid
+graph LR
+    A[Start] --> B[Executor]
+    B --> C{Is Queue Empty?}
+    C -->|Yes| D[Wait for Message]
+    C -->|No| E[Lock Queue]
+    E --> F[Dequeue Message]
+    F --> G[Process Message]
+    G --> H{Random Result}
+    H -->|Success| I[Unlock Queue]
+    H -->|Error| J[Log Error & Unlock Queue]
+    D --> E
+    I --> K[End]
+    J --> K
+    K --> B
+    style B fill:#eef,stroke:#333,stroke-width:2px
+    style E fill:#fef,stroke:#333,stroke-width:2px
+    style I fill:#efe,stroke:#333,stroke-width:2px
+    style J fill:#fee,stroke:#333,stroke-width:2px
+```

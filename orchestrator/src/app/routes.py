@@ -54,12 +54,10 @@ def init_routes(app):
 
         try:
             data = schema.load(request.get_json())
+
         except ValidationError as ve:
             logs.error(f"Validation error in checkout route: {ve.messages}")
             return jsonify({"code": "400", "message": "Invalid request parameters."}), 400
-        except Exception as e:
-            logs.error(f"Error in checkout route: {str(e)}")
-            return jsonify({"code": "500", "message": "Internal Server Error"}), 500
 
         try:
             local_vc.update()
@@ -90,12 +88,14 @@ def init_routes(app):
         except Exception as e:
             logs.error(f"Error in checkout route: {str(e)}")
             return jsonify({"code": "500", "message": "Internal Server Error"}), 500
-        
+
+
 def vc_msg_2_object(vcm: VectorClockMessage):
     logs.info("vc_msg_2_object called")
     vc = VectorClock(process_id=0, num_processes=4, order_id=vcm.order_id, clocks = vcm.clock)
     logs.info(str(vc))
     return vc
+
 
 def object_2_vc_msg(vc: VectorClock):
     vcm = VectorClockMessage()
