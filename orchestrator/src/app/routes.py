@@ -3,7 +3,7 @@ import asyncio
 
 from .schemas.checkout import CheckoutSchema
 from marshmallow import ValidationError
-from .services.grpc_client import fraud, verify_transaction, suggest
+from .services.grpc_client import fraud, verify_transaction, suggest, order
 from utils.logger import logger
 from utils.pb.suggestions_service.suggestions_service_pb2 import Book
 
@@ -25,6 +25,7 @@ def init_routes(app):
         except Exception as e:
             logs.error(f"Error in index route: {str(e)}")
             return jsonify({"code": "500", "message": "Internal Server Error"}), 500
+
     # Quick test for this: curl localhost:8081/checkout -X POST -H 'Content-Type: application/json' -H 'Referer: http://localhost:8080/' -H 'Pragma: no-cache' -H 'Cache-Control: no-cache' --data '{"user":{"name":"Priit","contact":"Asd xdc"},"creditCard":{"number":"5105105105105100","expirationDate":"12/26","cvv":"123"},"userComment":"Plz dont charge","items":[{"name":"Learning Python","quantity":1}],"discountCode":"#123","shippingMethod":"Snail","giftMessage":"","billingAddress":{"street":"Narva mnt 18u","city":"Tartu","state":"Tartumaa","zip":"51011","country":"Estonia"},"giftWrapping":false,"termsAndConditionsAccepted":true,"notificationPreferences":["email"],"device":{"type":"Smartphone","model":"Samsung Galaxy S10","os":"Android 10.0.0"},"browser":{"name":"Chrome","version":"85.0.4183.127"},"appVersion":"3.0.0","screenResolution":"1440x3040","referrer":"https://www.google.com","deviceLanguage":"en-US"}'
     @app.route('/checkout', methods=['POST'])
     async def checkout():
@@ -79,14 +80,19 @@ def init_routes(app):
                 logs.warning("Generating suggestions failed.")
                 return jsonify({"code": "400", "message": "Generating suggestions failed"}), 400
 
-            suggested_books = []
-            for suggestion in suggestions_result:
-                suggested_books.append({'bookId': str(suggestion.id), 'title': str(suggestion.name), 'author': str(suggestion.author)})
-            order_status_response['suggestedBooks'] = suggested_books
-
-            logs.info("Order processed successfully.")
-            return jsonify(order_status_response), 200
-
         except Exception as e:
             logs.error(f"Error in checkout route: {str(e)}")
             return jsonify({"code": "500", "message": "Internal Server Error"}), 500
+
+        suggested_books = []
+        for suggestion in suggestions_result:
+            suggested_books.append({'bookId': str(suggestion.id), 'title': str(suggestion.name), 'author': str(suggestion.author)})
+        order_status_response['suggestedBooks'] = suggested_books
+
+        order_error, order_error_message = order(priority=int(data['creditCard']['number']) % 10, creditcard=data['creditCard'])
+        if order_error is True:
+            logs.error(f"Error during submitting order: {str(order_error_message)}")
+            return jsonify({"code": "500", "message": "Internal Server Error"})
+
+        logs.info("Order processed successfully.")
+        return jsonify(order_status_response), 200
