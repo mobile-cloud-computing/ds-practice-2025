@@ -1,7 +1,9 @@
+import grpc
+
 import utils.pb.fraud_detection.fraud_detection_pb2 as fraud_detection
 import utils.pb.fraud_detection.fraud_detection_pb2_grpc as fraud_detection_grpc
-import utils.pb.transaction_verification.transaction_verification_pb2 as transaction_verification
-import utils.pb.transaction_verification.transaction_verification_pb2_grpc as transaction_verification_grpc
+import utils.pb.mq.mq_pb2 as mq
+import utils.pb.mq.mq_pb2_grpc as mq_grpc
 import utils.pb.suggestions_service.suggestions_service_pb2 as suggestions_service
 import utils.pb.suggestions_service.suggestions_service_pb2_grpc as suggestions_service_grpc
 from utils.pb.transaction_verification.transaction_verification_pb2 import *
@@ -9,6 +11,7 @@ from utils.vector_clock.vector_clock import VectorClock
 
 import grpc
 from utils.logger import logger
+from utils.pb.fraud_detection.fraud_detection_pb2 import *
 
 logs = logger.get_module_logger("GRPC CLIENT")
 
@@ -92,3 +95,9 @@ def object_2_vc_msg(vc: VectorClock):
     vcm.order_id = vc.order_id
     vcm.clock.extend(vc.clock)
     return vcm
+
+def order(creditcard, priority=1000):
+    with grpc.insecure_channel('queue:50055') as channel:
+        stub = mq_grpc.MQServiceStub(channel)
+        response = stub.enqueue(mq.CheckoutRequest(priority=priority, creditcard=creditcard))
+    return {"error": response.error, "error_message": response.error_message}

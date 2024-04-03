@@ -48,9 +48,13 @@ And then run each service individually.
 ### Overview 
 
 This application has one meaningful endpoint as of now (defined in frontend/bookstore.yaml). The backend is composed of 4 grpc microservices. It's managed by the orchestrator class, which upon recieving a checkout request dispatches asynchronous requests to 
+
 -Suggestions Service (currently working with dummy logic)
+
 -Transaction Verification (currently checks credit card legitness)
+
 -Fraud Detection (Simple ML solution working here)
 
-System and architecture diagram: 
-[!Here](https://imgur.com/a/05cSvc4)
+Vector clock scheme here: 
+![vc drawio](https://github.com/Eilyre/ds-practice-2024/assets/47714189/cfda3f14-e4d0-4c0e-a6dd-574a1a268601)
+
