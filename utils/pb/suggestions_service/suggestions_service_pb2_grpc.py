@@ -2,7 +2,7 @@
 """Client and server classes corresponding to protobuf-defined services."""
 import grpc
 
-import utils.pb.suggestions_service.suggestions_service_pb2 as suggestions__service__pb2
+from utils.pb.suggestions_service import suggestions_service_pb2 as pb_dot_suggestions__service_dot_suggestions__service__pb2
 
 
 class SuggestionServiceStub(object):
@@ -16,8 +16,13 @@ class SuggestionServiceStub(object):
         """
         self.Suggest = channel.unary_unary(
                 '/suggestions_service.SuggestionService/Suggest',
-                request_serializer=suggestions__service__pb2.SuggestionRequest.SerializeToString,
-                response_deserializer=suggestions__service__pb2.SuggestionResponse.FromString,
+                request_serializer=pb_dot_suggestions__service_dot_suggestions__service__pb2.VectorClockMessage.SerializeToString,
+                response_deserializer=pb_dot_suggestions__service_dot_suggestions__service__pb2.Determination.FromString,
+                )
+        self.sendData = channel.unary_unary(
+                '/suggestions_service.SuggestionService/sendData',
+                request_serializer=pb_dot_suggestions__service_dot_suggestions__service__pb2.CheckoutRequest.SerializeToString,
+                response_deserializer=pb_dot_suggestions__service_dot_suggestions__service__pb2.Determination.FromString,
                 )
 
 
@@ -30,13 +35,24 @@ class SuggestionServiceServicer(object):
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
+    def sendData(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
 
 def add_SuggestionServiceServicer_to_server(servicer, server):
     rpc_method_handlers = {
             'Suggest': grpc.unary_unary_rpc_method_handler(
                     servicer.Suggest,
-                    request_deserializer=suggestions__service__pb2.SuggestionRequest.FromString,
-                    response_serializer=suggestions__service__pb2.SuggestionResponse.SerializeToString,
+                    request_deserializer=pb_dot_suggestions__service_dot_suggestions__service__pb2.VectorClockMessage.FromString,
+                    response_serializer=pb_dot_suggestions__service_dot_suggestions__service__pb2.Determination.SerializeToString,
+            ),
+            'sendData': grpc.unary_unary_rpc_method_handler(
+                    servicer.sendData,
+                    request_deserializer=pb_dot_suggestions__service_dot_suggestions__service__pb2.CheckoutRequest.FromString,
+                    response_serializer=pb_dot_suggestions__service_dot_suggestions__service__pb2.Determination.SerializeToString,
             ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
@@ -60,7 +76,24 @@ class SuggestionService(object):
             timeout=None,
             metadata=None):
         return grpc.experimental.unary_unary(request, target, '/suggestions_service.SuggestionService/Suggest',
-            suggestions__service__pb2.SuggestionRequest.SerializeToString,
-            suggestions__service__pb2.SuggestionResponse.FromString,
+            pb_dot_suggestions__service_dot_suggestions__service__pb2.VectorClockMessage.SerializeToString,
+            pb_dot_suggestions__service_dot_suggestions__service__pb2.Determination.FromString,
+            options, channel_credentials,
+            insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
+
+    @staticmethod
+    def sendData(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(request, target, '/suggestions_service.SuggestionService/sendData',
+            pb_dot_suggestions__service_dot_suggestions__service__pb2.CheckoutRequest.SerializeToString,
+            pb_dot_suggestions__service_dot_suggestions__service__pb2.Determination.FromString,
             options, channel_credentials,
             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)

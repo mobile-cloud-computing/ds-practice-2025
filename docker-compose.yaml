@@ -2,20 +2,20 @@ version: '3'
 services:
   frontend:
     build:
-      # Use the current directory as the build context
-      # This allows us to access the files in the current directory inside the Dockerfile
-      context: ./
-      dockerfile: ./frontend/Dockerfile
+     # Use the current directory as the build context
+     # This allows us to access the files in the current directory inside the Dockerfile
+     context: ./
+     dockerfile: ./frontend/Dockerfile
     ports:
-      # Expose port 8080 on the host, and map port 3000 of the container to port 8080 on the host
-      - "8080:3000"
+     # Expose port 8080 on the host, and map port 3000 of the container to port 8080 on the host
+     - "8080:3000"
     volumes:
-      # Mount the frontend directory to the /app directory in the container
-      - ./frontend:/app
-      - /app/node_modules
+     # Mount the frontend directory to the /app directory in the container
+     - ./frontend:/app
+     - /app/node_modules
     environment:
-      - CHOKIDAR_USEPOLLING=true
-      - WDS_SOCKET_PORT=0
+     - CHOKIDAR_USEPOLLING=true
+     - WDS_SOCKET_PORT=0  
 
   orchestrator:
     build:
