@@ -55,5 +55,6 @@ This application has one meaningful endpoint as of now (defined in frontend/book
 
 -Fraud Detection (Simple ML solution working here)
 
-System and architecture diagram: 
-[Here](https://imgur.com/a/05cSvc4)
+Vector clock scheme here: 
+![vc drawio](https://github.com/Eilyre/ds-practice-2024/assets/47714189/cfda3f14-e4d0-4c0e-a6dd-574a1a268601)
+
