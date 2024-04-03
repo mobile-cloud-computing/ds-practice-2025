@@ -15,9 +15,10 @@ message HelloResponse {
     }
 
 service FraudService {
-    rpc DetectFraud (CheckoutRequest) returns (Determination);
+    rpc sendData (CheckoutRequest) returns (Determination);
+    rpc DetectFraud (VectorClockMessage) returns (Determination);
+    
 }
-
 message CheckoutRequest {
     UserData user = 2;
     CreditCardData creditCard = 3;
@@ -26,7 +27,11 @@ message CheckoutRequest {
     BrowserData browser = 6;
     repeated ItemData items = 7;
     string referrer = 8;
+    VectorClockMessage vector_clock = 9;
+
 }
+
+
 
 
 message UserData {
@@ -65,5 +70,27 @@ message ItemData {
 }
 
 message Determination {
-    bool determination = 1;
+    SuggestionResponse suggestion_response = 1;  
+    VectorClockMessage vector_clock = 9;
+}
+
+message VectorClockMessage {
+    int32 process_id = 1;
+    repeated int32 clock = 2;
+    int32 order_id = 3; 
+}
+
+
+message Book{
+    int32 id  =1; 
+    string name = 2; 
+    string author = 3;
+}
+
+message SuggestionRequest {
+    repeated string book_titles = 1;
+}
+
+message SuggestionResponse {
+    repeated Book book_suggestions = 1;
 }

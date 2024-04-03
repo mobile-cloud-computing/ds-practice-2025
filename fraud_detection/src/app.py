@@ -16,6 +16,11 @@ from concurrent import futures
 import pickle
 import pandas as pd
 from sklearn.preprocessing import LabelEncoder
+from utils.pb.fraud_detection.fraud_detection_pb2 import *
+from utils.vector_clock.vector_clock import *
+from utils.pb.fraud_detection.grpc_client.grpc_client import suggest
+
+cache = {}
 
 logs = logger.get_module_logger("FRAUD")
 
@@ -30,36 +35,53 @@ class HelloService(fraud_detection_grpc.HelloServiceServicer):
         return response
 
 class FraudService(fraud_detection_grpc.FraudServiceServicer):
-    # Extremely simplistic fraud detection is handled here.
-    def DetectFraud(self, request, context):
 
-        response = fraud_detection.Determination()
-        response.determination = True
+    def DetectFraud(self, vcm: VectorClockMessage, context):
 
-        # Check if credit card number is correct length.
-        if not 20 > len(str(request.creditCard.number)) > 15:
-            logs.warning("Invalid credit card number")
-            response.determination = False
-
-        # Check if expiration date is valid and in the future.
+        order_id = vcm.order_id
+        vc_received = vc_msg_2_object(vcm)
         try:
-            import datetime
-            datetime.datetime.strptime(request.creditCard.expirationDate, "%M/%y")
-        except ValueError:
-            logs.warning("Invalid credit card expiration date")
-            response.determination = False
+            local_vc = vc_msg_2_object(cache[order_id].vector_clock)
+        except:
+            det = Determination()
+            det.vector_clock.CopyFrom(object_2_vc_msg(vc_received))
+            det.suggestion_response.CopyFrom(SuggestionResponse())
+            return det
 
-        # Check if CVV is valid.
-        if not 1000 > int(request.creditCard.cvv) > 0 or len(str(request.creditCard.cvv)) != 3:
-            logs.warning("Invalid credit card CVV")
-            response.determination = False
+        local_vc.merge(vc_received)
+        local_vc.update()
 
-        response_2 = predict(request)[0]
-        if not response_2:
+        request = cache[order_id]
+        
+        response = predict(request)[0]
+        
+        if not response:
             logs.warning("Fraud suspected")
-            response.determination = False
+            det = Determination()
+            det.vector_clock.CopyFrom(object_2_vc_msg(vc_received))
+            det.suggestion_response.CopyFrom(SuggestionResponse())
+            return det
+        else: 
+            local_vc.update()
+        
+        local_vc.update()
+        vcm = object_2_vc_msg(local_vc)
+        
+        return suggest(vcm)
 
-        return response
+    
+    def sendData(self, request:CheckoutRequest, context):
+        order_id = request.vector_clock.order_id
+        cache[order_id] = request
+        local_vc = vc_msg_2_object(request.vector_clock)
+        local_vc.update()
+
+        det = Determination()
+        local_vc.update()
+        det.vector_clock.CopyFrom(object_2_vc_msg(local_vc))
+        det.suggestion_response.CopyFrom (SuggestionResponse())
+        
+        return det 
 
 def serve():
     server = grpc.server(futures.ThreadPoolExecutor())
@@ -126,12 +148,18 @@ def predict(request):
 
     return prediction
 
+def vc_msg_2_object(vc: VectorClockMessage):
+    logs.info("Converting VectorClockMessage to VectorClock")
+    return VectorClock(process_id=2, num_processes=4, order_id=vc.order_id, clocks = vc.clock)
 
+def object_2_vc_msg(vc: VectorClock):
+    logs.info("Converting VectorClock to VectorClockMessage")
+    vcm = VectorClockMessage()
+    vcm.process_id = 2
+    vcm.order_id = vc.order_id
+    vcm.clock.extend(vc.clock)
 
-
-
-    
-
+    return VectorClockMessage(process_id= vc.process_id, order_id= vc.order_id, clock=vc.clock)
 
 if __name__ == '__main__':
     serve()

@@ -18,7 +18,7 @@ class HelloResponse(_message.Message):
     def __init__(self, greeting: _Optional[str] = ...) -> None: ...
 
 class CheckoutRequest(_message.Message):
-    __slots__ = ("user", "creditCard", "billingAddress", "device", "browser", "items", "referrer")
+    __slots__ = ("user", "creditCard", "billingAddress", "device", "browser", "items", "referrer", "vector_clock")
     USER_FIELD_NUMBER: _ClassVar[int]
     CREDITCARD_FIELD_NUMBER: _ClassVar[int]
     BILLINGADDRESS_FIELD_NUMBER: _ClassVar[int]
@@ -26,6 +26,7 @@ class CheckoutRequest(_message.Message):
     BROWSER_FIELD_NUMBER: _ClassVar[int]
     ITEMS_FIELD_NUMBER: _ClassVar[int]
     REFERRER_FIELD_NUMBER: _ClassVar[int]
+    VECTOR_CLOCK_FIELD_NUMBER: _ClassVar[int]
     user: UserData
     creditCard: CreditCardData
     billingAddress: BillingAddressData
@@ -33,7 +34,8 @@ class CheckoutRequest(_message.Message):
     browser: BrowserData
     items: _containers.RepeatedCompositeFieldContainer[ItemData]
     referrer: str
-    def __init__(self, user: _Optional[_Union[UserData, _Mapping]] = ..., creditCard: _Optional[_Union[CreditCardData, _Mapping]] = ..., billingAddress: _Optional[_Union[BillingAddressData, _Mapping]] = ..., device: _Optional[_Union[DeviceData, _Mapping]] = ..., browser: _Optional[_Union[BrowserData, _Mapping]] = ..., items: _Optional[_Iterable[_Union[ItemData, _Mapping]]] = ..., referrer: _Optional[str] = ...) -> None: ...
+    vector_clock: VectorClockMessage
+    def __init__(self, user: _Optional[_Union[UserData, _Mapping]] = ..., creditCard: _Optional[_Union[CreditCardData, _Mapping]] = ..., billingAddress: _Optional[_Union[BillingAddressData, _Mapping]] = ..., device: _Optional[_Union[DeviceData, _Mapping]] = ..., browser: _Optional[_Union[BrowserData, _Mapping]] = ..., items: _Optional[_Iterable[_Union[ItemData, _Mapping]]] = ..., referrer: _Optional[str] = ..., vector_clock: _Optional[_Union[VectorClockMessage, _Mapping]] = ...) -> None: ...
 
 class UserData(_message.Message):
     __slots__ = ("name", "contact")
@@ -94,7 +96,41 @@ class ItemData(_message.Message):
     def __init__(self, name: _Optional[str] = ..., quantity: _Optional[str] = ...) -> None: ...
 
 class Determination(_message.Message):
-    __slots__ = ("determination",)
-    DETERMINATION_FIELD_NUMBER: _ClassVar[int]
-    determination: bool
-    def __init__(self, determination: bool = ...) -> None: ...
+    __slots__ = ("suggestion_response", "vector_clock")
+    SUGGESTION_RESPONSE_FIELD_NUMBER: _ClassVar[int]
+    VECTOR_CLOCK_FIELD_NUMBER: _ClassVar[int]
+    suggestion_response: SuggestionResponse
+    vector_clock: VectorClockMessage
+    def __init__(self, suggestion_response: _Optional[_Union[SuggestionResponse, _Mapping]] = ..., vector_clock: _Optional[_Union[VectorClockMessage, _Mapping]] = ...) -> None: ...
+
+class VectorClockMessage(_message.Message):
+    __slots__ = ("process_id", "clock", "order_id")
+    PROCESS_ID_FIELD_NUMBER: _ClassVar[int]
+    CLOCK_FIELD_NUMBER: _ClassVar[int]
+    ORDER_ID_FIELD_NUMBER: _ClassVar[int]
+    process_id: int
+    clock: _containers.RepeatedScalarFieldContainer[int]
+    order_id: int
+    def __init__(self, process_id: _Optional[int] = ..., clock: _Optional[_Iterable[int]] = ..., order_id: _Optional[int] = ...) -> None: ...
+
+class Book(_message.Message):
+    __slots__ = ("id", "name", "author")
+    ID_FIELD_NUMBER: _ClassVar[int]
+    NAME_FIELD_NUMBER: _ClassVar[int]
+    AUTHOR_FIELD_NUMBER: _ClassVar[int]
+    id: int
+    name: str
+    author: str
+    def __init__(self, id: _Optional[int] = ..., name: _Optional[str] = ..., author: _Optional[str] = ...) -> None: ...
+
+class SuggestionRequest(_message.Message):
+    __slots__ = ("book_titles",)
+    BOOK_TITLES_FIELD_NUMBER: _ClassVar[int]
+    book_titles: _containers.RepeatedScalarFieldContainer[str]
+    def __init__(self, book_titles: _Optional[_Iterable[str]] = ...) -> None: ...
+
+class SuggestionResponse(_message.Message):
+    __slots__ = ("book_suggestions",)
+    BOOK_SUGGESTIONS_FIELD_NUMBER: _ClassVar[int]
+    book_suggestions: _containers.RepeatedCompositeFieldContainer[Book]
+    def __init__(self, book_suggestions: _Optional[_Iterable[_Union[Book, _Mapping]]] = ...) -> None: ...
