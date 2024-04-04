@@ -5,6 +5,13 @@ import sys
 # The path of the stubs is relative to the current file, or absolute inside the container.
 # Change these lines only if strictly needed.
 FILE = __file__ if "__file__" in globals() else os.getenv("PYTHONFILE", "")
+
+config_path = os.path.abspath(
+    os.path.join(FILE, "../../../utils/config")
+)
+sys.path.insert(0, config_path)
+import log_configurator
+
 relative_modules_path = os.path.abspath(os.path.join(FILE, "../../../orchestrator/src"))
 sys.path.insert(0, relative_modules_path)
 
@@ -13,7 +20,6 @@ import logging
 # ruff : noqa: E402
 import traceback
 from concurrent.futures import ThreadPoolExecutor
-from logging.config import dictConfig
 
 import data_store as store
 from exceptions import FraudActivityException
@@ -21,66 +27,34 @@ from flask import Flask, jsonify, request
 from flask_cors import CORS
 from google.protobuf.json_format import MessageToJson
 
-import book_recommendation
-import fraud_detection
-import transaction_verification
+import clients.book_recommendation as book_recommendation_client
+import clients.fraud_detection as fraud_detection_client
+import clients.transaction_verification as transaction_verification_client
 
-dictConfig(
-    {
-        "version": 1,
-        "disable_existing_loggers": True,
-        "formatters": {
-            "default": {
-                "format": "[%(asctime)s] %(levelname)s in %(module)s: %(message)s",
-            },
-            "access": {
-                "format": "%(message)s",
-            },
-        },
-        "handlers": {
-            "console": {
-                "level": "INFO",
-                "class": "logging.StreamHandler",
-                "formatter": "default",
-                "stream": "ext://sys.stdout",
-            },
-            "error_file": {
-                "class": "logging.handlers.RotatingFileHandler",
-                "formatter": "default",
-                "filename": "/app/logs/orchestrator.error.log",
-                "maxBytes": 10000,
-                "backupCount": 10,
-                "delay": "True",
-                "level": "ERROR",
-            },
-            "info_file": {
-                "class": "logging.handlers.RotatingFileHandler",
-                "formatter": "access",
-                "filename": "/app/logs/orchestrator.info.log",
-                "maxBytes": 10000,
-                "backupCount": 10,
-                "delay": "True",
-                "level": "INFO",
-            },
-        },
-        "root": {
-            "level": "INFO",
-            "handlers": ["console", "info_file", "error_file"],
-        },
-    }
-)
+ignored_paths = ["favicon.ico"]
+log_configurator.configure("/app/logs/orchestrator.info.log", "/app/logs/orchestrator.error.log")
+
+def is_ignored_path(path):
+    return any([path in request.path for path in ignored_paths])
 
 app = Flask(__name__)
 CORS(app)
 
-
 @app.before_request
 def before_request():
-    logging.info("Before handling the request")
+    if is_ignored_path(request.path):
+        return
+    logging.info("Received request: %s %s", request.method, request.path)
 
 
 @app.after_request
 def after_request(response):
+    if is_ignored_path(request.path):
+        return response
+    
+    if request.path in ignored_paths:
+        return response
+    
     logging.info(
         "path: %s | method: %s | scheme: %s | status: %s | size: %s | remote addr: %s",
         request.path,
@@ -88,13 +62,16 @@ def after_request(response):
         request.scheme,
         response.status,
         response.content_length,
-        request.remote_addr,
+        request.remote_addr
     )
     return response
 
 
 @app.errorhandler(Exception)
 def exceptions(e):
+    if is_ignored_path(request.path):
+        return "Internal Server Error", 500
+    
     tb = traceback.format_exc()
     logging.error(
         "%s %s %s %s \n%s",
@@ -150,7 +127,7 @@ def checkout():
         return fraud_detection.check_fraud(request.json)
 
     def verify_transaction():
-        return transaction_verification.verify_transaction(
+        return transaction_verification_client.verify_transaction(
             {
                 "cardNumber": jsonRequest["creditCard"]["number"],
                 "expirationDate": jsonRequest["creditCard"]["expirationDate"],
@@ -159,7 +136,7 @@ def checkout():
         )
 
     def get_recommendations():
-        return book_recommendation.get_recommendations(bookIds)
+        return book_recommendation_client.get_recommendations(bookIds)
 
     with ThreadPoolExecutor() as executor:
         future_transaction = executor.submit(verify_transaction)
@@ -203,12 +180,12 @@ def health():
 
     with ThreadPoolExecutor() as executor:
         futures = [
-            executor.submit(run_health_check, fraud_detection, "fraud_detection"),
+            executor.submit(run_health_check, fraud_detection_client, "fraud_detection"),
             executor.submit(
-                run_health_check, book_recommendation, "book_recommendation"
+                run_health_check, book_recommendation_client, "book_recommendation"
             ),
             executor.submit(
-                run_health_check, transaction_verification, "transaction_verification"
+                run_health_check, transaction_verification_client, "transaction_verification"
             ),
         ]
         statuses = {future.result()[0]: future.result()[1] for future in futures}

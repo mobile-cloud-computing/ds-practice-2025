@@ -3,7 +3,7 @@ import sys
 
 FILE = __file__ if "__file__" in globals() else os.getenv("PYTHONFILE", "")
 book_recommendation_path = os.path.abspath(
-    os.path.join(FILE, "../../../utils/pb/book_recommendation")
+    os.path.join(FILE, "../../../../utils/pb/book_recommendation")
 )
 
 sys.path.insert(0, book_recommendation_path)

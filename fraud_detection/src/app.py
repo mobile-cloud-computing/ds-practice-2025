@@ -3,6 +3,12 @@ import sys
 
 FILE = __file__ if "__file__" in globals() else os.getenv("PYTHONFILE", "")
 
+config_path = os.path.abspath(
+    os.path.join(FILE, "../../../utils/config")
+)
+sys.path.insert(0, config_path)
+import log_configurator
+
 relative_modules_path = os.path.abspath(
     os.path.join(FILE, "../../../fraud_detection/src")
 )
@@ -18,8 +24,9 @@ import fraud_detection_pb2 as fraud_detection
 import fraud_detection_pb2_grpc as fraud_detection_grpc
 import grpc
 
-fraud_detection_model = FraudDetectionModel()
+log_configurator.configure("/app/logs/fraud_detection.info.log", "/app/logs/fraud_detection.error.log")
 
+fraud_detection_model = FraudDetectionModel()
 
 def fraud_check(input):
     return fraud_detection_model.check_fraud(input)

@@ -1,5 +1,6 @@
 import os
 import sys
+import logging
 
 # This set of lines are needed to import the gRPC stubs.
 # The path of the stubs is relative to the current file, or absolute inside the container.
@@ -11,6 +12,11 @@ relative_modules_path = os.path.abspath(
 sys.path.insert(0, relative_modules_path)
 import data_store as store
 from model import BookRecommendationModel
+config_path = os.path.abspath(
+    os.path.join(FILE, "../../../utils/config")
+)
+sys.path.insert(0, config_path)
+import log_configurator
 
 utils_path = os.path.abspath(
     os.path.join(FILE, "../../../utils/pb/book_recommendation")
@@ -26,6 +32,7 @@ import grpc
 
 recommendation_model = BookRecommendationModel()
 
+log_configurator.configure("/app/logs/book_recommendation.info.log", "/app/logs/book_recommendation.error.log")
 
 def get_model_recommendations(title):
     books = store.get_books()
@@ -67,8 +74,10 @@ class RecommendationService(book_recommendation_grpc.RecommendationServiceServic
 
 
 def serve():
+    logging.info("Initializing recommendation model ...")
     sample = get_model_recommendations("Learning Python")
     print(f"recommendation model is ready {sample}")
+    logging.info("Recommendation model is ready. Starting server ...")
     server = grpc.server(futures.ThreadPoolExecutor())
     book_recommendation_grpc.add_RecommendationServiceServicer_to_server(
         RecommendationService(), server
@@ -76,9 +85,13 @@ def serve():
     port = "50053"
     server.add_insecure_port("[::]:" + port)
     server.start()
-    print(f"Server started. Listening on port {port}.")
+    logging.info(f"Server started. Listening on port {port}.")
     server.wait_for_termination()
 
 
 if __name__ == "__main__":
-    serve()
+    try:
+        serve()
+    except Exception as e:
+        logging.error(f"Failed to start recommendation service: {e}")
+        raise e

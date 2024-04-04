@@ -61,6 +61,7 @@ services:
       - ./utils:/app/utils
       # Mount the fraud_detection/src directory in the current directory to the /app/fraud_detection/src directory in the container
       - ./fraud_detection/src:/app/fraud_detection/src
+      - ./logs:/app/logs
 
   book_recommendation:
     build:
@@ -74,6 +75,7 @@ services:
     volumes:
       - ./utils:/app/utils
       - ./book_recommendation/src:/app/book_recommendation/src
+      - ./logs:/app/logs
 
   transaction_verification:
     build:
@@ -87,6 +89,7 @@ services:
     volumes:
       - ./utils:/app/utils
       - ./transaction_verification/src:/app/transaction_verification/src
+      - ./logs:/app/logs
 
 
       

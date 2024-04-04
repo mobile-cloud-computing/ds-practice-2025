@@ -4,7 +4,7 @@ import sys
 import grpc
 
 FILE = __file__ if "__file__" in globals() else os.getenv("PYTHONFILE", "")
-utils_path = os.path.abspath(os.path.join(FILE, "../../../utils/pb/fraud_detection"))
+utils_path = os.path.abspath(os.path.join(FILE, "../../../../utils/pb/fraud_detection"))
 sys.path.insert(0, utils_path)
 
 # ruff : noqa: E402
