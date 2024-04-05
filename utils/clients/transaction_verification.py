@@ -3,7 +3,7 @@ import sys
 
 FILE = __file__ if "__file__" in globals() else os.getenv("PYTHONFILE", "")
 book_recommendation_path = os.path.abspath(
-    os.path.join(FILE, "../../../../utils/pb/transaction_verification")
+    os.path.join(FILE, "../pb/transaction_verification")
 )
 
 sys.path.insert(0, book_recommendation_path)
@@ -28,7 +28,8 @@ def health_check():
         return f"Unhealthy: {e}"
 
 
-def verify_transaction(transaction):
+def verify_transaction(transaction, vector_clock=[]):
+    transaction["vector_clock"] = vector_clock
     with grpc.insecure_channel(_TRANSACTION_VERIFICATION_SERVICE) as channel:
         stub = transaction_verification_grpc.TransactionServiceStub(channel)
         response = stub.VerifyTransaction(

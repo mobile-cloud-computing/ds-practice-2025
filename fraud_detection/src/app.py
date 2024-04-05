@@ -26,6 +26,10 @@ import grpc
 
 log_configurator.configure("/app/logs/fraud_detection.info.log", "/app/logs/fraud_detection.error.log")
 
+
+_VECTOR_CLOCK_INDEX = 1
+_CURRENT_VECTOR_CLOCK = [0,0,0]
+
 fraud_detection_model = FraudDetectionModel()
 
 def fraud_check(input):
@@ -34,6 +38,13 @@ def fraud_check(input):
 
 class FraudDetectionService(fraud_detection_grpc.FraudDetectionServiceServicer):
     def CheckFraud(self, request, context):
+        
+        global _CURRENT_VECTOR_CLOCK
+        vector_clock = request.vector_clock
+        if vector_clock is not None and len(vector_clock) > 0:
+            _CURRENT_VECTOR_CLOCK = [max(a, b) for a, b in zip(_CURRENT_VECTOR_CLOCK, vector_clock)]
+        _CURRENT_VECTOR_CLOCK[_VECTOR_CLOCK_INDEX] += 1
+
         response = fraud_detection.FraudResponse()
         cardInfo = request.creditCard.number
         fraud = fraud_check(cardInfo)
@@ -41,6 +52,7 @@ class FraudDetectionService(fraud_detection_grpc.FraudDetectionServiceServicer):
         response.message = (
             "Fraud Detected" if fraud["is_fraud"] else "No Fraud Detected"
         )
+        response.vector_clock.extend(vector_clock)
         return response
 
     def HealthCheck(self, request, context):

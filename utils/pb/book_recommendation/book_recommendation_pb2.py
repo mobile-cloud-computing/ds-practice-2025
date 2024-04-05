@@ -14,7 +14,7 @@ _sym_db = _symbol_database.Default()
 
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x19\x62ook_recommendation.proto\x12\x0erecommendation\",\n\x19GetRecommendationsRequest\x12\x0f\n\x07\x62ookIds\x18\x01 \x03(\t\"U\n\x1aGetRecommendationsResponse\x12\x37\n\x0frecommendations\x18\x01 \x03(\x0b\x32\x1e.recommendation.Recommendation\"\xbb\x01\n\x0eRecommendation\x12\n\n\x02id\x18\x01 \x01(\t\x12\r\n\x05title\x18\x02 \x01(\t\x12\x0e\n\x06\x61uthor\x18\x03 \x01(\t\x12\x13\n\x0b\x64\x65scription\x18\x04 \x01(\t\x12\x0e\n\x06\x63opies\x18\x05 \x01(\x05\x12\x17\n\x0f\x63opiesAvailable\x18\x06 \x01(\x05\x12\x10\n\x08\x63\x61tegory\x18\x07 \x01(\t\x12\x11\n\timage_url\x18\x08 \x01(\t\x12\r\n\x05price\x18\t \x01(\x02\x12\x0c\n\x04tags\x18\n \x03(\t\"\x14\n\x12HealthCheckRequest\"%\n\x13HealthCheckResponse\x12\x0e\n\x06status\x18\x01 \x01(\t2\xdc\x01\n\x15RecommendationService\x12V\n\x0bHealthCheck\x12\".recommendation.HealthCheckRequest\x1a#.recommendation.HealthCheckResponse\x12k\n\x12GetRecommendations\x12).recommendation.GetRecommendationsRequest\x1a*.recommendation.GetRecommendationsResponseb\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x19\x62ook_recommendation.proto\x12\x0erecommendation\"B\n\x19GetRecommendationsRequest\x12\x0f\n\x07\x62ookIds\x18\x01 \x03(\t\x12\x14\n\x0cvector_clock\x18\x02 \x03(\x05\"k\n\x1aGetRecommendationsResponse\x12\x37\n\x0frecommendations\x18\x01 \x03(\x0b\x32\x1e.recommendation.Recommendation\x12\x14\n\x0cvector_clock\x18\x02 \x03(\x05\"\xbb\x01\n\x0eRecommendation\x12\n\n\x02id\x18\x01 \x01(\t\x12\r\n\x05title\x18\x02 \x01(\t\x12\x0e\n\x06\x61uthor\x18\x03 \x01(\t\x12\x13\n\x0b\x64\x65scription\x18\x04 \x01(\t\x12\x0e\n\x06\x63opies\x18\x05 \x01(\x05\x12\x17\n\x0f\x63opiesAvailable\x18\x06 \x01(\x05\x12\x10\n\x08\x63\x61tegory\x18\x07 \x01(\t\x12\x11\n\timage_url\x18\x08 \x01(\t\x12\r\n\x05price\x18\t \x01(\x02\x12\x0c\n\x04tags\x18\n \x03(\t\"\x14\n\x12HealthCheckRequest\"%\n\x13HealthCheckResponse\x12\x0e\n\x06status\x18\x01 \x01(\t2\xdc\x01\n\x15RecommendationService\x12V\n\x0bHealthCheck\x12\".recommendation.HealthCheckRequest\x1a#.recommendation.HealthCheckResponse\x12k\n\x12GetRecommendations\x12).recommendation.GetRecommendationsRequest\x1a*.recommendation.GetRecommendationsResponseb\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
@@ -22,15 +22,15 @@ _builder.BuildTopDescriptorsAndMessages(DESCRIPTOR, 'book_recommendation_pb2', _
 if _descriptor._USE_C_DESCRIPTORS == False:
   DESCRIPTOR._options = None
   _globals['_GETRECOMMENDATIONSREQUEST']._serialized_start=45
-  _globals['_GETRECOMMENDATIONSREQUEST']._serialized_end=89
-  _globals['_GETRECOMMENDATIONSRESPONSE']._serialized_start=91
-  _globals['_GETRECOMMENDATIONSRESPONSE']._serialized_end=176
-  _globals['_RECOMMENDATION']._serialized_start=179
-  _globals['_RECOMMENDATION']._serialized_end=366
-  _globals['_HEALTHCHECKREQUEST']._serialized_start=368
-  _globals['_HEALTHCHECKREQUEST']._serialized_end=388
-  _globals['_HEALTHCHECKRESPONSE']._serialized_start=390
-  _globals['_HEALTHCHECKRESPONSE']._serialized_end=427
-  _globals['_RECOMMENDATIONSERVICE']._serialized_start=430
-  _globals['_RECOMMENDATIONSERVICE']._serialized_end=650
+  _globals['_GETRECOMMENDATIONSREQUEST']._serialized_end=111
+  _globals['_GETRECOMMENDATIONSRESPONSE']._serialized_start=113
+  _globals['_GETRECOMMENDATIONSRESPONSE']._serialized_end=220
+  _globals['_RECOMMENDATION']._serialized_start=223
+  _globals['_RECOMMENDATION']._serialized_end=410
+  _globals['_HEALTHCHECKREQUEST']._serialized_start=412
+  _globals['_HEALTHCHECKREQUEST']._serialized_end=432
+  _globals['_HEALTHCHECKRESPONSE']._serialized_start=434
+  _globals['_HEALTHCHECKRESPONSE']._serialized_end=471
+  _globals['_RECOMMENDATIONSERVICE']._serialized_start=474
+  _globals['_RECOMMENDATIONSERVICE']._serialized_end=694
 # @@protoc_insertion_point(module_scope)

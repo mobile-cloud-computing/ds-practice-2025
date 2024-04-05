@@ -11,10 +11,12 @@ message TransactionRequest {
     string cardNumber = 1;
     string expirationDate = 2;
     string cvv = 3;
+    repeated int32 vector_clock = 4;
 }
 
 message TransactionResponse {
     string transactionId = 1;
+    repeated int32 vector_clock = 2;
 }
 
 message HealthCheckRequest {

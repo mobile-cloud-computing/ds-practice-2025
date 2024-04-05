@@ -6,16 +6,20 @@ from typing import ClassVar as _ClassVar, Iterable as _Iterable, Mapping as _Map
 DESCRIPTOR: _descriptor.FileDescriptor
 
 class GetRecommendationsRequest(_message.Message):
-    __slots__ = ("bookIds",)
+    __slots__ = ("bookIds", "vector_clock")
     BOOKIDS_FIELD_NUMBER: _ClassVar[int]
+    VECTOR_CLOCK_FIELD_NUMBER: _ClassVar[int]
     bookIds: _containers.RepeatedScalarFieldContainer[str]
-    def __init__(self, bookIds: _Optional[_Iterable[str]] = ...) -> None: ...
+    vector_clock: _containers.RepeatedScalarFieldContainer[int]
+    def __init__(self, bookIds: _Optional[_Iterable[str]] = ..., vector_clock: _Optional[_Iterable[int]] = ...) -> None: ...
 
 class GetRecommendationsResponse(_message.Message):
-    __slots__ = ("recommendations",)
+    __slots__ = ("recommendations", "vector_clock")
     RECOMMENDATIONS_FIELD_NUMBER: _ClassVar[int]
+    VECTOR_CLOCK_FIELD_NUMBER: _ClassVar[int]
     recommendations: _containers.RepeatedCompositeFieldContainer[Recommendation]
-    def __init__(self, recommendations: _Optional[_Iterable[_Union[Recommendation, _Mapping]]] = ...) -> None: ...
+    vector_clock: _containers.RepeatedScalarFieldContainer[int]
+    def __init__(self, recommendations: _Optional[_Iterable[_Union[Recommendation, _Mapping]]] = ..., vector_clock: _Optional[_Iterable[int]] = ...) -> None: ...
 
 class Recommendation(_message.Message):
     __slots__ = ("id", "title", "author", "description", "copies", "copiesAvailable", "category", "image_url", "price", "tags")

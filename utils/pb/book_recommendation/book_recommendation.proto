@@ -9,10 +9,12 @@ service RecommendationService {
 
 message GetRecommendationsRequest {
   repeated string bookIds = 1;
+  repeated int32 vector_clock = 2;
 }
 
 message GetRecommendationsResponse {
   repeated Recommendation recommendations = 1;
+  repeated int32 vector_clock = 2;
 }
 
 message Recommendation {

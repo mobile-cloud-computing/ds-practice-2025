@@ -4,7 +4,7 @@ import sys
 import grpc
 
 FILE = __file__ if "__file__" in globals() else os.getenv("PYTHONFILE", "")
-utils_path = os.path.abspath(os.path.join(FILE, "../../../../utils/pb/fraud_detection"))
+utils_path = os.path.abspath(os.path.join(FILE, "../pb/fraud_detection"))
 sys.path.insert(0, utils_path)
 
 # ruff : noqa: E402
@@ -31,7 +31,8 @@ def health_check():
     return response.status
 
 
-def check_fraud(transaction):
+def check_fraud(transaction, vector_clock = []):
+    transaction["vector_clock"] = vector_clock
     with grpc.insecure_channel(_FRAUD_DETECTION_SERVICE) as channel:
         stub = fraud_detection_grpc.FraudDetectionServiceStub(channel)
         response = stub.CheckFraud(fraud_detection.FraudRequest(**transaction))

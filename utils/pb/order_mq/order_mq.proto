@@ -1,0 +1,33 @@
+syntax = "proto3";
+
+package ordermq;
+
+service OrderMqService{
+    rpc HealthCheck(HealthCheckRequest) returns (HealthCheckResponse);
+    rpc EnqueueOrder(EnqueueOrderRequest) returns (EnqueueOrderResponse);
+    rpc DequeueOrder(DequeueOrderRequest) returns (DequeueOrderResponse);
+}
+
+message HealthCheckRequest{
+}
+
+message HealthCheckResponse{
+    string status = 1;
+}
+
+message EnqueueOrderRequest{
+    string order_id = 1;
+    string order_data = 2;
+}
+
+message EnqueueOrderResponse{
+    string status = 1;
+}
+
+message DequeueOrderRequest{
+}
+
+message DequeueOrderResponse{
+    string order_id = 1;
+    string order_data = 2;
+}

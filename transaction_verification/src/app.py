@@ -29,12 +29,23 @@ log_configurator.configure(
     "/app/logs/transaction_verification.info.log", "/app/logs/transaction_verification.error.log"
 )
 
+_VECTOR_CLOCK_INDEX = 0
+_CURRENT_VECTOR_CLOCK = [0,0,0]
+
 class TransactionVerificationService(
     transaction_verification_grpc.TransactionServiceServicer
 ):
     def VerifyTransaction(self, request, context):
+
+        global _CURRENT_VECTOR_CLOCK
+        vector_clock = request.vector_clock
+        if vector_clock is not None and len(vector_clock) > 0:
+            _CURRENT_VECTOR_CLOCK = [max(a, b) for a, b in zip(_CURRENT_VECTOR_CLOCK, vector_clock)]
+        _CURRENT_VECTOR_CLOCK[_VECTOR_CLOCK_INDEX] += 1
+
         transaction_response = transaction_verification.TransactionResponse()
         transaction_response.transactionId = str(uuid.uuid4().node)
+        transaction_response.vector_clock.extend(vector_clock)
         return transaction_response
 
     def HealthCheck(self, request, context):

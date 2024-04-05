@@ -14,7 +14,7 @@ _sym_db = _symbol_database.Default()
 
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x15\x66raud_detection.proto\x12\x0e\x66rauddetection\"%\n\x04User\x12\x0c\n\x04name\x18\x01 \x01(\t\x12\x0f\n\x07\x63ontact\x18\x02 \x01(\t\"A\n\nCreditCard\x12\x0e\n\x06number\x18\x01 \x01(\t\x12\x16\n\x0e\x65xpirationDate\x18\x02 \x01(\t\x12\x0b\n\x03\x63vv\x18\x03 \x01(\t\"&\n\x04Item\x12\x0c\n\x04name\x18\x01 \x01(\t\x12\x10\n\x08quantity\x18\x02 \x01(\x05\"[\n\x0e\x42illingAddress\x12\x0e\n\x06street\x18\x01 \x01(\t\x12\x0c\n\x04\x63ity\x18\x02 \x01(\t\x12\r\n\x05state\x18\x03 \x01(\t\x12\x0b\n\x03zip\x18\x04 \x01(\t\x12\x0f\n\x07\x63ountry\x18\x05 \x01(\t\"1\n\x06\x44\x65vice\x12\x0c\n\x04type\x18\x01 \x01(\t\x12\r\n\x05model\x18\x02 \x01(\t\x12\n\n\x02os\x18\x03 \x01(\t\"(\n\x07\x42rowser\x12\x0c\n\x04name\x18\x01 \x01(\t\x12\x0f\n\x07version\x18\x02 \x01(\t\"\x86\x04\n\x0c\x46raudRequest\x12\"\n\x04user\x18\x01 \x01(\x0b\x32\x14.frauddetection.User\x12.\n\ncreditCard\x18\x02 \x01(\x0b\x32\x1a.frauddetection.CreditCard\x12\x13\n\x0buserComment\x18\x03 \x01(\t\x12#\n\x05items\x18\x04 \x03(\x0b\x32\x14.frauddetection.Item\x12\x14\n\x0c\x64iscountCode\x18\x05 \x01(\t\x12\x16\n\x0eshippingMethod\x18\x06 \x01(\t\x12\x13\n\x0bgiftMessage\x18\x07 \x01(\t\x12\x36\n\x0e\x62illingAddress\x18\x08 \x01(\x0b\x32\x1e.frauddetection.BillingAddress\x12\"\n\x1atermsAndConditionsAccepted\x18\t \x01(\x08\x12\x1f\n\x17notificationPreferences\x18\n \x03(\t\x12&\n\x06\x64\x65vice\x18\x0b \x01(\x0b\x32\x16.frauddetection.Device\x12(\n\x07\x62rowser\x18\x0c \x01(\x0b\x32\x17.frauddetection.Browser\x12\x12\n\nappVersion\x18\r \x01(\t\x12\x18\n\x10screenResolution\x18\x0e \x01(\t\x12\x10\n\x08referrer\x18\x0f \x01(\t\x12\x16\n\x0e\x64\x65viceLanguage\x18\x10 \x01(\t\"1\n\rFraudResponse\x12\x0f\n\x07isFraud\x18\x01 \x01(\x08\x12\x0f\n\x07message\x18\x02 \x01(\t\"\x14\n\x12HealthCheckRequest\"%\n\x13HealthCheckResponse\x12\x0e\n\x06status\x18\x01 \x01(\t2\xba\x01\n\x15\x46raudDetectionService\x12I\n\nCheckFraud\x12\x1c.frauddetection.FraudRequest\x1a\x1d.frauddetection.FraudResponse\x12V\n\x0bHealthCheck\x12\".frauddetection.HealthCheckRequest\x1a#.frauddetection.HealthCheckResponseb\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x15\x66raud_detection.proto\x12\x0e\x66rauddetection\"%\n\x04User\x12\x0c\n\x04name\x18\x01 \x01(\t\x12\x0f\n\x07\x63ontact\x18\x02 \x01(\t\"A\n\nCreditCard\x12\x0e\n\x06number\x18\x01 \x01(\t\x12\x16\n\x0e\x65xpirationDate\x18\x02 \x01(\t\x12\x0b\n\x03\x63vv\x18\x03 \x01(\t\"&\n\x04Item\x12\x0c\n\x04name\x18\x01 \x01(\t\x12\x10\n\x08quantity\x18\x02 \x01(\x05\"[\n\x0e\x42illingAddress\x12\x0e\n\x06street\x18\x01 \x01(\t\x12\x0c\n\x04\x63ity\x18\x02 \x01(\t\x12\r\n\x05state\x18\x03 \x01(\t\x12\x0b\n\x03zip\x18\x04 \x01(\t\x12\x0f\n\x07\x63ountry\x18\x05 \x01(\t\"1\n\x06\x44\x65vice\x12\x0c\n\x04type\x18\x01 \x01(\t\x12\r\n\x05model\x18\x02 \x01(\t\x12\n\n\x02os\x18\x03 \x01(\t\"(\n\x07\x42rowser\x12\x0c\n\x04name\x18\x01 \x01(\t\x12\x0f\n\x07version\x18\x02 \x01(\t\"\x9c\x04\n\x0c\x46raudRequest\x12\"\n\x04user\x18\x01 \x01(\x0b\x32\x14.frauddetection.User\x12.\n\ncreditCard\x18\x02 \x01(\x0b\x32\x1a.frauddetection.CreditCard\x12\x13\n\x0buserComment\x18\x03 \x01(\t\x12#\n\x05items\x18\x04 \x03(\x0b\x32\x14.frauddetection.Item\x12\x14\n\x0c\x64iscountCode\x18\x05 \x01(\t\x12\x16\n\x0eshippingMethod\x18\x06 \x01(\t\x12\x13\n\x0bgiftMessage\x18\x07 \x01(\t\x12\x36\n\x0e\x62illingAddress\x18\x08 \x01(\x0b\x32\x1e.frauddetection.BillingAddress\x12\"\n\x1atermsAndConditionsAccepted\x18\t \x01(\x08\x12\x1f\n\x17notificationPreferences\x18\n \x03(\t\x12&\n\x06\x64\x65vice\x18\x0b \x01(\x0b\x32\x16.frauddetection.Device\x12(\n\x07\x62rowser\x18\x0c \x01(\x0b\x32\x17.frauddetection.Browser\x12\x12\n\nappVersion\x18\r \x01(\t\x12\x18\n\x10screenResolution\x18\x0e \x01(\t\x12\x10\n\x08referrer\x18\x0f \x01(\t\x12\x16\n\x0e\x64\x65viceLanguage\x18\x10 \x01(\t\x12\x14\n\x0cvector_clock\x18\x11 \x03(\x05\"G\n\rFraudResponse\x12\x0f\n\x07isFraud\x18\x01 \x01(\x08\x12\x0f\n\x07message\x18\x02 \x01(\t\x12\x14\n\x0cvector_clock\x18\x03 \x03(\x05\"\x14\n\x12HealthCheckRequest\"%\n\x13HealthCheckResponse\x12\x0e\n\x06status\x18\x01 \x01(\t2\xba\x01\n\x15\x46raudDetectionService\x12I\n\nCheckFraud\x12\x1c.frauddetection.FraudRequest\x1a\x1d.frauddetection.FraudResponse\x12V\n\x0bHealthCheck\x12\".frauddetection.HealthCheckRequest\x1a#.frauddetection.HealthCheckResponseb\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
@@ -34,13 +34,13 @@ if _descriptor._USE_C_DESCRIPTORS == False:
   _globals['_BROWSER']._serialized_start=331
   _globals['_BROWSER']._serialized_end=371
   _globals['_FRAUDREQUEST']._serialized_start=374
-  _globals['_FRAUDREQUEST']._serialized_end=892
-  _globals['_FRAUDRESPONSE']._serialized_start=894
-  _globals['_FRAUDRESPONSE']._serialized_end=943
-  _globals['_HEALTHCHECKREQUEST']._serialized_start=945
-  _globals['_HEALTHCHECKREQUEST']._serialized_end=965
-  _globals['_HEALTHCHECKRESPONSE']._serialized_start=967
-  _globals['_HEALTHCHECKRESPONSE']._serialized_end=1004
-  _globals['_FRAUDDETECTIONSERVICE']._serialized_start=1007
-  _globals['_FRAUDDETECTIONSERVICE']._serialized_end=1193
+  _globals['_FRAUDREQUEST']._serialized_end=914
+  _globals['_FRAUDRESPONSE']._serialized_start=916
+  _globals['_FRAUDRESPONSE']._serialized_end=987
+  _globals['_HEALTHCHECKREQUEST']._serialized_start=989
+  _globals['_HEALTHCHECKREQUEST']._serialized_end=1009
+  _globals['_HEALTHCHECKRESPONSE']._serialized_start=1011
+  _globals['_HEALTHCHECKRESPONSE']._serialized_end=1048
+  _globals['_FRAUDDETECTIONSERVICE']._serialized_start=1051
+  _globals['_FRAUDDETECTIONSERVICE']._serialized_end=1237
 # @@protoc_insertion_point(module_scope)

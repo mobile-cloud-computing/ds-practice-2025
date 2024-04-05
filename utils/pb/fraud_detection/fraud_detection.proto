@@ -59,11 +59,13 @@ message FraudRequest {
     string screenResolution = 14;
     string referrer = 15;
     string deviceLanguage = 16;
+    repeated int32 vector_clock = 17;
 }
 
 message FraudResponse {
     bool isFraud = 1;
     string message = 2;
+    repeated int32 vector_clock = 3;
 }
 
 message HealthCheckRequest {

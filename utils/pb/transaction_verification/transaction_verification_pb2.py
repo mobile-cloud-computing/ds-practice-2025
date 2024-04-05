@@ -14,7 +14,7 @@ _sym_db = _symbol_database.Default()
 
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x1etransaction_verification.proto\x12\x0btransaction\"M\n\x12TransactionRequest\x12\x12\n\ncardNumber\x18\x01 \x01(\t\x12\x16\n\x0e\x65xpirationDate\x18\x02 \x01(\t\x12\x0b\n\x03\x63vv\x18\x03 \x01(\t\",\n\x13TransactionResponse\x12\x15\n\rtransactionId\x18\x01 \x01(\t\"\x14\n\x12HealthCheckRequest\"%\n\x13HealthCheckResponse\x12\x0e\n\x06status\x18\x01 \x01(\t2\xbe\x01\n\x12TransactionService\x12V\n\x11VerifyTransaction\x12\x1f.transaction.TransactionRequest\x1a .transaction.TransactionResponse\x12P\n\x0bHealthCheck\x12\x1f.transaction.HealthCheckRequest\x1a .transaction.HealthCheckResponseb\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x1etransaction_verification.proto\x12\x0btransaction\"c\n\x12TransactionRequest\x12\x12\n\ncardNumber\x18\x01 \x01(\t\x12\x16\n\x0e\x65xpirationDate\x18\x02 \x01(\t\x12\x0b\n\x03\x63vv\x18\x03 \x01(\t\x12\x14\n\x0cvector_clock\x18\x04 \x03(\x05\"B\n\x13TransactionResponse\x12\x15\n\rtransactionId\x18\x01 \x01(\t\x12\x14\n\x0cvector_clock\x18\x02 \x03(\x05\"\x14\n\x12HealthCheckRequest\"%\n\x13HealthCheckResponse\x12\x0e\n\x06status\x18\x01 \x01(\t2\xbe\x01\n\x12TransactionService\x12V\n\x11VerifyTransaction\x12\x1f.transaction.TransactionRequest\x1a .transaction.TransactionResponse\x12P\n\x0bHealthCheck\x12\x1f.transaction.HealthCheckRequest\x1a .transaction.HealthCheckResponseb\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
@@ -22,13 +22,13 @@ _builder.BuildTopDescriptorsAndMessages(DESCRIPTOR, 'transaction_verification_pb
 if _descriptor._USE_C_DESCRIPTORS == False:
   DESCRIPTOR._options = None
   _globals['_TRANSACTIONREQUEST']._serialized_start=47
-  _globals['_TRANSACTIONREQUEST']._serialized_end=124
-  _globals['_TRANSACTIONRESPONSE']._serialized_start=126
-  _globals['_TRANSACTIONRESPONSE']._serialized_end=170
-  _globals['_HEALTHCHECKREQUEST']._serialized_start=172
-  _globals['_HEALTHCHECKREQUEST']._serialized_end=192
-  _globals['_HEALTHCHECKRESPONSE']._serialized_start=194
-  _globals['_HEALTHCHECKRESPONSE']._serialized_end=231
-  _globals['_TRANSACTIONSERVICE']._serialized_start=234
-  _globals['_TRANSACTIONSERVICE']._serialized_end=424
+  _globals['_TRANSACTIONREQUEST']._serialized_end=146
+  _globals['_TRANSACTIONRESPONSE']._serialized_start=148
+  _globals['_TRANSACTIONRESPONSE']._serialized_end=214
+  _globals['_HEALTHCHECKREQUEST']._serialized_start=216
+  _globals['_HEALTHCHECKREQUEST']._serialized_end=236
+  _globals['_HEALTHCHECKRESPONSE']._serialized_start=238
+  _globals['_HEALTHCHECKRESPONSE']._serialized_end=275
+  _globals['_TRANSACTIONSERVICE']._serialized_start=278
+  _globals['_TRANSACTIONSERVICE']._serialized_end=468
 # @@protoc_insertion_point(module_scope)

@@ -33,6 +33,8 @@ services:
       # The PYTHONFILE environment variable specifies the absolute entry point of the application
       # Check app.py in the orchestrator directory to see how this is used
       - PYTHONFILE=/app/orchestrator/src/app.py
+      - ORDER_EXECUTORS=order_executor_1:50055,order_executor_2:50055
+
     volumes:
       # Mount the utils directory in the current directory to the /app/utils directory in the container
       - ./utils:/app/utils
@@ -90,6 +92,72 @@ services:
       - ./utils:/app/utils
       - ./transaction_verification/src:/app/transaction_verification/src
       - ./logs:/app/logs
+
+  order_mq:
+    build:
+      context: ./
+      dockerfile: ./order_mq/Dockerfile
+    ports:
+      - 9000:9000
+    environment:
+      - PYTHONUNBUFFERED=TRUE
+      - PYTHONFILE=/app/order_mq/src/app.py
+    volumes:
+      - ./utils:/app/utils
+      - ./order_mq/src:/app/order_mq/src
+      - ./logs:/app/logs
+
+  order_executor_1:
+    build:
+      context: ./
+      dockerfile: ./order_executor/Dockerfile
+    ports:
+      - 50040:50055
+    environment:
+      - PYTHONUNBUFFERED=TRUE
+      - PYTHONFILE=/app/order_executor/src/app.py
+      - EXECUTOR_LIST_URL=http://orchestrator:5000/order_executors
+    volumes:
+      - ./utils:/app/utils
+      - ./order_executor/src:/app/order_executor/src
+      - ./logs:/app/logs
+    depends_on:
+      - orchestrator
+
+  order_executor_2:
+    build:
+      context: ./
+      dockerfile: ./order_executor/Dockerfile
+    ports:
+      - 50041:50055
+    environment:
+      - PYTHONUNBUFFERED=TRUE
+      - PYTHONFILE=/app/order_executor/src/app.py
+      - EXECUTOR_LIST_URL=http://orchestrator:5000/order_executors
+    volumes:
+      - ./utils:/app/utils
+      - ./order_executor/src:/app/order_executor/src
+      - ./logs:/app/logs
+    depends_on:
+      - orchestrator
+
+      
+  order_executor_3:
+    build:
+      context: ./
+      dockerfile: ./order_executor/Dockerfile
+    ports:
+      - 50041:50055
+    environment:
+      - PYTHONUNBUFFERED=TRUE
+      - PYTHONFILE=/app/order_executor/src/app.py
+      - EXECUTOR_LIST_URL=http://orchestrator:5000/order_executors
+    volumes:
+      - ./utils:/app/utils
+      - ./order_executor/src:/app/order_executor/src
+      - ./logs:/app/logs
+    depends_on:
+      - orchestrator
 
 
       

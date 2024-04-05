@@ -30,6 +30,9 @@ import book_recommendation_pb2 as book_recommendation
 import book_recommendation_pb2_grpc as book_recommendation_grpc
 import grpc
 
+_VECTOR_CLOCK_INDEX = 2
+_CURRENT_VECTOR_CLOCK = [0,0,0]
+
 recommendation_model = BookRecommendationModel()
 
 log_configurator.configure("/app/logs/book_recommendation.info.log", "/app/logs/book_recommendation.error.log")
@@ -48,6 +51,13 @@ def get_model_recommendations(title):
 
 class RecommendationService(book_recommendation_grpc.RecommendationServiceServicer):
     def GetRecommendations(self, request, context):
+        
+        global _CURRENT_VECTOR_CLOCK
+        vector_clock = request.vector_clock
+        if vector_clock is not None and len(vector_clock) > 0:
+            _CURRENT_VECTOR_CLOCK = [max(a, b) for a, b in zip(_CURRENT_VECTOR_CLOCK, vector_clock)]
+        _CURRENT_VECTOR_CLOCK[_VECTOR_CLOCK_INDEX] += 1
+
         response = book_recommendation.GetRecommendationsResponse()
         current_book_title = store.get_book_by_id(request.bookIds[0])["title"]
         recommended_books = get_model_recommendations(current_book_title)
@@ -67,6 +77,7 @@ class RecommendationService(book_recommendation_grpc.RecommendationServiceServic
                     tags=book["tags"],
                 )
             )
+        response.vector_clock.extend(_CURRENT_VECTOR_CLOCK)
         return response
 
     def HealthCheck(self, request, context):

@@ -3,7 +3,7 @@ import sys
 
 FILE = __file__ if "__file__" in globals() else os.getenv("PYTHONFILE", "")
 book_recommendation_path = os.path.abspath(
-    os.path.join(FILE, "../../../../utils/pb/book_recommendation")
+    os.path.join(FILE, "../pb/book_recommendation")
 )
 
 sys.path.insert(0, book_recommendation_path)
@@ -26,10 +26,12 @@ def health_check():
         return f"Unhealthy: {e}"
 
 
-def get_recommendations(bookIds):
+def get_recommendations(bookIds, vector_clock=[]):
     with grpc.insecure_channel(_BOOK_RECOMMENDATION_SERVICE) as channel:
         stub = book_recommendation_grpc.RecommendationServiceStub(channel)
         response = stub.GetRecommendations(
-            book_recommendation.GetRecommendationsRequest(bookIds=bookIds)
+            book_recommendation.GetRecommendationsRequest(
+                bookIds=bookIds, vector_clock=vector_clock
+            )
         )
     return response

@@ -1,0 +1,35 @@
+syntax = "proto3";
+
+package orderexecutor;
+
+service OrderExecutorService{
+    rpc HealthCheck(HealthCheckRequest) returns (HealthCheckResponse);
+    rpc ExecuteOrder(ExecuteOrderRequest) returns (ExecuteOrderResponse);
+    rpc Vote(VoteRequest) returns (VoteResponse);
+}
+
+message HealthCheckRequest{
+}
+
+message HealthCheckResponse{
+    string status = 1;
+}
+
+message ExecuteOrderRequest{
+    string order_id = 1;
+}
+
+message ExecuteOrderResponse{
+    string status = 1;
+}
+
+message VoteRequest{
+    int64 term = 1;
+    string candidate_id = 2;
+}
+
+message VoteResponse{
+    int64 term = 1;
+    bool vote_granted = 2;
+}
+
