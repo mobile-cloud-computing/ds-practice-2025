@@ -3,6 +3,7 @@ import sys
 import random
 import threading
 import time
+import logging
 
 FILE = __file__ if "__file__" in globals() else os.getenv("PYTHONFILE", "")
 
@@ -21,6 +22,9 @@ sys.path.insert(0, clients_path)
 import order_mq as order_mq_client
 import order_executor as order_executor_client
 
+sys.path.insert(0, os.path.abspath(os.path.join(FILE, "../../../order_executor/src")))
+import info
+
 
 _FOLLOWER_ROLE = "FOLLOWER"
 _CANDIDATE_ROLE = "CANDIDATE"
@@ -38,6 +42,7 @@ _VOTES_RECEIVED = 0
 
 
 def become_candidate():
+    logging.info("Worker %s is becoming candidate", info._WORKER_NAME)
     global _CURRENT_ROLE, _VOTES_RECEIVED, _CURRENT_TERM, _VOTED_FOR
 
     _CURRENT_ROLE = _CANDIDATE_ROLE
@@ -47,6 +52,7 @@ def become_candidate():
 
 
 def become_leader():
+    logging.info("Worker %s is becoming leader", info._WORKER_NAME)
     global _CURRENT_ROLE, _CURRENT_LEADER
 
     _CURRENT_ROLE = _LEADER_ROLE
@@ -54,6 +60,7 @@ def become_leader():
 
 
 def become_follower():
+    logging.info("Worker %s is becoming follower", info._WORKER_NAME)
     global _CURRENT_ROLE, _VOTED_FOR
 
     _CURRENT_ROLE = _FOLLOWER_ROLE
@@ -61,6 +68,7 @@ def become_follower():
 
 
 def run_election():
+    logging.info("Worker %s is running election", info._WORKER_NAME)
     global _CURRENT_ROLE, _VOTES_RECEIVED
 
     become_candidate()
@@ -74,6 +82,7 @@ def run_election():
 
     if _VOTES_RECEIVED > len(_ALL_EXECUTOR_ADDRS) / 2:
         become_leader()
+    logging.info("Worker %s election completed", info._WORKER_NAME)
 
 
 def handle_vote_request(request):
@@ -109,6 +118,7 @@ def replicate_order(order):
 
 
 def start_executor_flow():
+    logging.info("Starting executor flow")
     while True:
         try:
             time.sleep(random.randint(1, 5))
@@ -120,9 +130,9 @@ def start_executor_flow():
                 if order is not None:
                     replicate_order(order)
         except Exception as e:
-            print(f"Error in raft: {e}")
+            print(f"Error in coordinator: {e}")
 
 
-def start_worker_pool():
+def start_coordination():
     t = threading.Thread(target=start_executor_flow)
     t.start()

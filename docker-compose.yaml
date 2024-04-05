@@ -111,8 +111,6 @@ services:
     build:
       context: ./
       dockerfile: ./order_executor/Dockerfile
-    ports:
-      - 50040:50055
     environment:
       - PYTHONUNBUFFERED=TRUE
       - PYTHONFILE=/app/order_executor/src/app.py
@@ -128,8 +126,6 @@ services:
     build:
       context: ./
       dockerfile: ./order_executor/Dockerfile
-    ports:
-      - 50041:50055
     environment:
       - PYTHONUNBUFFERED=TRUE
       - PYTHONFILE=/app/order_executor/src/app.py
@@ -146,8 +142,6 @@ services:
     build:
       context: ./
       dockerfile: ./order_executor/Dockerfile
-    ports:
-      - 50041:50055
     environment:
       - PYTHONUNBUFFERED=TRUE
       - PYTHONFILE=/app/order_executor/src/app.py

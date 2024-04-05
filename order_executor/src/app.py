@@ -1,3 +1,4 @@
+import logging
 import os
 import sys
 import requests
@@ -34,11 +35,12 @@ log_configurator.configure(info._INFO_LOG_PATH, info._ERROR_LOG_PATH)
 EXECUTOR_LIST_URL = os.getenv("EXECUTOR_LIST_URL", "http://orchestrator:5000/order_executors")
 
 def serve():
+    logging.info("Getting executor list.")
     response = requests.get(EXECUTOR_LIST_URL)
-    # response content is a list of executor addresses
-    print(f"\n\n\n{response.content}\n\n\n")
-    print(f"\n\n\n{response}\n\n\n")
     state._ALL_EXECUTOR_ADDRS = response.json()
+    logging.info("Obtained list of executors.Starting coordination....")
+    state.start_coordination()
+    logging.info("Coordination started. Starting server....")
     server = grpc.server(futures.ThreadPoolExecutor())
     order_executor_grpc.add_OrderExecutorServiceServicer_to_server(
         OrderExecutorService(), server
@@ -46,7 +48,7 @@ def serve():
     port = "50055"
     server.add_insecure_port("[::]:" + port)
     server.start()
-    print(f"Server started. Listening on port {port}.")
+    logging.info("Server started. Listening on port %s.", port)
     server.wait_for_termination()
 
 if __name__ == "__main__":

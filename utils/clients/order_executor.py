@@ -26,5 +26,5 @@ def execute_order(executor_addr, order):
 def vote_request(executor_addr, request):
     with grpc.insecure_channel(executor_addr) as channel:
         stub = order_executor_grpc.OrderExecutorServiceStub(channel)
-        response = stub.VoteRequest(order_executor.VoteRequest(**request))
+        response = stub.Vote(order_executor.VoteRequest(**request))
     return response
