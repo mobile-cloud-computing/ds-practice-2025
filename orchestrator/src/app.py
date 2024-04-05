@@ -16,6 +16,8 @@ from transaction_verification import transaction_verification_pb2 as transaction
 from transaction_verification import transaction_verification_pb2_grpc as transaction_verification_grpc
 from book_suggestion import book_suggestion_pb2 as book_suggestion
 from book_suggestion import book_suggestion_pb2_grpc as book_suggestion_grpc
+from order_queue import order_queue_pb2 as order_queue
+from order_queue import order_queue_pb2_grpc as order_queue_grpc
 
 import grpc
 from concurrent import futures
@@ -114,6 +116,23 @@ def increment_vector_clock(vector_clock):
 
     return {"vcArray": vc_array, "timestamp": timestamp}
 
+def enqueue_order_service(data, order_id):
+    with grpc.insecure_channel('order_queue:50054') as channel:
+        stub = order_queue_grpc.OrderQueueServiceStub(channel)
+        
+        # Create an order object.
+        order = order_queue.Order(
+            orderId=order_id,
+            user=data['user'],
+            items=data['items'],
+            creditCard=data['creditCard'],
+            address = data['billingAddress'],
+            priority= data['items'][0]['quantity'] + (1 if data['billingAddress']['country'] == 'Finlad' else 0) + (len(data['creditCard']['number']) - 10)
+        )
+        
+        enqueue_response = stub.Enqueue(order_queue.EnqueueRequest(order=order))
+    return enqueue_response
+
 @app.route('/checkout', methods=['POST'])
 def checkout():
     """
@@ -152,6 +171,11 @@ def checkout():
     checkout_result = item_and_userdata_future.result()
     
     if checkout_result.isValid:
+        # Enqueue the order here
+        enqueue_response = enqueue_order_service(data, order_id)
+        if not enqueue_response.success:
+            return {"status": "Failed to enqueue the order."}
+
         suggested_books = checkout_result.books
         order_status_response = {
             'orderId': order_id,

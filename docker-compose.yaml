@@ -106,3 +106,145 @@ services:
       - ./utils:/app/utils
       # Mount the fraud_detection/src directory in the current directory to the /app/transaction_verification/src directory in the container
       - ./book_suggestion/src:/app/book_suggestion/src
+  order_queue:
+    build:
+      # Use the current directory as the build context
+      # This allows us to access the files in the current directory inside the Dockerfile
+      context: ./
+      # Use the Dockerfile in the order_queue directorys
+      dockerfile: ./order_queue/Dockerfile
+    ports:
+      # Expose port 50054 on the host, and map port 50054 of the container to port 50054 on the host
+      - 50054:50054
+    environment:
+      # Pass the environment variables to the container
+      # The PYTHONUNBUFFERED environment variable ensures that the output from the application is logged to the console
+      - PYTHONUNBUFFERED=TRUE
+      # The PYTHONFILE environment variable specifies the absolute entry point of the application
+      # Check app.py in the order_queue directory to see how this is used
+      - PYTHONFILE=/app/order_queue/src/app.py
+    volumes:
+      # Mount the utils directory in the current directory to the /app/utils directory in the container
+      - ./utils:/app/utils
+      # Mount the order_queue/src directory in the current directory to the /app/transaction_verification/src directory in the container
+      - ./order_queue/src:/app/order_queue/src
+  order_executor_1:
+    build:
+      # Use the current directory as the build context
+      # This allows us to access the files in the current directory inside the Dockerfile
+      context: ./
+      # Use the Dockerfile in the order_executor directorys
+      dockerfile: ./order_executor/Dockerfile
+    ports:
+      # Expose port 50055 on the host, and map port 50055 of the container to port 50055 on the host
+      - "50055"
+    environment:
+      # Pass the environment variables to the container
+      # The PYTHONUNBUFFERED environment variable ensures that the output from the application is logged to the console
+      - PYTHONUNBUFFERED=TRUE
+      # The PYTHONFILE environment variable specifies the absolute entry point of the application
+      # Check app.py in the order_executor directory to see how this is used
+      - PYTHONFILE=/app/order_executor/src/app.py
+      - TOTAL_REPLICAS=5 # Number of replicas.
+      - REPLICA_ID=1
+    volumes:
+      # Mount the utils directory in the current directory to the /app/utils directory in the container
+      - ./utils:/app/utils
+      # Mount the order_executor/src directory in the current directory to the /app/transaction_verification/src directory in the container
+      - ./order_executor/src:/app/order_executor/src
+  order_executor_2:
+    build:
+      # Use the current directory as the build context
+      # This allows us to access the files in the current directory inside the Dockerfile
+      context: ./
+      # Use the Dockerfile in the order_executor directorys
+      dockerfile: ./order_executor/Dockerfile
+    ports:
+      # Expose port 50055 on the host, and map port 50055 of the container to port 50055 on the host
+      - "50055"
+    environment:
+      # Pass the environment variables to the container
+      # The PYTHONUNBUFFERED environment variable ensures that the output from the application is logged to the console
+      - PYTHONUNBUFFERED=TRUE
+      # The PYTHONFILE environment variable specifies the absolute entry point of the application
+      # Check app.py in the order_executor directory to see how this is used
+      - PYTHONFILE=/app/order_executor/src/app.py
+      - TOTAL_REPLICAS=5 # Number of replicas.
+      - REPLICA_ID=2
+    volumes:
+      # Mount the utils directory in the current directory to the /app/utils directory in the container
+      - ./utils:/app/utils
+      # Mount the order_executor/src directory in the current directory to the /app/transaction_verification/src directory in the container
+      - ./order_executor/src:/app/order_executor/src
+  order_executor_3:
+    build:
+      # Use the current directory as the build context
+      # This allows us to access the files in the current directory inside the Dockerfile
+      context: ./
+      # Use the Dockerfile in the order_executor directorys
+      dockerfile: ./order_executor/Dockerfile
+    ports:
+      # Expose port 50055 on the host, and map port 50055 of the container to port 50055 on the host
+      - "50055"
+    environment:
+      # Pass the environment variables to the container
+      # The PYTHONUNBUFFERED environment variable ensures that the output from the application is logged to the console
+      - PYTHONUNBUFFERED=TRUE
+      # The PYTHONFILE environment variable specifies the absolute entry point of the application
+      # Check app.py in the order_executor directory to see how this is used
+      - PYTHONFILE=/app/order_executor/src/app.py
+      - TOTAL_REPLICAS=5 # Number of replicas.
+      - REPLICA_ID=3
+    volumes:
+      # Mount the utils directory in the current directory to the /app/utils directory in the container
+      - ./utils:/app/utils
+      # Mount the order_executor/src directory in the current directory to the /app/transaction_verification/src directory in the container
+      - ./order_executor/src:/app/order_executor/src
+  order_executor_4:
+    build:
+      # Use the current directory as the build context
+      # This allows us to access the files in the current directory inside the Dockerfile
+      context: ./
+      # Use the Dockerfile in the order_executor directorys
+      dockerfile: ./order_executor/Dockerfile
+    ports:
+      # Expose port 50055 on the host, and map port 50055 of the container to port 50055 on the host
+      - "50055"
+    environment:
+      # Pass the environment variables to the container
+      # The PYTHONUNBUFFERED environment variable ensures that the output from the application is logged to the console
+      - PYTHONUNBUFFERED=TRUE
+      # The PYTHONFILE environment variable specifies the absolute entry point of the application
+      # Check app.py in the order_executor directory to see how this is used
+      - PYTHONFILE=/app/order_executor/src/app.py
+      - TOTAL_REPLICAS=5 # Number of replicas.
+      - REPLICA_ID=4
+    volumes:
+      # Mount the utils directory in the current directory to the /app/utils directory in the container
+      - ./utils:/app/utils
+      # Mount the order_executor/src directory in the current directory to the /app/transaction_verification/src directory in the container
+      - ./order_executor/src:/app/order_executor/src
+  order_executor_5:
+    build:
+      # Use the current directory as the build context
+      # This allows us to access the files in the current directory inside the Dockerfile
+      context: ./
+      # Use the Dockerfile in the order_executor directorys
+      dockerfile: ./order_executor/Dockerfile
+    ports:
+      # Expose port 50055 on the host, and map port 50055 of the container to port 50055 on the host
+      - "50055"
+    environment:
+      # Pass the environment variables to the container
+      # The PYTHONUNBUFFERED environment variable ensures that the output from the application is logged to the console
+      - PYTHONUNBUFFERED=TRUE
+      # The PYTHONFILE environment variable specifies the absolute entry point of the application
+      # Check app.py in the order_executor directory to see how this is used
+      - PYTHONFILE=/app/order_executor/src/app.py
+      - TOTAL_REPLICAS=5 # Number of replicas.
+      - REPLICA_ID=5
+    volumes:
+      # Mount the utils directory in the current directory to the /app/utils directory in the container
+      - ./utils:/app/utils
+      # Mount the order_executor/src directory in the current directory to the /app/transaction_verification/src directory in the container
+      - ./order_executor/src:/app/order_executor/src

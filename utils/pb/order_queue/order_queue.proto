@@ -1,0 +1,57 @@
+syntax = "proto3";
+
+package order_queue;
+
+message User {
+  string name = 1;
+  string contact = 2;
+}
+
+message Item {
+  string name = 1;
+  int32 quantity = 2;
+}
+
+message CreditCard {
+  string number = 1;
+  string expirationDate = 2;
+  string cvv = 3;
+}
+
+message Order {
+  string orderId = 1;
+  User user = 2;
+  repeated Item items = 3;
+  CreditCard creditCard = 4;
+  BillingAddress address = 5;
+  int32 priority = 6;
+}
+
+message BillingAddress {
+  string street = 1;
+  string city = 2;
+  string state = 3;
+  string zip = 4;
+  string country = 5;
+}
+
+message EnqueueRequest {
+  Order order = 1;
+}
+
+message EnqueueResponse {
+  bool success = 1;
+}
+
+message DequeueRequest {
+}
+
+message DequeueResponse {
+  Order order = 1;
+  bool success = 2;
+}
+
+service OrderQueueService {
+  rpc Enqueue(EnqueueRequest) returns (EnqueueResponse);
+  rpc Dequeue(DequeueRequest) returns (DequeueResponse);
+}

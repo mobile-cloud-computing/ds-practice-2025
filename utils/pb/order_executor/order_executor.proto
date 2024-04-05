@@ -1,0 +1,23 @@
+syntax = "proto3";
+
+package order_executor;
+
+message Token {
+  string token = 1;
+}
+
+message TokenResponse {
+  bool success = 1;
+}
+
+message HealthCheckRequest {}
+
+message HealthCheckResponse {
+    bool alive = 1;
+}
+
+service OrderExecutorService {
+  rpc PassToken(Token) returns (TokenResponse);
+  rpc CheckHealth(HealthCheckRequest) returns (HealthCheckResponse);
+}
+
