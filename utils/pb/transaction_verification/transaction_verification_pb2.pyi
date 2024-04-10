@@ -5,18 +5,6 @@ from typing import ClassVar as _ClassVar, Iterable as _Iterable, Mapping as _Map
 
 DESCRIPTOR: _descriptor.FileDescriptor
 
-class HelloRequest(_message.Message):
-    __slots__ = ("name",)
-    NAME_FIELD_NUMBER: _ClassVar[int]
-    name: str
-    def __init__(self, name: _Optional[str] = ...) -> None: ...
-
-class HelloResponse(_message.Message):
-    __slots__ = ("greeting",)
-    GREETING_FIELD_NUMBER: _ClassVar[int]
-    greeting: str
-    def __init__(self, greeting: _Optional[str] = ...) -> None: ...
-
 class CheckoutRequest(_message.Message):
     __slots__ = ("user", "creditCard", "billingAddress", "device", "browser", "items", "referrer", "vector_clock")
     USER_FIELD_NUMBER: _ClassVar[int]

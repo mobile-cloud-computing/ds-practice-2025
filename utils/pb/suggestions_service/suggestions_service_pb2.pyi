@@ -5,17 +5,35 @@ from typing import ClassVar as _ClassVar, Iterable as _Iterable, Mapping as _Map
 
 DESCRIPTOR: _descriptor.FileDescriptor
 
-class HelloRequest(_message.Message):
-    __slots__ = ("name",)
+class Book(_message.Message):
+    __slots__ = ("id", "name", "author")
+    ID_FIELD_NUMBER: _ClassVar[int]
     NAME_FIELD_NUMBER: _ClassVar[int]
+    AUTHOR_FIELD_NUMBER: _ClassVar[int]
+    id: int
     name: str
-    def __init__(self, name: _Optional[str] = ...) -> None: ...
+    author: str
+    def __init__(self, id: _Optional[int] = ..., name: _Optional[str] = ..., author: _Optional[str] = ...) -> None: ...
 
-class HelloResponse(_message.Message):
-    __slots__ = ("greeting",)
-    GREETING_FIELD_NUMBER: _ClassVar[int]
-    greeting: str
-    def __init__(self, greeting: _Optional[str] = ...) -> None: ...
+class SuggestionRequest(_message.Message):
+    __slots__ = ("book_titles",)
+    BOOK_TITLES_FIELD_NUMBER: _ClassVar[int]
+    book_titles: _containers.RepeatedScalarFieldContainer[str]
+    def __init__(self, book_titles: _Optional[_Iterable[str]] = ...) -> None: ...
+
+class SuggestionResponse(_message.Message):
+    __slots__ = ("book_suggestions",)
+    BOOK_SUGGESTIONS_FIELD_NUMBER: _ClassVar[int]
+    book_suggestions: _containers.RepeatedCompositeFieldContainer[Book]
+    def __init__(self, book_suggestions: _Optional[_Iterable[_Union[Book, _Mapping]]] = ...) -> None: ...
+
+class VectorClock(_message.Message):
+    __slots__ = ("process_id", "clock")
+    PROCESS_ID_FIELD_NUMBER: _ClassVar[int]
+    CLOCK_FIELD_NUMBER: _ClassVar[int]
+    process_id: int
+    clock: _containers.RepeatedScalarFieldContainer[int]
+    def __init__(self, process_id: _Optional[int] = ..., clock: _Optional[_Iterable[int]] = ...) -> None: ...
 
 class CheckoutRequest(_message.Message):
     __slots__ = ("user", "creditCard", "billingAddress", "device", "browser", "items", "referrer", "vector_clock")
@@ -112,25 +130,3 @@ class VectorClockMessage(_message.Message):
     clock: _containers.RepeatedScalarFieldContainer[int]
     order_id: int
     def __init__(self, process_id: _Optional[int] = ..., clock: _Optional[_Iterable[int]] = ..., order_id: _Optional[int] = ...) -> None: ...
-
-class Book(_message.Message):
-    __slots__ = ("id", "name", "author")
-    ID_FIELD_NUMBER: _ClassVar[int]
-    NAME_FIELD_NUMBER: _ClassVar[int]
-    AUTHOR_FIELD_NUMBER: _ClassVar[int]
-    id: int
-    name: str
-    author: str
-    def __init__(self, id: _Optional[int] = ..., name: _Optional[str] = ..., author: _Optional[str] = ...) -> None: ...
-
-class SuggestionRequest(_message.Message):
-    __slots__ = ("book_titles",)
-    BOOK_TITLES_FIELD_NUMBER: _ClassVar[int]
-    book_titles: _containers.RepeatedScalarFieldContainer[str]
-    def __init__(self, book_titles: _Optional[_Iterable[str]] = ...) -> None: ...
-
-class SuggestionResponse(_message.Message):
-    __slots__ = ("book_suggestions",)
-    BOOK_SUGGESTIONS_FIELD_NUMBER: _ClassVar[int]
-    book_suggestions: _containers.RepeatedCompositeFieldContainer[Book]
-    def __init__(self, book_suggestions: _Optional[_Iterable[_Union[Book, _Mapping]]] = ...) -> None: ...

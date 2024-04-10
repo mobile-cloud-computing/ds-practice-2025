@@ -1,24 +1,13 @@
 syntax = "proto3";
 
-package hello;
+package transaction_verification;
 
-service HelloService {
-    rpc SayHello (HelloRequest) returns (HelloResponse);
-}
-
-message HelloRequest {
-    string name = 1;
-}
-
-message HelloResponse {
-    string greeting = 1;
-    }
-
-service FraudService {
+service TransactionService {
+    rpc verifyTransaction  (VectorClockMessage) returns (Determination);
     rpc sendData (CheckoutRequest) returns (Determination);
-    rpc DetectFraud (VectorClockMessage) returns (Determination);
-    
 }
+
+
 message CheckoutRequest {
     UserData user = 2;
     CreditCardData creditCard = 3;
@@ -30,8 +19,6 @@ message CheckoutRequest {
     VectorClockMessage vector_clock = 9;
 
 }
-
-
 
 
 message UserData {
@@ -68,7 +55,6 @@ message ItemData {
     string name = 1;
     string quantity = 2;
 }
-
 message Determination {
     SuggestionResponse suggestion_response = 1;  
     VectorClockMessage vector_clock = 9;

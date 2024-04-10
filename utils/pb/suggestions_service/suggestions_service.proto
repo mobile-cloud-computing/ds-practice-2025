@@ -1,24 +1,30 @@
 syntax = "proto3";
 
-package hello;
+package suggestions_service;
 
-service HelloService {
-    rpc SayHello (HelloRequest) returns (HelloResponse);
-}
-
-message HelloRequest {
-    string name = 1;
-}
-
-message HelloResponse {
-    string greeting = 1;
-    }
-
-service FraudService {
+service SuggestionService {
+    rpc Suggest (VectorClockMessage) returns (Determination);
     rpc sendData (CheckoutRequest) returns (Determination);
-    rpc DetectFraud (VectorClockMessage) returns (Determination);
-    
 }
+message Book{
+    int32 id  =1; 
+    string name = 2; 
+    string author = 3;
+}
+
+message SuggestionRequest {
+    repeated string book_titles = 1;
+}
+
+message SuggestionResponse {
+    repeated Book book_suggestions = 1;
+}
+
+message VectorClock {
+    int32 process_id = 1;
+    repeated int32 clock = 2;
+}
+
 message CheckoutRequest {
     UserData user = 2;
     CreditCardData creditCard = 3;
@@ -30,8 +36,6 @@ message CheckoutRequest {
     VectorClockMessage vector_clock = 9;
 
 }
-
-
 
 
 message UserData {
@@ -81,16 +85,4 @@ message VectorClockMessage {
 }
 
 
-message Book{
-    int32 id  =1; 
-    string name = 2; 
-    string author = 3;
-}
 
-message SuggestionRequest {
-    repeated string book_titles = 1;
-}
-
-message SuggestionResponse {
-    repeated Book book_suggestions = 1;
-}
