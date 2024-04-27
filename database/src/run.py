@@ -16,16 +16,13 @@ from utils.vector_clock.vector_clock import VectorClock
 
 logs = logger.get_module_logger("DB")
 
-   # fraud_detection_grpc.add_HelloServiceServicer_to_server(HelloService(), server)
-   # fraud_detection_grpc.add_FraudServiceServicer_to_server(FraudService(), server)
-
-
 
 class DatabaseService(DatabaseServicer):
     def Read(self, request, context):
         logs.log("Read operation triggered")
     def Write(self, request, context):
         logs.log("Write operation triggered")
+
 def serve():
     # Create a gRPC server
     server = grpc.server(futures.ThreadPoolExecutor())
