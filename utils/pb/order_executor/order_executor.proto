@@ -13,6 +13,7 @@ message HealthCheckRequest{
 
 message HealthCheckResponse{
     string status = 1;
+    string role = 2;
 }
 
 message ExecuteOrderRequest{

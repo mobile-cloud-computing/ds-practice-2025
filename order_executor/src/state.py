@@ -133,6 +133,18 @@ def start_executor_flow():
             print(f"Error in coordinator: {e}")
 
 
+def find_leader():
+    global _CURRENT_LEADER
+
+    for executor_addr in _ALL_EXECUTOR_ADDRS:
+        try:
+            response = order_executor_client.health_check(executor_addr)
+            if response.status == "Healthy":
+                _CURRENT_LEADER = executor_addr
+                break
+        except Exception:
+            pass
+
 def start_coordination():
     t = threading.Thread(target=start_executor_flow)
     t.start()
