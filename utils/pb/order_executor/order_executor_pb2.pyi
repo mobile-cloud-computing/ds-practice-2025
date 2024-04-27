@@ -9,10 +9,12 @@ class HealthCheckRequest(_message.Message):
     def __init__(self) -> None: ...
 
 class HealthCheckResponse(_message.Message):
-    __slots__ = ("status",)
+    __slots__ = ("status", "role")
     STATUS_FIELD_NUMBER: _ClassVar[int]
+    ROLE_FIELD_NUMBER: _ClassVar[int]
     status: str
-    def __init__(self, status: _Optional[str] = ...) -> None: ...
+    role: str
+    def __init__(self, status: _Optional[str] = ..., role: _Optional[str] = ...) -> None: ...
 
 class ExecuteOrderRequest(_message.Message):
     __slots__ = ("order_id",)

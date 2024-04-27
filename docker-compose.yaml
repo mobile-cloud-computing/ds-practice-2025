@@ -107,49 +107,64 @@ services:
       - ./order_mq/src:/app/order_mq/src
       - ./logs:/app/logs
 
-  order_executor_1:
-    build:
-      context: ./
-      dockerfile: ./order_executor/Dockerfile
-    environment:
-      - PYTHONUNBUFFERED=TRUE
-      - PYTHONFILE=/app/order_executor/src/app.py
-      - EXECUTOR_LIST_URL=http://orchestrator:5000/order_executors
-    volumes:
-      - ./utils:/app/utils
-      - ./order_executor/src:/app/order_executor/src
-      - ./logs:/app/logs
-    depends_on:
-      - orchestrator
+  # order_executor_1:
+  #   build:
+  #     context: ./
+  #     dockerfile: ./order_executor/Dockerfile
+  #   environment:
+  #     - PYTHONUNBUFFERED=TRUE
+  #     - PYTHONFILE=/app/order_executor/src/app.py
+  #     - EXECUTOR_LIST_URL=http://orchestrator:5000/order_executors
+  #   volumes:
+  #     - ./utils:/app/utils
+  #     - ./order_executor/src:/app/order_executor/src
+  #     - ./logs:/app/logs
+  #   depends_on:
+  #     - orchestrator
 
-  order_executor_2:
-    build:
-      context: ./
-      dockerfile: ./order_executor/Dockerfile
-    environment:
-      - PYTHONUNBUFFERED=TRUE
-      - PYTHONFILE=/app/order_executor/src/app.py
-      - EXECUTOR_LIST_URL=http://orchestrator:5000/order_executors
-    volumes:
-      - ./utils:/app/utils
-      - ./order_executor/src:/app/order_executor/src
-      - ./logs:/app/logs
-    depends_on:
-      - orchestrator
+  # order_executor_2:
+  #   build:
+  #     context: ./
+  #     dockerfile: ./order_executor/Dockerfile
+  #   environment:
+  #     - PYTHONUNBUFFERED=TRUE
+  #     - PYTHONFILE=/app/order_executor/src/app.py
+  #     - EXECUTOR_LIST_URL=http://orchestrator:5000/order_executors
+  #   volumes:
+  #     - ./utils:/app/utils
+  #     - ./order_executor/src:/app/order_executor/src
+  #     - ./logs:/app/logs
+  #   depends_on:
+  #     - orchestrator
 
       
-  order_executor_3:
+  # order_executor_3:
+  #   build:
+  #     context: ./
+  #     dockerfile: ./order_executor/Dockerfile
+  #   environment:
+  #     - PYTHONUNBUFFERED=TRUE
+  #     - PYTHONFILE=/app/order_executor/src/app.py
+  #     - EXECUTOR_LIST_URL=http://orchestrator:5000/order_executors
+  #   volumes:
+  #     - ./utils:/app/utils
+  #     - ./order_executor/src:/app/order_executor/src
+  #     - ./logs:/app/logs
+  #   depends_on:
+  #     - orchestrator
+
+  datastore:
     build:
       context: ./
-      dockerfile: ./order_executor/Dockerfile
+      dockerfile: ./datastore/Dockerfile
     environment:
       - PYTHONUNBUFFERED=TRUE
-      - PYTHONFILE=/app/order_executor/src/app.py
+      - PYTHONFILE=/app/datastore/src/app.py
       - EXECUTOR_LIST_URL=http://orchestrator:5000/order_executors
     volumes:
       - ./utils:/app/utils
-      - ./order_executor/src:/app/order_executor/src
-      - ./logs:/app/logs
+      - ./datastore/src:/app/datastore/src
+      - ./logs:/app/logs/
     depends_on:
       - orchestrator
 

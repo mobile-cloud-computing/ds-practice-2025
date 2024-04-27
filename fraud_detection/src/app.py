@@ -1,22 +1,18 @@
 import os
 import sys
+from pathlib import Path
 
 FILE = __file__ if "__file__" in globals() else os.getenv("PYTHONFILE", "")
+APP_DIR = Path(FILE).resolve().parents[2]
 
-config_path = os.path.abspath(
-    os.path.join(FILE, "../../../utils/config")
-)
-sys.path.insert(0, config_path)
+sys.path.append(str(APP_DIR / "utils/config"))
+sys.path.append(str(APP_DIR / "utils/pb/fraud_detection"))
+sys.path.append(str(APP_DIR / "fraud_detection/src"))
+
+
 import log_configurator
-
-relative_modules_path = os.path.abspath(
-    os.path.join(FILE, "../../../fraud_detection/src")
-)
-sys.path.insert(0, relative_modules_path)
 from model import FraudDetectionModel
 
-utils_path = os.path.abspath(os.path.join(FILE, "../../../utils/pb/fraud_detection"))
-sys.path.insert(0, utils_path)
 # ruff : noqa: E402
 from concurrent import futures
 
@@ -24,13 +20,16 @@ import fraud_detection_pb2 as fraud_detection
 import fraud_detection_pb2_grpc as fraud_detection_grpc
 import grpc
 
-log_configurator.configure("/app/logs/fraud_detection.info.log", "/app/logs/fraud_detection.error.log")
+log_configurator.configure(
+    "/app/logs/fraud_detection.info.log", "/app/logs/fraud_detection.error.log"
+)
 
 
 _VECTOR_CLOCK_INDEX = 1
-_CURRENT_VECTOR_CLOCK = [0,0,0]
+_CURRENT_VECTOR_CLOCK = [0, 0, 0]
 
 fraud_detection_model = FraudDetectionModel()
+
 
 def fraud_check(input):
     return fraud_detection_model.check_fraud(input)
@@ -38,11 +37,12 @@ def fraud_check(input):
 
 class FraudDetectionService(fraud_detection_grpc.FraudDetectionServiceServicer):
     def CheckFraud(self, request, context):
-        
         global _CURRENT_VECTOR_CLOCK
         vector_clock = request.vector_clock
         if vector_clock is not None and len(vector_clock) > 0:
-            _CURRENT_VECTOR_CLOCK = [max(a, b) for a, b in zip(_CURRENT_VECTOR_CLOCK, vector_clock)]
+            _CURRENT_VECTOR_CLOCK = [
+                max(a, b) for a, b in zip(_CURRENT_VECTOR_CLOCK, vector_clock)
+            ]
         _CURRENT_VECTOR_CLOCK[_VECTOR_CLOCK_INDEX] += 1
 
         response = fraud_detection.FraudResponse()

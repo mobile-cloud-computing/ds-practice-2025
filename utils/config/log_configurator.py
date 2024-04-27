@@ -1,14 +1,17 @@
 from logging.config import dictConfig
+from pathlib import Path
 
-
-def configure(info_log_path, error_log_path):
+def configure(info_log_path, error_log_path, service_name=None):
+    service_name_fmt = f"[{service_name}]" if service_name else ""
+    Path(info_log_path).parent.mkdir(parents=True, exist_ok=True)
+    Path(error_log_path).parent.mkdir(parents=True, exist_ok=True)
     dictConfig(
         {
             "version": 1,
             "disable_existing_loggers": True,
             "formatters": {
                 "default": {
-                    "format": "[%(asctime)s] %(levelname)s in %(module)s: %(message)s",
+                    "format": f"[%(asctime)s] {service_name_fmt} %(levelname)s in %(module)s: %(message)s",
                 },
                 "access": {
                     "format": "%(message)s",

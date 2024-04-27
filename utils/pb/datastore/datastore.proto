@@ -1,0 +1,87 @@
+syntax = "proto3";
+
+package datastore;
+
+service DatastoreService{
+    rpc HealthCheck(HealthCheckRequest) returns (HealthCheckResponse);
+    rpc Get(GetRequest) returns (GetResponse);
+    rpc GetBulk(GetBulkRequest) returns (GetBulkResponse);
+    rpc Put(PutRequest) returns (PutResponse);
+    rpc PutBulk(PutBulkRequest) returns (PutBulkResponse);
+    rpc Delete(DeleteRequest) returns (DeleteResponse);
+    rpc DeleteBulk(DeleteBulkRequest) returns (DeleteBulkResponse);
+}
+
+message HealthCheckRequest{
+}
+
+message HealthCheckResponse{
+    string status = 1;
+    string role = 2;
+}
+
+message GetRequest{
+    string book_id = 1;
+}
+
+message GetResponse{
+    string id = 1;
+    string title = 2;
+    string author = 3;
+    string description = 4;
+    int32 copies = 5;
+    int32 copiesAvailable = 6;
+    string category = 7;
+    string image_url = 8;
+    float price = 9;
+    repeated string tags = 10;
+}
+
+message GetBulkRequest{
+    repeated string book_ids = 1;
+}
+
+message GetBulkResponse{
+    repeated GetResponse books = 1;
+}
+
+message PutRequest{
+    string id = 1;
+    string title = 2;
+    string author = 3;
+    string description = 4;
+    int32 copies = 5;
+    int32 copiesAvailable = 6;
+    string category = 7;
+    string image_url = 8;
+    float price = 9;
+    repeated string tags = 10;
+}
+
+message PutResponse{
+    string id = 1;
+}
+
+message PutBulkRequest{
+    repeated PutRequest books = 1;
+}
+
+message PutBulkResponse{
+    repeated PutResponse books = 1;
+}
+
+message DeleteRequest{
+    string book_id = 1;
+}
+
+message DeleteResponse{
+    string id = 1;
+}
+
+message DeleteBulkRequest{
+    repeated string book_ids = 1;
+}
+
+message DeleteBulkResponse{
+    repeated string book_ids = 1;
+}

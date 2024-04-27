@@ -14,7 +14,7 @@ _sym_db = _symbol_database.Default()
 
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x14order_executor.proto\x12\rorderexecutor\"\x14\n\x12HealthCheckRequest\"%\n\x13HealthCheckResponse\x12\x0e\n\x06status\x18\x01 \x01(\t\"\'\n\x13\x45xecuteOrderRequest\x12\x10\n\x08order_id\x18\x01 \x01(\t\"&\n\x14\x45xecuteOrderResponse\x12\x0e\n\x06status\x18\x01 \x01(\t\"1\n\x0bVoteRequest\x12\x0c\n\x04term\x18\x01 \x01(\x03\x12\x14\n\x0c\x63\x61ndidate_id\x18\x02 \x01(\t\"2\n\x0cVoteResponse\x12\x0c\n\x04term\x18\x01 \x01(\x03\x12\x14\n\x0cvote_granted\x18\x02 \x01(\x08\x32\x86\x02\n\x14OrderExecutorService\x12T\n\x0bHealthCheck\x12!.orderexecutor.HealthCheckRequest\x1a\".orderexecutor.HealthCheckResponse\x12W\n\x0c\x45xecuteOrder\x12\".orderexecutor.ExecuteOrderRequest\x1a#.orderexecutor.ExecuteOrderResponse\x12?\n\x04Vote\x12\x1a.orderexecutor.VoteRequest\x1a\x1b.orderexecutor.VoteResponseb\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x14order_executor.proto\x12\rorderexecutor\"\x14\n\x12HealthCheckRequest\"3\n\x13HealthCheckResponse\x12\x0e\n\x06status\x18\x01 \x01(\t\x12\x0c\n\x04role\x18\x02 \x01(\t\"\'\n\x13\x45xecuteOrderRequest\x12\x10\n\x08order_id\x18\x01 \x01(\t\"&\n\x14\x45xecuteOrderResponse\x12\x0e\n\x06status\x18\x01 \x01(\t\"1\n\x0bVoteRequest\x12\x0c\n\x04term\x18\x01 \x01(\x03\x12\x14\n\x0c\x63\x61ndidate_id\x18\x02 \x01(\t\"2\n\x0cVoteResponse\x12\x0c\n\x04term\x18\x01 \x01(\x03\x12\x14\n\x0cvote_granted\x18\x02 \x01(\x08\x32\x86\x02\n\x14OrderExecutorService\x12T\n\x0bHealthCheck\x12!.orderexecutor.HealthCheckRequest\x1a\".orderexecutor.HealthCheckResponse\x12W\n\x0c\x45xecuteOrder\x12\".orderexecutor.ExecuteOrderRequest\x1a#.orderexecutor.ExecuteOrderResponse\x12?\n\x04Vote\x12\x1a.orderexecutor.VoteRequest\x1a\x1b.orderexecutor.VoteResponseb\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
@@ -24,15 +24,15 @@ if _descriptor._USE_C_DESCRIPTORS == False:
   _globals['_HEALTHCHECKREQUEST']._serialized_start=39
   _globals['_HEALTHCHECKREQUEST']._serialized_end=59
   _globals['_HEALTHCHECKRESPONSE']._serialized_start=61
-  _globals['_HEALTHCHECKRESPONSE']._serialized_end=98
-  _globals['_EXECUTEORDERREQUEST']._serialized_start=100
-  _globals['_EXECUTEORDERREQUEST']._serialized_end=139
-  _globals['_EXECUTEORDERRESPONSE']._serialized_start=141
-  _globals['_EXECUTEORDERRESPONSE']._serialized_end=179
-  _globals['_VOTEREQUEST']._serialized_start=181
-  _globals['_VOTEREQUEST']._serialized_end=230
-  _globals['_VOTERESPONSE']._serialized_start=232
-  _globals['_VOTERESPONSE']._serialized_end=282
-  _globals['_ORDEREXECUTORSERVICE']._serialized_start=285
-  _globals['_ORDEREXECUTORSERVICE']._serialized_end=547
+  _globals['_HEALTHCHECKRESPONSE']._serialized_end=112
+  _globals['_EXECUTEORDERREQUEST']._serialized_start=114
+  _globals['_EXECUTEORDERREQUEST']._serialized_end=153
+  _globals['_EXECUTEORDERRESPONSE']._serialized_start=155
+  _globals['_EXECUTEORDERRESPONSE']._serialized_end=193
+  _globals['_VOTEREQUEST']._serialized_start=195
+  _globals['_VOTEREQUEST']._serialized_end=244
+  _globals['_VOTERESPONSE']._serialized_start=246
+  _globals['_VOTERESPONSE']._serialized_end=296
+  _globals['_ORDEREXECUTORSERVICE']._serialized_start=299
+  _globals['_ORDEREXECUTORSERVICE']._serialized_end=561
 # @@protoc_insertion_point(module_scope)
