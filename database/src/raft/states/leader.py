@@ -1,7 +1,10 @@
-from state import NodeState
+from .state import NodeState
 
 
 class Leader(NodeState):
+    def __init__(self, node):
+        super().__init__(node)
+        
     def handle_message(self, message):
         # handle leader-specific messages
         pass
