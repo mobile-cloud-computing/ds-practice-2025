@@ -1,0 +1,11 @@
+syntax = "proto3";
+
+package database;
+
+service Database {
+    rpc Read (Empty) returns (Empty);
+    rpc Write(Empty) returns (Empty); 
+}
+message Empty{
+    
+}

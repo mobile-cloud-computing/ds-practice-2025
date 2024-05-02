@@ -7,6 +7,7 @@ import utils.pb.mq.mq_pb2_grpc as mq_grpc
 import utils.pb.suggestions_service.suggestions_service_pb2 as suggestions_service
 import utils.pb.suggestions_service.suggestions_service_pb2_grpc as suggestions_service_grpc
 from utils.pb.transaction_verification.transaction_verification_pb2 import *
+import utils.pb.transaction_verification.transaction_verification_pb2_grpc as transaction_verification_grpc
 from utils.vector_clock.vector_clock import VectorClock
 
 import grpc
