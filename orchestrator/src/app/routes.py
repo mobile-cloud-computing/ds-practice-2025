@@ -7,8 +7,7 @@ from .services.grpc_client import *
 from utils.logger import logger
 from utils.pb.suggestions_service.suggestions_service_pb2 import *
 from utils.vector_clock.vector_clock import VectorClock
-import time 
-import hashlib
+
 import uuid
 
 def init_routes(app):

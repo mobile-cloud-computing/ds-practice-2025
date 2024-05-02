@@ -4,7 +4,6 @@ import grpc
 
 import utils.pb.database.database_pb2 as database__pb2
 
-
 class DatabaseStub(object):
     """Missing associated documentation comment in .proto file."""
 
@@ -24,6 +23,16 @@ class DatabaseStub(object):
                 request_serializer=database__pb2.Empty.SerializeToString,
                 response_deserializer=database__pb2.Empty.FromString,
                 )
+        self.Request_Commit = channel.unary_unary(
+                '/database.Database/Request_Commit',
+                request_serializer=database__pb2.Request_Commit_Message.SerializeToString,
+                response_deserializer=database__pb2.Response.FromString,
+                )
+        self.Commit = channel.unary_unary(
+                '/database.Database/Commit',
+                request_serializer=database__pb2.Commit_Message.SerializeToString,
+                response_deserializer=database__pb2.Response.FromString,
+                )
 
 
 class DatabaseServicer(object):
@@ -41,6 +50,18 @@ class DatabaseServicer(object):
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
+    def Request_Commit(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def Commit(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
 
 def add_DatabaseServicer_to_server(servicer, server):
     rpc_method_handlers = {
@@ -53,6 +74,16 @@ def add_DatabaseServicer_to_server(servicer, server):
                     servicer.Write,
                     request_deserializer=database__pb2.Empty.FromString,
                     response_serializer=database__pb2.Empty.SerializeToString,
+            ),
+            'Request_Commit': grpc.unary_unary_rpc_method_handler(
+                    servicer.Request_Commit,
+                    request_deserializer=database__pb2.Request_Commit_Message.FromString,
+                    response_serializer=database__pb2.Response.SerializeToString,
+            ),
+            'Commit': grpc.unary_unary_rpc_method_handler(
+                    servicer.Commit,
+                    request_deserializer=database__pb2.Commit_Message.FromString,
+                    response_serializer=database__pb2.Response.SerializeToString,
             ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
@@ -95,5 +126,39 @@ class Database(object):
         return grpc.experimental.unary_unary(request, target, '/database.Database/Write',
             database__pb2.Empty.SerializeToString,
             database__pb2.Empty.FromString,
+            options, channel_credentials,
+            insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
+
+    @staticmethod
+    def Request_Commit(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(request, target, '/database.Database/Request_Commit',
+            database__pb2.Request_Commit_Message.SerializeToString,
+            database__pb2.Response.FromString,
+            options, channel_credentials,
+            insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
+
+    @staticmethod
+    def Commit(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(request, target, '/database.Database/Commit',
+            database__pb2.Commit_Message.SerializeToString,
+            database__pb2.Response.FromString,
             options, channel_credentials,
             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)

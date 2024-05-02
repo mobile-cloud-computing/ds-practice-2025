@@ -7,26 +7,19 @@ sys.path.insert(0, str(app_dir))
 cache = {}
 
 from utils.logger import logger
+from utils.pb.payment_service.payment_service_pb2_grpc import *
+from utils.pb.payment_service.payment_service_pb2 import Request_Commit_Message, Commit_Message, Response
 import grpc
 from concurrent import futures
-from utils.pb.database.database_pb2_grpc import *
-from utils.pb.database.database_pb2 import *
-from utils.vector_clock.vector_clock import VectorClock
 import threading
-import time
 
-logs = logger.get_module_logger("DB")
+logs = logger.get_module_logger("PAYMENT SERVICE")
 
-class DatabaseService(DatabaseServicer):
+class PaymentService(Payment_ServiceServicer):
+
     def __init__(self):
         self.commit_lock = threading.Lock()
         self.commit_data = None
-
-    def Read(self, request, context):
-        logs.info("Read operation triggered")
-
-    def Write(self, request, context):
-        logs.info("Write operation triggered")
 
     def Request_Commit(self, request, context):
         logs.info("Request Commit triggered for id: %s", request.id)
@@ -47,24 +40,28 @@ class DatabaseService(DatabaseServicer):
         response = Response()
         if request.id == self.commit_data:
             try:
+                pay(request)
                 response.message = "Committed successfully"
                 response.status = True
                 self.commit_data = None
                 self.commit_lock.release()
             except Exception as e:
                 logs.error("Error during committing: %s", e)
-                response.message = "Committing failed: " + str(e)
+                response.message = "Committing failed"
                 response.status = False
         else:
             response.message = "Committing failed. Preoccupied with id" + str(self.commit_data)
-            response.status = False 
+            response.status = False
         return response
+
+def pay(request):
+    pass
 
 def serve():
     # Create a gRPC server
     server = grpc.server(futures.ThreadPoolExecutor())
-    add_DatabaseServicer_to_server(DatabaseService(), server)
-    port = "50054"
+    add_Payment_ServiceServicer_to_server(PaymentService(), server)
+    port = "50056"
     server.add_insecure_port("[::]:" + port)
     server.start()
     logs.info(f"Server started. Listening on port {port}.")

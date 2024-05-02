@@ -1,21 +1,20 @@
-version: '3'
 services:
-  frontend:
-    build:
+  #frontend:
+  #  build:
      # Use the current directory as the build context
      # This allows us to access the files in the current directory inside the Dockerfile
-     context: ./
-     dockerfile: ./frontend/Dockerfile
-    ports:
+  #   context: ./
+  #   dockerfile: ./frontend/Dockerfile
+  #  ports:
      # Expose port 8080 on the host, and map port 3000 of the container to port 8080 on the host
-     - "8080:3000"
-    volumes:
+  #  - "8080:3000"
+  #  volumes:
      # Mount the frontend directory to the /app directory in the container
-     - ./frontend:/app
-     - /app/node_modules
-    environment:
-     - CHOKIDAR_USEPOLLING=true
-     - WDS_SOCKET_PORT=0  
+  #   - ./frontend:/app
+  #   - /app/node_modules
+  #  environment:
+  #  - CHOKIDAR_USEPOLLING=true
+  #   - WDS_SOCKET_PORT=0  
 
   orchestrator:
     build:
@@ -135,3 +134,25 @@ services:
       - PYTHONFILE=/app/executor/src/run.py
     volumes:
       - ./utils:/app/utils
+  payment_service:
+      build:
+        # Use the current directory as the build context
+        # This allows us to access the files in the current directory inside the Dockerfile
+        context: ./
+        # Use the Dockerfile in the orchestrator directory
+        dockerfile: ./payment_service/Dockerfile
+      ports:
+        # Expose port 8081 on the host, and map port 5000 of the container to port 8081 on the host
+        - 50056:50056
+      environment:
+        # Pass the environment variables to the container
+        # The PYTHONUNBUFFERED environment variable ensures that the output from the application is logged to the console
+        - PYTHONUNBUFFERED=TRUE
+        # The PYTHONFILE environment variable specifies the absolute entry point of the application
+        # Check app.py in the orchestrator directory to see how this is used
+        - PYTHONFILE=/app/payment_service/src/app/run.py
+      volumes:
+        # Mount the utils directory in the current directory to the /app/utils directory in the container
+        - ./utils:/app/utils
+        # Mount the orchestrator/src directory in the current directory to the /app/orchestrator/src directory in the container
+        - ./payment_service/src:/app/payment_service/src

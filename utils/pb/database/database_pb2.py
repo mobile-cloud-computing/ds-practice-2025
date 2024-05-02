@@ -14,15 +14,21 @@ _sym_db = _symbol_database.Default()
 
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x0e\x64\x61tabase.proto\x12\x08\x64\x61tabase\"\x07\n\x05\x45mpty2_\n\x08\x44\x61tabase\x12(\n\x04Read\x12\x0f.database.Empty\x1a\x0f.database.Empty\x12)\n\x05Write\x12\x0f.database.Empty\x1a\x0f.database.Emptyb\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x0e\x64\x61tabase.proto\x12\x08\x64\x61tabase\"+\n\x08Response\x12\x0e\n\x06status\x18\x01 \x01(\x08\x12\x0f\n\x07message\x18\x02 \x01(\t\"$\n\x16Request_Commit_Message\x12\n\n\x02id\x18\x01 \x01(\x05\"\x1c\n\x0e\x43ommit_Message\x12\n\n\x02id\x18\x01 \x01(\x05\"\x07\n\x05\x45mpty2\xdf\x01\n\x08\x44\x61tabase\x12(\n\x04Read\x12\x0f.database.Empty\x1a\x0f.database.Empty\x12)\n\x05Write\x12\x0f.database.Empty\x1a\x0f.database.Empty\x12\x46\n\x0eRequest_Commit\x12 .database.Request_Commit_Message\x1a\x12.database.Response\x12\x36\n\x06\x43ommit\x12\x18.database.Commit_Message\x1a\x12.database.Responseb\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
 _builder.BuildTopDescriptorsAndMessages(DESCRIPTOR, 'database_pb2', _globals)
 if _descriptor._USE_C_DESCRIPTORS == False:
   DESCRIPTOR._options = None
-  _globals['_EMPTY']._serialized_start=28
-  _globals['_EMPTY']._serialized_end=35
-  _globals['_DATABASE']._serialized_start=37
-  _globals['_DATABASE']._serialized_end=132
+  _globals['_RESPONSE']._serialized_start=28
+  _globals['_RESPONSE']._serialized_end=71
+  _globals['_REQUEST_COMMIT_MESSAGE']._serialized_start=73
+  _globals['_REQUEST_COMMIT_MESSAGE']._serialized_end=109
+  _globals['_COMMIT_MESSAGE']._serialized_start=111
+  _globals['_COMMIT_MESSAGE']._serialized_end=139
+  _globals['_EMPTY']._serialized_start=141
+  _globals['_EMPTY']._serialized_end=148
+  _globals['_DATABASE']._serialized_start=151
+  _globals['_DATABASE']._serialized_end=374
 # @@protoc_insertion_point(module_scope)

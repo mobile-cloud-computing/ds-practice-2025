@@ -1,10 +1,8 @@
 syntax = "proto3";
 
-package database;
+package payment_service;
 
-service Database {
-    rpc Read (Empty) returns (Empty);
-    rpc Write(Empty) returns (Empty); 
+service Payment_Service {
     rpc Request_Commit (Request_Commit_Message) returns (Response);
     rpc Commit (Commit_Message) returns (Response);
 }
@@ -19,8 +17,4 @@ message Request_Commit_Message{
 message Commit_Message{
     int32 id = 1;
     bool rollback = 2; 
-}
-
-message Empty{
-    
 }
