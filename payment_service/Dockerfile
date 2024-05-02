@@ -10,6 +10,6 @@ COPY ./payment_service/requirements.txt .
 
 # Install the Python dependencies
 RUN pip install --no-cache-dir -r requirements.txt
-
+ADD ./payment_service/src payment_service/src
 # Set the command to run the application
 CMD python3 "payment_service/src/app.py"

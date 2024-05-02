@@ -15,6 +15,9 @@ import utils.pb.database.database_pb2_grpc as db_grpc
 import utils.pb.payment_service.payment_service_pb2 as payment_service
 import utils.pb.payment_service.payment_service_pb2_grpc as payment_service_grpc
 
+import utils.pb.raft.raft_pb2 as raft
+import utils.pb.raft.raft_pb2_grpc as raft_grpc
+
 from utils.logger import logger
 import grpc
 import threading
@@ -34,10 +37,10 @@ def dequeue():
 
 def send_request_commits(id, checkout_request: mq.CheckoutRequest):
     with grpc.insecure_channel('database:50054') as channel:
-        stub = db_grpc.DatabaseStub(channel)
-        message = db.Request_Commit_Message()
+        stub = raft_grpc.RaftStub(channel)
+        message = raft.Request_Commit_Message()
         message.id = id
-        response: db.Response = stub.Request_Commit(message)
+        response: raft.Response = stub.Request_Commit(message)
     
     if not response.status:
         logs.error(f"Failed to send request commits for id {id}. Error: {response.message}")
@@ -60,11 +63,11 @@ def send_request_commits(id, checkout_request: mq.CheckoutRequest):
 
 
 def send_commits(id, checkout_request: mq.CheckoutRequest):
-    with grpc.insecure_channel('database:50054') as channel:
-        stub = db_grpc.DatabaseStub(channel)
-        message = db.Commit_Message()
+    with grpc.insecure_channel('raft_node_1:50060') as channel:
+        stub = raft_grpc.RaftStub(channel)
+        message = raft.Request_Commit_Message()
         message.id = id
-        response: db.Response = stub.Commit(message)
+        response: raft.Response = stub.Request_Commit(message)
     
     if not response.status:
         logs.error(f"Failed to send commits for id {id}. Error: {response.message}")

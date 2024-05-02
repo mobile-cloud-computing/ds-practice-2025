@@ -1,4 +1,3 @@
-services:
 version: '3'
 services:
   #  frontend:
@@ -18,77 +17,76 @@ services:
   #      - CHOKIDAR_USEPOLLING=true
   #      - WDS_SOCKET_PORT=0
   #
-  #  orchestrator:
-  #    build:
-  #      # Use the current directory as the build context
-  #      # This allows us to access the files in the current directory inside the Dockerfile
-  #      context: ./
-  #      # Use the Dockerfile in the orchestrator directory
-  #      dockerfile: ./orchestrator/Dockerfile
-  #    ports:
-  #      # Expose port 8081 on the host, and map port 5000 of the container to port 8081 on the host
-  #      - 8081:5000
-  #    environment:
-  #      # Pass the environment variables to the container
-  #      # The PYTHONUNBUFFERED environment variable ensures that the output from the application is logged to the console
-  #      - PYTHONUNBUFFERED=TRUE
-  #      # The PYTHONFILE environment variable specifies the absolute entry point of the application
-  #      # Check app.py in the orchestrator directory to see how this is used
-  #      - PYTHONFILE=/app/orchestrator/src/app/run.py
-  #    volumes:
-  #      # Mount the utils directory in the current directory to the /app/utils directory in the container
-  #      - ./utils:/app/utils
-  #      # Mount the orchestrator/src directory in the current directory to the /app/orchestrator/src directory in the container
-  #      - ./orchestrator/src:/app/orchestrator/src
-  #
-  #  fraud_detection:
-  #    build:
-  #      # Use the current directory as the build context
-  #      # This allows us to access the files in the current directory inside the Dockerfile
-  #      context: ./
-  #      # Use the Dockerfile in the fraud_detection directorys
-  #      dockerfile: ./fraud_detection/Dockerfile
-  #    ports:
-  #      # Expose port 50051 on the host, and map port 50051 of the container to port 50051 on the host
-  #      - 50051:50051
-  #    environment:
-  #      # Pass the environment variables to the container
-  #      # The PYTHONUNBUFFERED environment variable ensures that the output from the application is logged to the console
-  #      - PYTHONUNBUFFERED=TRUE
-  #      # The PYTHONFILE environment variable specifies the absolute entry point of the application
-  #      # Check app.py in the fraud_detection directory to see how this is used
-  #      - PYTHONFILE=/app/fraud_detection/src/app.py
-  #    volumes:
-  #      # Mount the utils directory in the current directory to the /app/utils directory in the container
-  #      - ./utils:/app/utils
-  #      # Mount the fraud_detection/src directory in the current directory to the /app/fraud_detection/src directory in the container
-  #      - ./fraud_detection/src:/app/fraud_detection/src
-  #
-  #  transaction_verification:
-  #    build:
-  #      context: ./
-  #      dockerfile: ./transaction_verification/Dockerfile
-  #    ports:
-  #      - "50052:50052"
-  #    environment:
-  #      - PYTHONUNBUFFERED=TRUE
-  #      - PYTHONFILE=/app/transaction_verification/src/run.py
-  #    volumes:
-  #      - ./utils:/app/utils
-  #      - ./transaction_verification/src:/app/transaction_verification/src
-  #
-  #  suggestions_service:
-  #    build:
-  #      context: ./
-  #      dockerfile: ./suggestions_service/Dockerfile
-  #    ports:
-  #      - "50053:50053"
-  #    environment:
-  #      - PYTHONUNBUFFERED=TRUE
-  #      - PYTHONFILE=/app/transaction_verification/src/run.py
-  #    volumes:
-  #      - ./utils:/app/utils
-  #      - ./suggestions_service/src:/app/suggestions_service/src
+  orchestrator:
+    build:
+      # Use the current directory as the build context
+      # This allows us to access the files in the current directory inside the Dockerfile
+      context: ./
+      # Use the Dockerfile in the orchestrator directory
+      dockerfile: ./orchestrator/Dockerfile
+    ports:
+      # Expose port 8081 on the host, and map port 5000 of the container to port 8081 on the host
+      - 8081:5000
+    environment:
+      # Pass the environment variables to the container
+      # The PYTHONUNBUFFERED environment variable ensures that the output from the application is logged to the console
+      - PYTHONUNBUFFERED=TRUE
+      # The PYTHONFILE environment variable specifies the absolute entry point of the application
+      # Check app.py in the orchestrator directory to see how this is used
+      - PYTHONFILE=/app/orchestrator/src/app/run.py
+    volumes:
+      # Mount the utils directory in the current directory to the /app/utils directory in the container
+      - ./utils:/app/utils
+      # Mount the orchestrator/src directory in the current directory to the /app/orchestrator/src directory in the container
+      - ./orchestrator/src:/app/orchestrator/src
+#  fraud_detection:
+#    build:
+#      # Use the current directory as the build context
+#      # This allows us to access the files in the current directory inside the Dockerfile
+#      context: ./
+#      # Use the Dockerfile in the fraud_detection directorys
+#      dockerfile: ./fraud_detection/Dockerfile
+#    ports:
+#      # Expose port 50051 on the host, and map port 50051 of the container to port 50051 on the host
+#      - 50051:50051
+#    environment:
+#      # Pass the environment variables to the container
+#      # The PYTHONUNBUFFERED environment variable ensures that the output from the application is logged to the console
+#      - PYTHONUNBUFFERED=TRUE
+#      # The PYTHONFILE environment variable specifies the absolute entry point of the application
+#      # Check app.py in the fraud_detection directory to see how this is used
+#      - PYTHONFILE=/app/fraud_detection/src/app.py
+#    volumes:
+#      # Mount the utils directory in the current directory to the /app/utils directory in the container
+#      - ./utils:/app/utils
+#      # Mount the fraud_detection/src directory in the current directory to the /app/fraud_detection/src directory in the container
+#      - ./fraud_detection/src:/app/fraud_detection/src
+#
+#  transaction_verification:
+#    build:
+#      context: ./
+#      dockerfile: ./transaction_verification/Dockerfile
+#    ports:
+#      - "50052:50052"
+#    environment:
+#      - PYTHONUNBUFFERED=TRUE
+#      - PYTHONFILE=/app/transaction_verification/src/run.py
+#    volumes:
+#      - ./utils:/app/utils
+#      - ./transaction_verification/src:/app/transaction_verification/src
+
+#  suggestions_service:
+#    build:
+#      context: ./
+#      dockerfile: ./suggestions_service/Dockerfile
+#    ports:
+#      - "50053:50053"
+#    environment:
+  #    - PYTHONUNBUFFERED=TRUE
+ #     - PYTHONFILE=/app/transaction_verification/src/run.py
+#    volumes:
+#      - ./utils:/app/utils
+#      - ./suggestions_service/src:/app/suggestions_service/src
 
   raft_node_1:
     build:
@@ -99,6 +97,9 @@ services:
     environment:
       - NODE_ID=raft_node_1
       - PEERS=raft_node_2:50060,raft_node_3:50060
+    volumes:
+      # Mount the utils directory in the current directory to the /app/utils directory in the container
+      - ./utils/logger:/app/database/src/raft/logger
 
   raft_node_2:
     build:
@@ -109,6 +110,9 @@ services:
     environment:
       - NODE_ID=raft_node_2
       - PEERS=raft_node_1:50060,raft_node_3:50060
+    volumes:
+      # Mount the utils directory in the current directory to the /app/utils directory in the container
+      - ./utils/logger:/app/database/src/raft/logger
 
   raft_node_3:
     build:
@@ -119,50 +123,48 @@ services:
     environment:
       - NODE_ID=raft_node_3
       - PEERS=raft_node_1:50060,raft_node_2:50060
+    volumes:
+      # Mount the utils directory in the current directory to the /app/utils directory in the container
+      - ./utils/logger:/app/database/src/raft/logger
 
-#  queue:
-#    build:
-#      context: ./
-#      dockerfile: ./queue/Dockerfile
-#    ports:
-#      - "50055:50055"
-#    environment:
-#      - PYTHONUNBUFFERED=TRUE
-#      - PYTHONFILE=/app/queue/src/run.py
-#    volumes:
-#      - ./utils:/app/utils
-#
-#  executor:
-#    build:
-#      context: ./
-#      dockerfile: ./executor/Dockerfile
-#    deploy:
-#      replicas: 2
-#    environment:
-#      - PYTHONUNBUFFERED=TRUE
-#      - PYTHONFILE=/app/executor/src/run.py
-#    volumes:
-#      - ./utils:/app/utils
+  queue:
+    build:
+      context: ./
+      dockerfile: ./queue/Dockerfile
+    ports:
+      - "50055:50055"
+    environment:
+      - PYTHONUNBUFFERED=TRUE
+      - PYTHONFILE=/app/queue/src/run.py
+    volumes:
+      - ./utils:/app/utils
+
+  executor:
+    build:
+      context: ./
+      dockerfile: ./executor/Dockerfile
+    deploy:
+      replicas: 2
+    environment:
+      - PYTHONUNBUFFERED=TRUE
+      - PYTHONFILE=/app/executor/src/run.py
+    volumes:
+      - ./utils:/app/utils
 
   payment_service:
-      build:
-        # Use the current directory as the build context
-        # This allows us to access the files in the current directory inside the Dockerfile
-        context: ./
-        # Use the Dockerfile in the orchestrator directory
-        dockerfile: ./payment_service/Dockerfile
-      ports:
-        # Expose port 8081 on the host, and map port 5000 of the container to port 8081 on the host
-        - 50056:50056
-      environment:
-        # Pass the environment variables to the container
-        # The PYTHONUNBUFFERED environment variable ensures that the output from the application is logged to the console
-        - PYTHONUNBUFFERED=TRUE
-        # The PYTHONFILE environment variable specifies the absolute entry point of the application
-        # Check app.py in the orchestrator directory to see how this is used
-        - PYTHONFILE=/app/payment_service/src/app/run.py
-      volumes:
-        # Mount the utils directory in the current directory to the /app/utils directory in the container
-        - ./utils:/app/utils
-        # Mount the orchestrator/src directory in the current directory to the /app/orchestrator/src directory in the container
-        - ./payment_service/src:/app/payment_service/src
+    build:
+      context: ./
+
+      dockerfile: ./payment_service/Dockerfile
+    ports:
+      - 50056:50056
+    environment:
+      # Pass the environment variables to the container
+      - PYTHONUNBUFFERED=TRUE
+      # The PYTHONFILE environment variable specifies the absolute entry point of the application
+      # Check app.py in the orchestrator directory to see how this is used
+      - PYTHONFILE=/app/payment_service/src/app/run.py
+    volumes:
+      # Mount the utils directory in the current directory to the /app/utils directory in the container
+      - ./utils:/app/utils
+      # Mount the orchestrator/src directory in the current directory
