@@ -135,9 +135,9 @@ class Node:
         Apply all committed but unapplied entries to the state machine from lastApplied up to commitIndex.
         """
         # Start applying from the next entry after lastApplied
-        from_index = self.last_applied
+        from_index = self.last_applied + 1
 
-        while from_index < self.commit_index:
+        while from_index <= self.commit_index:
             entry = self.log[from_index]
 
             operation = entry['command']['operation']

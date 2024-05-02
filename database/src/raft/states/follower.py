@@ -87,7 +87,7 @@ class Follower(NodeState):
 
         # Append any new entries not already in the log.
         if message.entries:
-            self.logger.debug(f"Appending {len(message.entries)} to local log.")
+            self.logger.debug(f"Appending {len(message.entries)} entries to local log.")
             self.node.log.extend(self._convert_log_entries(message.entries))
 
         # If leaderCommit > commitIndex, set commitIndex = min(leaderCommit, index of last new entry)
