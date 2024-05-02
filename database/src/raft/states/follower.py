@@ -18,6 +18,7 @@ class Follower(NodeState):
         if message.term > self.node.term:
             self.logger.debug(f"Request term {message.term} higher than mine {self.node.term}.")
             self.node.term = message.term
+            self.node.leader_id = None
             self.node.voted_for = None
 
         # Reply false if term < currentTerm (§5.1)
@@ -56,6 +57,7 @@ class Follower(NodeState):
                 f"Rejecting AppendEntries RPC from outdated term {message.term}. Current term is {self.node.term}.")
             return raft_pb2.AppendEntriesResponse(term=self.node.term, success=False)
 
+        self.node.leader_id = message.leader_id
         self.node.reset_timer()
 
         # If RPC request or response contains term T > currentTerm:
@@ -85,7 +87,7 @@ class Follower(NodeState):
 
         # Append any new entries not already in the log.
         if message.entries:
-            self.logger.debug(f"Appending {len(message.entries)} to local log.")
+            self.logger.debug(f"Appending {len(message.entries)} entries to local log.")
             self.node.log.extend(self._convert_log_entries(message.entries))
 
         # If leaderCommit > commitIndex, set commitIndex = min(leaderCommit, index of last new entry)
@@ -105,3 +107,11 @@ class Follower(NodeState):
         self.logger.info('Follower timeout, transitioning to Candidate')
         from .candidate import Candidate
         self.node.change_state(Candidate)
+
+    def append_log(self, command):
+        if self.node.leader_id:
+            return self.node.forward_to_leader(command)
+
+        else:
+            return raft_pb2.RaftClientStatus(error=True, leader_id=self.node.leader_id,
+                                             message="Election in progress, try again later.")

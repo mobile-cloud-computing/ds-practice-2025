@@ -24,6 +24,7 @@ class RaftService(RaftServicer):
     def StateMachineInfo(self, request, context):
         return self.node.state_machine_info()
 
+    # Trigger with: grpcurl -proto raft.proto -import-path raft/proto/ -d '{"operation": "set", "key": "asd", "value": "value5"}' -plaintext (hostname).local:50062 raft.Raft/WriteCommand
     def WriteCommand(self, request, context):
         return self.node.write_command(request)
 
