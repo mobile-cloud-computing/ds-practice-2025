@@ -29,7 +29,7 @@ class Node:
 
         self.state = Follower(self)
 
-        self.timer = threading.Timer(self._random_timeout(), self.state.handle_timeout)
+        self.timer = threading.Timer(self.state.timeout(), self.state.handle_timeout)
         self.timer.start()
 
         self.lock = threading.Lock()
@@ -38,14 +38,10 @@ class Node:
         self.logger.info(f"Starting Raft node {self.node_id} with peers {self.peers}")
 
     @staticmethod
-    def _random_timeout():
-        """Return a random timeout between 150 and 300 ms."""
-        return random.uniform(150, 300) / 1000.0
-
-    @staticmethod
     def _static_timeout():
         """Return a random timeout between 150 and 300 ms."""
-        return 0.5
+        # return 0.05
+        return 1
 
     def change_state(self, new_state):
         """Change the state to another state class."""
@@ -59,7 +55,7 @@ class Node:
             self.logger.info(f"Changing {self.state.__class__.__name__} state to {new_state.__name__}")
 
             self.state = new_state(self)
-            self.timer = threading.Timer(self._random_timeout(), self.state.handle_timeout)
+            self.timer = threading.Timer(self.state.timeout(), self.state.handle_timeout)
             self.timer.start()
 
     def reset_timer(self):
@@ -71,10 +67,10 @@ class Node:
         with self.lock:
             self.cancel_timer()
 
-            self.timer = threading.Timer(self._random_timeout(), self.state.handle_timeout)
+            self.timer = threading.Timer(self.state.timeout(), self.state.handle_timeout)
             self.timer.start()
 
-            self.logger.debug(f"Timer reset by {self.state.__class__.__name__}")
+            self.logger.debug(f"Timer reset by {self.state.__class__.__name__} (term: {self.term})")
 
     def cancel_timer(self):
         """Cancel timeout timers if set."""
@@ -97,7 +93,7 @@ class Node:
                     sys.exit(1)
 
             except grpc.RpcError as e:
-                self.logger.warning(f"Failed sending message to {peer}: {e}")
+                self.logger.debug(f"Failed sending message to {peer} due to gRPC error: {e}")
                 return None
 
             return response

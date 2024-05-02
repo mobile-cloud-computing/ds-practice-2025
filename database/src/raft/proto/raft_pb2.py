@@ -14,23 +14,23 @@ _sym_db = _symbol_database.Default()
 
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\nraft.proto\x12\x04raft\"\x16\n\x14\x41ppendEntriesRequest\"\x17\n\x15\x41ppendEntriesResponse\"g\n\x12RequestVoteRequest\x12\x0c\n\x04term\x18\x01 \x01(\x05\x12\x14\n\x0c\x63\x61ndidate_id\x18\x02 \x01(\t\x12\x16\n\x0elast_log_index\x18\x03 \x01(\x05\x12\x15\n\rlast_log_term\x18\x04 \x01(\x05\"4\n\x13RequestVoteResponse\x12\x0c\n\x04term\x18\x01 \x01(\x05\x12\x0f\n\x07granted\x18\x02 \x01(\x08\")\n\x08LogEntry\x12\x0c\n\x04term\x18\x01 \x01(\x05\x12\x0f\n\x07\x63ommand\x18\x02 \x01(\t2\x98\x01\n\x04Raft\x12J\n\rAppendEntries\x12\x1a.raft.AppendEntriesRequest\x1a\x1b.raft.AppendEntriesResponse\"\x00\x12\x44\n\x0bRequestVote\x12\x18.raft.RequestVoteRequest\x1a\x19.raft.RequestVoteResponse\"\x00\x62\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\nraft.proto\x12\x04raft\"\xa5\x01\n\x14\x41ppendEntriesRequest\x12\x0c\n\x04term\x18\x01 \x01(\x05\x12\x11\n\tleader_id\x18\x02 \x01(\t\x12\x1f\n\x07\x65ntries\x18\x03 \x03(\x0b\x32\x0e.raft.LogEntry\x12\x1a\n\x12previous_log_index\x18\x04 \x01(\x05\x12\x19\n\x11previous_log_term\x18\x05 \x01(\x05\x12\x14\n\x0c\x63ommit_index\x18\x06 \x01(\x05\"e\n\x15\x41ppendEntriesResponse\x12\x0c\n\x04term\x18\x01 \x01(\x05\x12\x0f\n\x07success\x18\x02 \x01(\x08\x12\x16\n\x0e\x63onflict_index\x18\x03 \x01(\x05\x12\x15\n\rconflict_term\x18\x04 \x01(\x05\"g\n\x12RequestVoteRequest\x12\x0c\n\x04term\x18\x01 \x01(\x05\x12\x14\n\x0c\x63\x61ndidate_id\x18\x02 \x01(\t\x12\x16\n\x0elast_log_index\x18\x03 \x01(\x05\x12\x15\n\rlast_log_term\x18\x04 \x01(\x05\"4\n\x13RequestVoteResponse\x12\x0c\n\x04term\x18\x01 \x01(\x05\x12\x0f\n\x07granted\x18\x02 \x01(\x08\")\n\x08LogEntry\x12\x0c\n\x04term\x18\x01 \x01(\x05\x12\x0f\n\x07\x63ommand\x18\x02 \x01(\t2\x98\x01\n\x04Raft\x12J\n\rAppendEntries\x12\x1a.raft.AppendEntriesRequest\x1a\x1b.raft.AppendEntriesResponse\"\x00\x12\x44\n\x0bRequestVote\x12\x18.raft.RequestVoteRequest\x1a\x19.raft.RequestVoteResponse\"\x00\x62\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
 _builder.BuildTopDescriptorsAndMessages(DESCRIPTOR, 'raft_pb2', _globals)
 if _descriptor._USE_C_DESCRIPTORS == False:
   DESCRIPTOR._options = None
-  _globals['_APPENDENTRIESREQUEST']._serialized_start=20
-  _globals['_APPENDENTRIESREQUEST']._serialized_end=42
-  _globals['_APPENDENTRIESRESPONSE']._serialized_start=44
-  _globals['_APPENDENTRIESRESPONSE']._serialized_end=67
-  _globals['_REQUESTVOTEREQUEST']._serialized_start=69
-  _globals['_REQUESTVOTEREQUEST']._serialized_end=172
-  _globals['_REQUESTVOTERESPONSE']._serialized_start=174
-  _globals['_REQUESTVOTERESPONSE']._serialized_end=226
-  _globals['_LOGENTRY']._serialized_start=228
-  _globals['_LOGENTRY']._serialized_end=269
-  _globals['_RAFT']._serialized_start=272
-  _globals['_RAFT']._serialized_end=424
+  _globals['_APPENDENTRIESREQUEST']._serialized_start=21
+  _globals['_APPENDENTRIESREQUEST']._serialized_end=186
+  _globals['_APPENDENTRIESRESPONSE']._serialized_start=188
+  _globals['_APPENDENTRIESRESPONSE']._serialized_end=289
+  _globals['_REQUESTVOTEREQUEST']._serialized_start=291
+  _globals['_REQUESTVOTEREQUEST']._serialized_end=394
+  _globals['_REQUESTVOTERESPONSE']._serialized_start=396
+  _globals['_REQUESTVOTERESPONSE']._serialized_end=448
+  _globals['_LOGENTRY']._serialized_start=450
+  _globals['_LOGENTRY']._serialized_end=491
+  _globals['_RAFT']._serialized_start=494
+  _globals['_RAFT']._serialized_end=646
 # @@protoc_insertion_point(module_scope)

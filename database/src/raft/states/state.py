@@ -16,9 +16,18 @@ class NodeState:
     def handle_timeout(self):
         raise NotImplementedError
 
+    def timeout(self):
+        raise NotImplementedError
+
+    def get_last_log_index(self):
+        return self.node.get_last_log_index()
+
+    def get_last_log_term(self):
+        return self.node.get_last_log_term()
+
     @staticmethod
     def _random_timeout():
-        return random.uniform(150, 300) / 1000.0
+        return random.uniform(150, 300) / 100.0
 
     @staticmethod
     def _static_timeout():

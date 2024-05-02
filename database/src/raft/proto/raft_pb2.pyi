@@ -1,16 +1,37 @@
+from google.protobuf.internal import containers as _containers
 from google.protobuf import descriptor as _descriptor
 from google.protobuf import message as _message
-from typing import ClassVar as _ClassVar, Optional as _Optional
+from typing import ClassVar as _ClassVar, Iterable as _Iterable, Mapping as _Mapping, Optional as _Optional, Union as _Union
 
 DESCRIPTOR: _descriptor.FileDescriptor
 
 class AppendEntriesRequest(_message.Message):
-    __slots__ = ()
-    def __init__(self) -> None: ...
+    __slots__ = ("term", "leader_id", "entries", "previous_log_index", "previous_log_term", "commit_index")
+    TERM_FIELD_NUMBER: _ClassVar[int]
+    LEADER_ID_FIELD_NUMBER: _ClassVar[int]
+    ENTRIES_FIELD_NUMBER: _ClassVar[int]
+    PREVIOUS_LOG_INDEX_FIELD_NUMBER: _ClassVar[int]
+    PREVIOUS_LOG_TERM_FIELD_NUMBER: _ClassVar[int]
+    COMMIT_INDEX_FIELD_NUMBER: _ClassVar[int]
+    term: int
+    leader_id: str
+    entries: _containers.RepeatedCompositeFieldContainer[LogEntry]
+    previous_log_index: int
+    previous_log_term: int
+    commit_index: int
+    def __init__(self, term: _Optional[int] = ..., leader_id: _Optional[str] = ..., entries: _Optional[_Iterable[_Union[LogEntry, _Mapping]]] = ..., previous_log_index: _Optional[int] = ..., previous_log_term: _Optional[int] = ..., commit_index: _Optional[int] = ...) -> None: ...
 
 class AppendEntriesResponse(_message.Message):
-    __slots__ = ()
-    def __init__(self) -> None: ...
+    __slots__ = ("term", "success", "conflict_index", "conflict_term")
+    TERM_FIELD_NUMBER: _ClassVar[int]
+    SUCCESS_FIELD_NUMBER: _ClassVar[int]
+    CONFLICT_INDEX_FIELD_NUMBER: _ClassVar[int]
+    CONFLICT_TERM_FIELD_NUMBER: _ClassVar[int]
+    term: int
+    success: bool
+    conflict_index: int
+    conflict_term: int
+    def __init__(self, term: _Optional[int] = ..., success: bool = ..., conflict_index: _Optional[int] = ..., conflict_term: _Optional[int] = ...) -> None: ...
 
 class RequestVoteRequest(_message.Message):
     __slots__ = ("term", "candidate_id", "last_log_index", "last_log_term")
