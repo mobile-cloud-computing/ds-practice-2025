@@ -20,6 +20,13 @@ class RaftService(RaftServicer):
     def RequestVote(self, request, context):
         return self.node.state.handle_vote_request(request)
 
+    # Trigger with: grpcurl -proto raft.proto -import-path raft/proto/ -d '{}' -plaintext (hostname).local:50062 raft.Raft/StateMachineInfo
+    def StateMachineInfo(self, request, context):
+        return self.node.state_machine_info()
+
+    def WriteCommand(self, request, context):
+        return self.node.write_command(request)
+
 
 def _start_raft(node_id, nodes, port=50060):
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))

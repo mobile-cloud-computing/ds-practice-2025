@@ -4,10 +4,10 @@ FROM python:3.11
 # Set the working directory in the container
 # Both the utils and src folders will be mounted as volumes, please see docker-compose.yaml
 WORKDIR /app
-ADD ./database /app/
 
 # Copy the requirements file to the working directory
 COPY ./database/requirements.txt .
+ADD ./database/src database/src
 
 # Install the Python dependencies
 RUN pip install --no-cache-dir -r requirements.txt

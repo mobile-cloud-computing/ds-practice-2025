@@ -5,8 +5,21 @@ package raft;
 service Raft {
   rpc AppendEntries(AppendEntriesRequest) returns (AppendEntriesResponse) {}
   rpc RequestVote(RequestVoteRequest) returns (RequestVoteResponse) {}
+  rpc StateMachineInfo(Empty) returns (Info) {}
+  rpc WriteCommand(Command) returns (RaftClientStatus) {}
 }
 
+message Empty {}
+
+message Info {
+  string info = 1;
+}
+
+message RaftClientStatus {
+  bool error = 1;
+  string leader_id = 2;
+  string message = 3;
+}
 
 message AppendEntriesRequest {
   int32 term = 1;

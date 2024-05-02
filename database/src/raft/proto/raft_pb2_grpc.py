@@ -24,6 +24,16 @@ class RaftStub(object):
             request_serializer=raft__pb2.RequestVoteRequest.SerializeToString,
             response_deserializer=raft__pb2.RequestVoteResponse.FromString,
         )
+        self.StateMachineInfo = channel.unary_unary(
+            '/raft.Raft/StateMachineInfo',
+            request_serializer=raft__pb2.Empty.SerializeToString,
+            response_deserializer=raft__pb2.Info.FromString,
+        )
+        self.WriteCommand = channel.unary_unary(
+            '/raft.Raft/WriteCommand',
+            request_serializer=raft__pb2.Command.SerializeToString,
+            response_deserializer=raft__pb2.RaftClientStatus.FromString,
+        )
 
 
 class RaftServicer(object):
@@ -41,6 +51,18 @@ class RaftServicer(object):
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
+    def StateMachineInfo(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def WriteCommand(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
 
 def add_RaftServicer_to_server(servicer, server):
     rpc_method_handlers = {
@@ -53,6 +75,16 @@ def add_RaftServicer_to_server(servicer, server):
             servicer.RequestVote,
             request_deserializer=raft__pb2.RequestVoteRequest.FromString,
             response_serializer=raft__pb2.RequestVoteResponse.SerializeToString,
+        ),
+        'StateMachineInfo': grpc.unary_unary_rpc_method_handler(
+            servicer.StateMachineInfo,
+            request_deserializer=raft__pb2.Empty.FromString,
+            response_serializer=raft__pb2.Info.SerializeToString,
+        ),
+        'WriteCommand': grpc.unary_unary_rpc_method_handler(
+            servicer.WriteCommand,
+            request_deserializer=raft__pb2.Command.FromString,
+            response_serializer=raft__pb2.RaftClientStatus.SerializeToString,
         ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
@@ -95,5 +127,39 @@ class Raft(object):
         return grpc.experimental.unary_unary(request, target, '/raft.Raft/RequestVote',
                                              raft__pb2.RequestVoteRequest.SerializeToString,
                                              raft__pb2.RequestVoteResponse.FromString,
+                                             options, channel_credentials,
+                                             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
+
+    @staticmethod
+    def StateMachineInfo(request,
+                         target,
+                         options=(),
+                         channel_credentials=None,
+                         call_credentials=None,
+                         insecure=False,
+                         compression=None,
+                         wait_for_ready=None,
+                         timeout=None,
+                         metadata=None):
+        return grpc.experimental.unary_unary(request, target, '/raft.Raft/StateMachineInfo',
+                                             raft__pb2.Empty.SerializeToString,
+                                             raft__pb2.Info.FromString,
+                                             options, channel_credentials,
+                                             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
+
+    @staticmethod
+    def WriteCommand(request,
+                     target,
+                     options=(),
+                     channel_credentials=None,
+                     call_credentials=None,
+                     insecure=False,
+                     compression=None,
+                     wait_for_ready=None,
+                     timeout=None,
+                     metadata=None):
+        return grpc.experimental.unary_unary(request, target, '/raft.Raft/WriteCommand',
+                                             raft__pb2.Command.SerializeToString,
+                                             raft__pb2.RaftClientStatus.FromString,
                                              options, channel_credentials,
                                              insecure, call_credentials, compression, wait_for_ready, timeout, metadata)

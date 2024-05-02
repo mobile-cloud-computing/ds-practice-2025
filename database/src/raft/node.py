@@ -6,6 +6,7 @@ import grpc
 
 from .proto import raft_pb2_grpc, raft_pb2
 from .states.follower import Follower
+from .statemachine import StateMachine
 
 logging.basicConfig(level=logging.DEBUG,
                     format='%(asctime)s - %(levelname)s - %(message)s',
@@ -30,12 +31,15 @@ class Node:
             {'term': 101, 'command': {'operation': 'update', 'key': 'key1', 'value': 'latest_value1'}},
             {'term': 102, 'command': {'operation': 'update', 'key': 'key3', 'value': 'final_value3'}}
         ]
-        self.term = self.log[-1]['term']
-        self.commit_index = 4
+        # self.term = self.log[-1]['term']
+        # self.commit_index = 4
 
-        # self.log = []
-        # self.term = 0
-        # self.commit_index = 0
+        self.log = []
+        self.term = 0
+        self.commit_index = -1
+
+        self.state_machine = StateMachine()
+        self.last_applied = -1
 
         self.voted_for = None
 
@@ -111,6 +115,26 @@ class Node:
 
             return response
 
+    def apply_entries_to_state_machine(self):
+        """
+        Apply all committed but unapplied entries to the state machine from lastApplied up to commitIndex.
+        """
+        # Start applying from the next entry after lastApplied
+        from_index = self.last_applied
+
+        while from_index < self.commit_index:
+            entry = self.log[from_index]
+
+            operation = entry['command']['operation']
+            key = entry['command']['key']
+            value = entry['command'].get('value', '')
+
+            result = self.state_machine.apply(operation, key, value)
+            self.logger.info(f"Applied entry {from_index}: {result}")
+
+            self.last_applied = from_index
+            from_index += 1
+
     def get_last_log_index(self):
         """Retrieve the index of the last entry in the log."""
         with self.log_lock:
@@ -120,6 +144,14 @@ class Node:
         """Retrieve the term of the last entry in the log."""
         with self.log_lock:
             return self.log[-1]['term'] if len(self.log) != 0 else 0
+
+    def write_command(self, command):
+        if isinstance(command, raft_pb2.Command):
+            c = {'operation': command.operation, 'key': command.key, 'value': command.value}
+            return self.state.append_log(c)
+
+    def state_machine_info(self):
+        return raft_pb2.Info(info=f"Node {self.node_id}: {self.state_machine.__repr__()}")
 
     # TODO: Maybe convert this to a node state? E.g. state: shutdown
     def terminate(self, server, signum):

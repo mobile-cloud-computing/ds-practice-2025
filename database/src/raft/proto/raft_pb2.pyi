@@ -5,6 +5,26 @@ from typing import ClassVar as _ClassVar, Iterable as _Iterable, Mapping as _Map
 
 DESCRIPTOR: _descriptor.FileDescriptor
 
+class Empty(_message.Message):
+    __slots__ = ()
+    def __init__(self) -> None: ...
+
+class Info(_message.Message):
+    __slots__ = ("info",)
+    INFO_FIELD_NUMBER: _ClassVar[int]
+    info: str
+    def __init__(self, info: _Optional[str] = ...) -> None: ...
+
+class RaftClientStatus(_message.Message):
+    __slots__ = ("error", "leader_id", "message")
+    ERROR_FIELD_NUMBER: _ClassVar[int]
+    LEADER_ID_FIELD_NUMBER: _ClassVar[int]
+    MESSAGE_FIELD_NUMBER: _ClassVar[int]
+    error: bool
+    leader_id: str
+    message: str
+    def __init__(self, error: bool = ..., leader_id: _Optional[str] = ..., message: _Optional[str] = ...) -> None: ...
+
 class AppendEntriesRequest(_message.Message):
     __slots__ = ("term", "leader_id", "entries", "previous_log_index", "previous_log_term", "commit_index")
     TERM_FIELD_NUMBER: _ClassVar[int]

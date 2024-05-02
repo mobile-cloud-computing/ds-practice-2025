@@ -23,27 +23,43 @@ class Candidate(NodeState):
         """Handle RequestVote gRPC messages from other candidates."""
         self.logger.debug(f"Node {self.node.node_id} received RequestVote RPC with term {message.term}")
 
+        # TODO: This is a very big bandaid around thread timing issues.
+        if not isinstance(self.node.state, Candidate):
+            self.logger.debug("Node is no longer a candidate, ignoring vote request.")
+            return
+
         # Update term if the incoming term is higher and reset state
         if message.term > self.node.term:
+            self.logger.debug(f"Request term {message.term} higher than mine {self.node.term}. Changing to follower.")
             self.node.term = message.term
             self.node.voted_for = None
             from .follower import Follower
-            self.node.change_state(Follower)  # Become a follower if the term is higher
+            self.node.change_state(Follower)
+
+            return self.node.state.handle_vote_request(message)
 
         # Reject if the incoming term is lower
         if message.term < self.node.term:
+            self.logger.debug(
+                f"Rejecting RequestVote RPC from outdated term {message.term} node {message.candidate_id}. Current term is {self.node.term}.")
             return raft_pb2.RequestVoteResponse(term=self.node.term, granted=False)
 
         # Check log freshness
         if (message.last_log_term < self.get_last_log_term() or
-                (message.last_log_term == self.get_last_log_term() and message.last_log_index < self.get_last_log_index())):
+                (
+                        message.last_log_term == self.get_last_log_term() and message.last_log_index < self.get_last_log_index())):
+            self.logger.debug(
+                f"Rejecting RequestVote RPC from {message.candidate_id} due to log freshness. Term: {message.last_log_term} < {self.get_last_log_term()}. Index: {message.last_log_index} < {self.get_last_log_index()}")
             return raft_pb2.RequestVoteResponse(term=self.node.term, granted=False)
 
         # Vote granting conditions
         if self.node.voted_for is None or self.node.voted_for == message.candidate_id:
+            self.logger.debug(f"Granting vote to {message.candidate_id}")
             self.node.voted_for = message.candidate_id
+            self.node.reset_timer()
             return raft_pb2.RequestVoteResponse(term=self.node.term, granted=True)
 
+        self.logger.debug(f"Node has voted for {self.node.voted_for} already.")
         return raft_pb2.RequestVoteResponse(term=self.node.term, granted=False)
 
     def handle_append_entries(self, message):
@@ -52,7 +68,8 @@ class Candidate(NodeState):
 
         # Reply false if term < currentTerm (§5.1)
         if message.term < self.node.term:
-            self.logger.debug(f"Rejecting AppendEntries RPC from outdated term {message.term}. Current term is {self.node.term}.")
+            self.logger.debug(
+                f"Rejecting AppendEntries RPC from outdated term {message.term}. Current term is {self.node.term}.")
             return raft_pb2.AppendEntriesResponse(term=self.node.term, success=False)
 
         self.node.reset_timer()
@@ -91,7 +108,8 @@ class Candidate(NodeState):
         # If leaderCommit > commitIndex, set commitIndex = min(leaderCommit, index of last new entry)
         if message.commit_index > self.node.commit_index:
             self.node.commit_index = min(message.commit_index, len(self.node.log) - 1)
-            self.logger.debug(f"Commit index updated to {self.node.commit_index} based on leader's commit index {message.commit_index}.")
+            self.logger.debug(
+                f"Commit index updated to {self.node.commit_index} based on leader's commit index {message.commit_index}.")
 
         self.logger.debug(
             f"AppendEntries RPC processed successfully. Commit index is now {self.node.commit_index}, last_log_term ({self.get_last_log_term()}), last_log_index ({self.get_last_log_index()}).")

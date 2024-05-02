@@ -25,6 +25,10 @@ class NodeState:
     def get_last_log_term(self):
         return self.node.get_last_log_term()
 
+    def append_log(self, command):
+        """Append a command to the node log."""
+        raise NotImplementedError
+
     @staticmethod
     def _convert_log_entries(entries):
         """Convert a LogEntry entries protobuf to a dictionary."""

@@ -8,9 +8,11 @@ class Leader(NodeState):
     def __init__(self, node):
         super().__init__(node)
 
-        # Track log consistency of the peers
+        # This is a dictionary that tracks the index of the next log entry each follower needs to replicate.
         self.next_index = {peer: len(node.log) for peer in node.peers}
-        self.match_index = {peer: 0 for peer in node.peers}
+
+        # This is a dictionary that records the highest log index known to be replicated on each follower.
+        self.match_index = {peer: -1 for peer in node.peers}
 
         self._append_entries()
 
@@ -70,6 +72,19 @@ class Leader(NodeState):
         self._append_entries()
         self.node.reset_timer()
 
+    def append_log(self, command):
+        entry = {
+            'term': self.node.term,
+            'command': command
+        }
+
+        self.node.log.append(entry)
+        self.logger.debug(f"Node {self.node.node_id} got a write request for new log entry: {entry}")
+        self._append_entries()
+
+        # TODO: This should be an asynchronous callback to replication instead.
+        return raft_pb2.RaftClientStatus(leader_id=self.node.node_id, message=f"Wrote {command} to log.")
+
     def _append_entries(self):
         with concurrent.futures.ThreadPoolExecutor(max_workers=len(self.node.peers)) as executor:
             futures = {}
@@ -77,13 +92,17 @@ class Leader(NodeState):
                 next_idx = self.next_index[peer]
                 prev_log_index = next_idx - 1
                 prev_log_term = self.node.log[prev_log_index]['term'] if prev_log_index >= 0 else 0
-                entries = [raft_pb2.LogEntry(term=entry['term'], command=raft_pb2.Command(operation=entry['command']['operation'],
-                                                                                          key=entry['command']['key'],
-                                                                                          value=entry['command']['value'])) for entry in
+                entries = [raft_pb2.LogEntry(term=entry['term'],
+                                             command=raft_pb2.Command(operation=entry['command']['operation'],
+                                                                      key=entry['command']['key'],
+                                                                      value=entry['command']['value'])) for entry in
                            self.node.log[next_idx:]] if next_idx < len(self.node.log) else []
 
                 self.logger.debug(
                     f"AppendEntries to peer {peer} with message parameters - {self.node.term} {self.node.node_id} {prev_log_index} {prev_log_term} {entries} {self.node.commit_index}")
+
+                assert prev_log_index >= -1, f"Invalid prev_log_index value {prev_log_index} for {peer}."
+                assert prev_log_term >= 0, f"Invalid prev_log_term value {prev_log_term} for {peer}."
 
                 message = raft_pb2.AppendEntriesRequest(
                     term=self.node.term,
@@ -101,22 +120,24 @@ class Leader(NodeState):
                     try:
                         response = future.result()
                         if response and response.success:
-                            self.next_index[peer] = max(self.next_index[peer], len(entries) + prev_log_index + 1)
+                            self.next_index[peer] = next_idx + len(entries)
                             self.match_index[peer] = self.next_index[peer] - 1
                         else:
-                            self.next_index[peer] -= 1
+                            self.next_index[peer] = max(self.next_index[peer] - 1, 0)
                     except Exception as e:
                         self.node.logger.error(f"RPC call failed for {peer} with error: {e}")
 
-                # if len(entries) > 0:
                 all_match_indices = list(self.match_index.values())
-                all_match_indices.append(len(self.node.log) - 1)  # Include the leader's last index
+                all_match_indices.append(len(self.node.log) - 1)
                 new_commit_index = self._find_majority_match(all_match_indices)
                 if new_commit_index > self.node.commit_index:
                     self.node.commit_index = new_commit_index
-                    self.logger.info(f"Commit index updated to {self.node.commit_index}")
+                    self.logger.info(f"Commit index updated to {self.node.commit_index}. Committing to State Machine.")
 
-    def _find_majority_match(self, indices):
+                    self.node.apply_entries_to_state_machine()
+
+    @staticmethod
+    def _find_majority_match(indices):
         # Find the highest log index replicated on the majority of servers
         sorted_indices = sorted(indices, reverse=True)
         majority_index = sorted_indices[len(sorted_indices) // 2]
