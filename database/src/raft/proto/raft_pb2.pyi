@@ -22,16 +22,12 @@ class AppendEntriesRequest(_message.Message):
     def __init__(self, term: _Optional[int] = ..., leader_id: _Optional[str] = ..., entries: _Optional[_Iterable[_Union[LogEntry, _Mapping]]] = ..., previous_log_index: _Optional[int] = ..., previous_log_term: _Optional[int] = ..., commit_index: _Optional[int] = ...) -> None: ...
 
 class AppendEntriesResponse(_message.Message):
-    __slots__ = ("term", "success", "conflict_index", "conflict_term")
+    __slots__ = ("term", "success")
     TERM_FIELD_NUMBER: _ClassVar[int]
     SUCCESS_FIELD_NUMBER: _ClassVar[int]
-    CONFLICT_INDEX_FIELD_NUMBER: _ClassVar[int]
-    CONFLICT_TERM_FIELD_NUMBER: _ClassVar[int]
     term: int
     success: bool
-    conflict_index: int
-    conflict_term: int
-    def __init__(self, term: _Optional[int] = ..., success: bool = ..., conflict_index: _Optional[int] = ..., conflict_term: _Optional[int] = ...) -> None: ...
+    def __init__(self, term: _Optional[int] = ..., success: bool = ...) -> None: ...
 
 class RequestVoteRequest(_message.Message):
     __slots__ = ("term", "candidate_id", "last_log_index", "last_log_term")
@@ -58,5 +54,15 @@ class LogEntry(_message.Message):
     TERM_FIELD_NUMBER: _ClassVar[int]
     COMMAND_FIELD_NUMBER: _ClassVar[int]
     term: int
-    command: str
-    def __init__(self, term: _Optional[int] = ..., command: _Optional[str] = ...) -> None: ...
+    command: Command
+    def __init__(self, term: _Optional[int] = ..., command: _Optional[_Union[Command, _Mapping]] = ...) -> None: ...
+
+class Command(_message.Message):
+    __slots__ = ("operation", "key", "value")
+    OPERATION_FIELD_NUMBER: _ClassVar[int]
+    KEY_FIELD_NUMBER: _ClassVar[int]
+    VALUE_FIELD_NUMBER: _ClassVar[int]
+    operation: str
+    key: str
+    value: str
+    def __init__(self, operation: _Optional[str] = ..., key: _Optional[str] = ..., value: _Optional[str] = ...) -> None: ...

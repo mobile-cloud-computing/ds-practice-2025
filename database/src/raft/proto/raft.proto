@@ -36,5 +36,11 @@ message RequestVoteResponse {
 
 message LogEntry {
   int32 term = 1;
-  string command = 2;
+  Command command = 2;
+}
+
+message Command {
+  string operation = 1;
+  string key = 2;
+  string value = 3;
 }

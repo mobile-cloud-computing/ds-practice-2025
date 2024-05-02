@@ -1,9 +1,10 @@
-import socket
+import os
 
 import raft
 
 if __name__ == '__main__':
-    node_id = "run"
-    nodes = ["localhost:50061"]
+    node_id = os.getenv('NODE_ID')
+    nodes = os.getenv('NODES').split(',')
+    port = "50060"
 
-    node = raft.start(node_id, nodes, "50062")
+    node = raft.start(node_id, nodes, port)

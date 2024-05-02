@@ -1,5 +1,4 @@
 import logging
-import random
 import sys
 import threading
 
@@ -20,11 +19,24 @@ class Node:
 
         self.logger = logging.getLogger('Node')
 
-        self.log = []
         self.log_lock = threading.RLock()
 
-        self.commit_index = 0
-        self.term = 0
+        self.log = [
+            {'term': 99, 'command': {'operation': 'set', 'key': 'key1', 'value': 'value1'}},
+            {'term': 99, 'command': {'operation': 'set', 'key': 'key2', 'value': 'value2'}},
+            {'term': 99, 'command': {'operation': 'set', 'key': 'key3', 'value': 'value3'}},
+            {'term': 100, 'command': {'operation': 'update', 'key': 'key1', 'value': 'new_value1'}},
+            {'term': 100, 'command': {'operation': 'update', 'key': 'key2', 'value': 'new_value2'}},
+            {'term': 101, 'command': {'operation': 'update', 'key': 'key1', 'value': 'latest_value1'}},
+            {'term': 102, 'command': {'operation': 'update', 'key': 'key3', 'value': 'final_value3'}}
+        ]
+        self.term = self.log[-1]['term']
+        self.commit_index = 4
+
+        # self.log = []
+        # self.term = 0
+        # self.commit_index = 0
+
         self.voted_for = None
 
         self.state = Follower(self)
@@ -35,7 +47,7 @@ class Node:
         self.lock = threading.Lock()
         self.stop_requested = threading.Event()
 
-        self.logger.info(f"Starting Raft node {self.node_id} with peers {self.peers}")
+        self.logger.info(f"Starting Raft node {self.node_id} with peers {self.peers} at term {self.term}")
 
     @staticmethod
     def _static_timeout():
@@ -70,7 +82,8 @@ class Node:
             self.timer = threading.Timer(self.state.timeout(), self.state.handle_timeout)
             self.timer.start()
 
-            self.logger.debug(f"Timer reset by {self.state.__class__.__name__} (term: {self.term})")
+            self.logger.debug(
+                f"Timer reset by {self.state.__class__.__name__} (term: {self.term}, last_log_index: {self.get_last_log_index()}, commit_index: {self.commit_index})")
 
     def cancel_timer(self):
         """Cancel timeout timers if set."""

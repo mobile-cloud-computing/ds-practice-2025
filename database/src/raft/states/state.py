@@ -26,6 +26,23 @@ class NodeState:
         return self.node.get_last_log_term()
 
     @staticmethod
+    def _convert_log_entries(entries):
+        """Convert a LogEntry entries protobuf to a dictionary."""
+
+        result = []
+        for entry in entries:
+            result.append({
+                'term': entry.term,
+                'command': {
+                    'operation': entry.command.operation,
+                    'key': entry.command.key,
+                    'value': entry.command.value
+                }
+            })
+
+        return result
+
+    @staticmethod
     def _random_timeout():
         return random.uniform(150, 300) / 100.0
 

@@ -89,30 +89,35 @@ services:
       - ./utils:/app/utils
       - ./suggestions_service/src:/app/suggestions_service/src
 
-  database:
+  raft_node_1:
     build:
-      # Use the current directory as the build context
-      # This allows us to access the files in the current directory inside the Dockerfile
       context: ./
-      # Use the Dockerfile in the orchestrator directory
       dockerfile: ./database/Dockerfile
     ports:
-      # Expose port 8081 on the host, and map port 5000 of the container to port 8081 on the host
-      - 50060:50060
-    deploy:
-      replicas: 3
+      - "50060:50060"
     environment:
-      # Pass the environment variables to the container
-      # The PYTHONUNBUFFERED environment variable ensures that the output from the application is logged to the console
-      - PYTHONUNBUFFERED=TRUE
-      # The PYTHONFILE environment variable specifies the absolute entry point of the application
-      # Check app.py in the orchestrator directory to see how this is used
-      - PYTHONFILE=/app/database/src/app/run.py
-    volumes:
-      # Mount the utils directory in the current directory to the /app/utils directory in the container
-      - ./utils:/app/utils
-      # Mount the orchestrator/src directory in the current directory to the /app/orchestrator/src directory in the container
-      - ./database/src:/app/database/src
+      - NODE_ID=raft_node_1
+      - PEERS=raft_node_2:50061,raft_node_3:50062
+
+  raft_node_2:
+    build:
+      context: ./
+      dockerfile: ./database/Dockerfile
+    ports:
+      - "50061:50060"
+    environment:
+      - NODE_ID=raft_node_2
+      - PEERS=raft_node_1:50060,raft_node_3:50062
+
+  raft_node_3:
+    build:
+      context: ./
+      dockerfile: ./database/Dockerfile
+    ports:
+      - "50062:50060"
+    environment:
+      - NODE_ID=raft_node_3
+      - PEERS=raft_node_1:50060,raft_node_2:50061
 
   queue:
     build:
