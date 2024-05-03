@@ -36,7 +36,7 @@ def dequeue():
 
 
 def send_request_commits(id, checkout_request: mq.CheckoutRequest):
-    with grpc.insecure_channel('database:50054') as channel:
+    with grpc.insecure_channel('raft_node_1:50060') as channel:
         stub = raft_grpc.RaftStub(channel)
         message = raft.Request_Commit_Message()
         message.id = id
@@ -65,9 +65,10 @@ def send_request_commits(id, checkout_request: mq.CheckoutRequest):
 def send_commits(id, checkout_request: mq.CheckoutRequest):
     with grpc.insecure_channel('raft_node_1:50060') as channel:
         stub = raft_grpc.RaftStub(channel)
-        message = raft.Request_Commit_Message()
+        message = raft.Commit_Message()
         message.id = id
-        response: raft.Response = stub.Request_Commit(message)
+        message.rollback = False
+        response: raft.Response = stub.Commit(message)
     
     if not response.status:
         logs.error(f"Failed to send commits for id {id}. Error: {response.message}")
@@ -79,6 +80,7 @@ def send_commits(id, checkout_request: mq.CheckoutRequest):
         stub = payment_service_grpc.Payment_ServiceStub(channel)
         message = payment_service.Commit_Message()
         message.id = id
+        message.rollback = False
         response = stub.Commit(message)
 
     if not response.status:
@@ -96,12 +98,10 @@ def process_message(stop_event):
             id = int(uuid.uuid4()) % 10000
             status, message = send_request_commits(id, message)
             time.sleep(5)
-
             if not status:
                 raise Exception(message)
                 
             status, message = send_commits(id, message)
-
             if not status:
                 raise Exception(message)
             else:

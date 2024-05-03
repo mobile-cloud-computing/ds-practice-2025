@@ -45,7 +45,7 @@ class PaymentService(Payment_ServiceServicer):
             self.commit_lock.release()
             return response 
 
-        if request.id == self.commit_data:
+        if int(request.id) == int(self.commit_data):
             try:
                 response.message = "Committed successfully"
                 response.status = True
@@ -56,7 +56,7 @@ class PaymentService(Payment_ServiceServicer):
                 response.message = "Committing failed: " + str(e)
                 response.status = False
         else:
-            response.message = "Committing failed. Preoccupied with id" + str(self.commit_data)
+            response.message = "Committing failed. Preoccupied with id" + str(self.commit_data) + " while receiving " + str(request.id)
             response.status = False 
         return response    
 def pay(request):

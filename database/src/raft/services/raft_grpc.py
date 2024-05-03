@@ -1,9 +1,6 @@
 import sys
 from pathlib import Path
 
-current_dir = Path(__file__).parent.absolute()
-app_dir = current_dir.parent.parent
-sys.path.insert(0, str(app_dir))
 
 import signal
 from concurrent import futures
@@ -13,10 +10,8 @@ import grpc
 from ..node import Node
 from ..proto.raft_pb2_grpc import RaftServicer, add_RaftServicer_to_server
 from ..proto.raft_pb2 import *
-from ..utils.logger import logger
+from ..logger import logger
 import threading
-
-
 
 logs = logger.get_module_logger("DATABASE")
 
@@ -49,7 +44,7 @@ class RaftService(RaftServicer):
         response = Response()
         if self.commit_lock.locked():
             response.status = False
-            response.message = "Not ready to commit. Preoccupied with id" + str(self.commit_data)
+            response.message = "Raft not ready to commit. Preoccupied with id" + str(self.commit_data)
         else:
             self.commit_lock.acquire()
             response.status = True
@@ -69,18 +64,23 @@ class RaftService(RaftServicer):
             self.commit_lock.release()
             return response 
 
-        if request.id == self.commit_data:
+        if int(request.id) == int(self.commit_data):
             try:
+                raft_request = Command()
+                raft_request.key = str(self.commit_data)
+                raft_request.operation= "write"
+                raft_request.value = "writing is hard"
+                self.node.write_command(raft_request)
                 response.message = "Committed successfully"
                 response.status = True
                 self.commit_data = None
                 self.commit_lock.release()
             except Exception as e:
                 logs.error("Error during committing: %s", e)
-                response.message = "Committing failed: " + str(e)
+                response.message = "Committing failed in Raft.: " + str(e)
                 response.status = False
         else:
-            response.message = "Committing failed. Preoccupied with id" + str(self.commit_data)
+            response.message = "Committing failed in Raft. Preoccupied with id " + str(self.commit_data) + " while received " + str(request.id) 
             response.status = False 
         return response    
 

@@ -59,6 +59,7 @@ def init_routes(app):
             return jsonify({"code": "400", "message": "Invalid request parameters."}), 400
 
         try:
+            '''
             local_vc.update()
             sending_data_result = send_data(checkout_request=data, vector_clock=local_vc)
             logs.info("Data sent to services")
@@ -75,7 +76,7 @@ def init_routes(app):
 
             logs.info("Vector clock received: " + str(sending_data_result[0].vector_clock))
             logs.info("Books suggested: " + str(sending_data_result[0].suggestion_response.book_suggestions))
-
+            '''
             order_error, order_error_message = order(priority=int(data['creditCard']['number']) % 10, creditcard=data['creditCard'])
             if order_error is True:
                 logs.error(f"Error during submitting order: {str(order_error_message)}")
