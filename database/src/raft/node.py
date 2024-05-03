@@ -16,6 +16,8 @@ logging.basicConfig(level=logging.DEBUG,
 class Node:
     def __init__(self, node_id, peers):
         self.node_id = node_id
+        self.leader_id = None
+
         self.peers = peers
 
         self.logger = logging.getLogger('Node')
@@ -115,14 +117,27 @@ class Node:
 
             return response
 
+    def forward_to_leader(self, command):
+        with grpc.insecure_channel(f'{self.leader_id}:50060') as channel:
+            stub = raft_pb2_grpc.RaftStub(channel)
+
+            try:
+                c = raft_pb2.Command(operation=command['operation'], key=command['key'], value=command['value'])
+                response = stub.WriteCommand(c)
+                return response
+
+            except grpc.RpcError as e:
+                return raft_pb2.RaftClientStatus(error=True, leader_id=self.leader_id,
+                                                 message="Failed to forward to leader: {}".format(str(e)))
+
     def apply_entries_to_state_machine(self):
         """
         Apply all committed but unapplied entries to the state machine from lastApplied up to commitIndex.
         """
         # Start applying from the next entry after lastApplied
-        from_index = self.last_applied
+        from_index = self.last_applied + 1
 
-        while from_index < self.commit_index:
+        while from_index <= self.commit_index:
             entry = self.log[from_index]
 
             operation = entry['command']['operation']

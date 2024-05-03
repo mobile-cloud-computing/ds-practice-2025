@@ -7,6 +7,7 @@ from ..proto import raft_pb2
 class Leader(NodeState):
     def __init__(self, node):
         super().__init__(node)
+        self.node.leader_id = self.node.node_id
 
         # This is a dictionary that tracks the index of the next log entry each follower needs to replicate.
         self.next_index = {peer: len(node.log) for peer in node.peers}

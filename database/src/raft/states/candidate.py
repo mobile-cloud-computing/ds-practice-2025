@@ -33,6 +33,7 @@ class Candidate(NodeState):
             self.logger.debug(f"Request term {message.term} higher than mine {self.node.term}. Changing to follower.")
             self.node.term = message.term
             self.node.voted_for = None
+            self.node.leader_id = None
             from .follower import Follower
             self.node.change_state(Follower)
 
@@ -72,6 +73,7 @@ class Candidate(NodeState):
                 f"Rejecting AppendEntries RPC from outdated term {message.term}. Current term is {self.node.term}.")
             return raft_pb2.AppendEntriesResponse(term=self.node.term, success=False)
 
+        self.node.leader_id = message.leader_id
         self.node.reset_timer()
 
         # If RPC request or response contains term T > currentTerm:
@@ -117,6 +119,14 @@ class Candidate(NodeState):
         # TODO: State machine commit.
 
         return raft_pb2.AppendEntriesResponse(term=self.node.term, success=True)
+
+    def append_log(self, command):
+        if self.node.leader_id:
+            return self.node.forward_to_leader(command)
+
+        else:
+            return raft_pb2.RaftClientStatus(error=True, leader_id=self.node.leader_id,
+                                             message="Election in progress, try again later.")
 
     def _start_election(self):
         self.logger.info(f'Node {self.node.node_id} starting election term {self.node.term}.')
