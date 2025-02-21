@@ -9,7 +9,7 @@ service SuggestionService {
 }
 
 message SuggestionRequest {
-    string query = 1;
+    string comment = 1;
 }
 
 message SuggestionsResponse {

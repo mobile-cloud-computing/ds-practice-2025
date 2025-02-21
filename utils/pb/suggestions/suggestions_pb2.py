@@ -24,7 +24,7 @@ _sym_db = _symbol_database.Default()
 
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x11suggestions.proto\x12\nsuggestion\"\"\n\x11SuggestionRequest\x12\r\n\x05query\x18\x01 \x01(\t\"*\n\x13SuggestionsResponse\x12\x13\n\x0bsuggestions\x18\x01 \x03(\t2e\n\x11SuggestionService\x12P\n\x0eGetSuggestions\x12\x1d.suggestion.SuggestionRequest\x1a\x1f.suggestion.SuggestionsResponseb\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x11suggestions.proto\x12\nsuggestion\"$\n\x11SuggestionRequest\x12\x0f\n\x07\x63omment\x18\x01 \x01(\t\"*\n\x13SuggestionsResponse\x12\x13\n\x0bsuggestions\x18\x01 \x03(\t2e\n\x11SuggestionService\x12P\n\x0eGetSuggestions\x12\x1d.suggestion.SuggestionRequest\x1a\x1f.suggestion.SuggestionsResponseb\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
@@ -32,9 +32,9 @@ _builder.BuildTopDescriptorsAndMessages(DESCRIPTOR, 'suggestions_pb2', _globals)
 if not _descriptor._USE_C_DESCRIPTORS:
   DESCRIPTOR._loaded_options = None
   _globals['_SUGGESTIONREQUEST']._serialized_start=33
-  _globals['_SUGGESTIONREQUEST']._serialized_end=67
-  _globals['_SUGGESTIONSRESPONSE']._serialized_start=69
-  _globals['_SUGGESTIONSRESPONSE']._serialized_end=111
-  _globals['_SUGGESTIONSERVICE']._serialized_start=113
-  _globals['_SUGGESTIONSERVICE']._serialized_end=214
+  _globals['_SUGGESTIONREQUEST']._serialized_end=69
+  _globals['_SUGGESTIONSRESPONSE']._serialized_start=71
+  _globals['_SUGGESTIONSRESPONSE']._serialized_end=113
+  _globals['_SUGGESTIONSERVICE']._serialized_start=115
+  _globals['_SUGGESTIONSERVICE']._serialized_end=216
 # @@protoc_insertion_point(module_scope)

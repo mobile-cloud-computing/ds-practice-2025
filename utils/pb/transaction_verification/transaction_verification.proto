@@ -9,12 +9,10 @@ service TransactionVerificationService {
 }
 
 message TransactionRequest {
-    string transaction_id = 1;
-    double amount = 2;
-    string currency = 3;
-    }
+    string id = 1;
+    int32 cvv = 2;
+}
 
 message TransactionVerificationResponse {
-    string status = 1;
-    string message = 2;
-    }
+    bool is_verified = 1;
+}
