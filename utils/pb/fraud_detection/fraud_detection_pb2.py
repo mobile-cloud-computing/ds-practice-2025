@@ -14,17 +14,33 @@ _sym_db = _symbol_database.Default()
 
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x15\x66raud_detection.proto\x12\x05hello\"\x1c\n\x0cHelloRequest\x12\x0c\n\x04name\x18\x01 \x01(\t\"!\n\rHelloResponse\x12\x10\n\x08greeting\x18\x01 \x01(\t2E\n\x0cHelloService\x12\x35\n\x08SayHello\x12\x13.hello.HelloRequest\x1a\x14.hello.HelloResponseb\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x15\x66raud_detection.proto\x12\x0e\x66rauddetection\"\x95\x08\n\x15\x46raudDetectionRequest\x12\x38\n\x04user\x18\x01 \x01(\x0b\x32*.frauddetection.FraudDetectionRequest.User\x12\x42\n\torderData\x18\x02 \x01(\x0b\x32/.frauddetection.FraudDetectionRequest.OrderData\x12\x44\n\ncreditCard\x18\x03 \x01(\x0b\x32\x30.frauddetection.FraudDetectionRequest.CreditCard\x12L\n\x0e\x62illingAddress\x18\x04 \x01(\x0b\x32\x34.frauddetection.FraudDetectionRequest.BillingAddress\x12\x42\n\ttelemetry\x18\x05 \x01(\x0b\x32/.frauddetection.FraudDetectionRequest.Telemetry\x1a%\n\x04User\x12\x0c\n\x04name\x18\x01 \x01(\t\x12\x0f\n\x07\x63ontact\x18\x02 \x01(\t\x1a\xb5\x01\n\tOrderData\x12M\n\norderItems\x18\x01 \x03(\x0b\x32\x39.frauddetection.FraudDetectionRequest.OrderData.OrderItem\x12\x14\n\x0c\x64iscountCode\x18\x02 \x01(\t\x12\x16\n\x0eshippingMethod\x18\x03 \x01(\t\x1a+\n\tOrderItem\x12\x0c\n\x04name\x18\x01 \x01(\t\x12\x10\n\x08quantity\x18\x02 \x01(\x05\x1a\x41\n\nCreditCard\x12\x0e\n\x06number\x18\x01 \x01(\t\x12\x16\n\x0e\x65xpirationDate\x18\x02 \x01(\t\x12\x0b\n\x03\x63vv\x18\x03 \x01(\t\x1a[\n\x0e\x42illingAddress\x12\x0e\n\x06street\x18\x01 \x01(\t\x12\x0c\n\x04\x63ity\x18\x02 \x01(\t\x12\r\n\x05state\x18\x03 \x01(\t\x12\x0b\n\x03zip\x18\x04 \x01(\t\x12\x0f\n\x07\x63ountry\x18\x05 \x01(\t\x1a\xa6\x02\n\tTelemetry\x12\x46\n\x06\x64\x65vice\x18\x01 \x01(\x0b\x32\x36.frauddetection.FraudDetectionRequest.Telemetry.Device\x12H\n\x07\x62rowser\x18\x02 \x01(\x0b\x32\x37.frauddetection.FraudDetectionRequest.Telemetry.Browser\x12\x18\n\x10screenResolution\x18\x03 \x01(\t\x12\x10\n\x08referrer\x18\x04 \x01(\t\x1a(\n\x07\x42rowser\x12\x0c\n\x04name\x18\x01 \x01(\t\x12\x0f\n\x07version\x18\x02 \x01(\t\x1a\x31\n\x06\x44\x65vice\x12\x0c\n\x04type\x18\x01 \x01(\t\x12\r\n\x05model\x18\x02 \x01(\t\x12\n\n\x02os\x18\x03 \x01(\t\">\n\x16\x46raudDetectionResponse\x12\x14\n\x0cisFraudulent\x18\x01 \x01(\x08\x12\x0e\n\x06reason\x18\x02 \x01(\t2u\n\x15\x46raudDetectionService\x12\\\n\x0b\x44\x65tectFraud\x12%.frauddetection.FraudDetectionRequest\x1a&.frauddetection.FraudDetectionResponseb\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
 _builder.BuildTopDescriptorsAndMessages(DESCRIPTOR, 'fraud_detection_pb2', _globals)
 if _descriptor._USE_C_DESCRIPTORS == False:
   DESCRIPTOR._options = None
-  _globals['_HELLOREQUEST']._serialized_start=32
-  _globals['_HELLOREQUEST']._serialized_end=60
-  _globals['_HELLORESPONSE']._serialized_start=62
-  _globals['_HELLORESPONSE']._serialized_end=95
-  _globals['_HELLOSERVICE']._serialized_start=97
-  _globals['_HELLOSERVICE']._serialized_end=166
+  _globals['_FRAUDDETECTIONREQUEST']._serialized_start=42
+  _globals['_FRAUDDETECTIONREQUEST']._serialized_end=1087
+  _globals['_FRAUDDETECTIONREQUEST_USER']._serialized_start=409
+  _globals['_FRAUDDETECTIONREQUEST_USER']._serialized_end=446
+  _globals['_FRAUDDETECTIONREQUEST_ORDERDATA']._serialized_start=449
+  _globals['_FRAUDDETECTIONREQUEST_ORDERDATA']._serialized_end=630
+  _globals['_FRAUDDETECTIONREQUEST_ORDERDATA_ORDERITEM']._serialized_start=587
+  _globals['_FRAUDDETECTIONREQUEST_ORDERDATA_ORDERITEM']._serialized_end=630
+  _globals['_FRAUDDETECTIONREQUEST_CREDITCARD']._serialized_start=632
+  _globals['_FRAUDDETECTIONREQUEST_CREDITCARD']._serialized_end=697
+  _globals['_FRAUDDETECTIONREQUEST_BILLINGADDRESS']._serialized_start=699
+  _globals['_FRAUDDETECTIONREQUEST_BILLINGADDRESS']._serialized_end=790
+  _globals['_FRAUDDETECTIONREQUEST_TELEMETRY']._serialized_start=793
+  _globals['_FRAUDDETECTIONREQUEST_TELEMETRY']._serialized_end=1087
+  _globals['_FRAUDDETECTIONREQUEST_TELEMETRY_BROWSER']._serialized_start=996
+  _globals['_FRAUDDETECTIONREQUEST_TELEMETRY_BROWSER']._serialized_end=1036
+  _globals['_FRAUDDETECTIONREQUEST_TELEMETRY_DEVICE']._serialized_start=1038
+  _globals['_FRAUDDETECTIONREQUEST_TELEMETRY_DEVICE']._serialized_end=1087
+  _globals['_FRAUDDETECTIONRESPONSE']._serialized_start=1089
+  _globals['_FRAUDDETECTIONRESPONSE']._serialized_end=1151
+  _globals['_FRAUDDETECTIONSERVICE']._serialized_start=1153
+  _globals['_FRAUDDETECTIONSERVICE']._serialized_end=1270
 # @@protoc_insertion_point(module_scope)
