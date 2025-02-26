@@ -3,7 +3,7 @@
 import grpc
 import warnings
 
-import fraud_detection_pb2 as fraud__detection__pb2
+import transaction_verification_pb2 as transaction__verification__pb2
 
 GRPC_GENERATED_VERSION = '1.70.0'
 GRPC_VERSION = grpc.__version__
@@ -18,14 +18,14 @@ except ImportError:
 if _version_not_supported:
     raise RuntimeError(
         f'The grpc package installed is at version {GRPC_VERSION},'
-        + f' but the generated code in fraud_detection_pb2_grpc.py depends on'
+        + f' but the generated code in transaction_verification_pb2_grpc.py depends on'
         + f' grpcio>={GRPC_GENERATED_VERSION}.'
         + f' Please upgrade your grpc module to grpcio>={GRPC_GENERATED_VERSION}'
         + f' or downgrade your generated code using grpcio-tools<={GRPC_VERSION}.'
     )
 
 
-class FraudServiceStub(object):
+class TransactionVerificationServiceStub(object):
     """Missing associated documentation comment in .proto file."""
 
     def __init__(self, channel):
@@ -34,43 +34,43 @@ class FraudServiceStub(object):
         Args:
             channel: A grpc.Channel.
         """
-        self.CheckFraud = channel.unary_unary(
-                '/hello.FraudService/CheckFraud',
-                request_serializer=fraud__detection__pb2.FraudRequest.SerializeToString,
-                response_deserializer=fraud__detection__pb2.FraudResponse.FromString,
+        self.VerifyTransaction = channel.unary_unary(
+                '/transaction.TransactionVerificationService/VerifyTransaction',
+                request_serializer=transaction__verification__pb2.TransactionRequest.SerializeToString,
+                response_deserializer=transaction__verification__pb2.TransactionVerificationResponse.FromString,
                 _registered_method=True)
 
 
-class FraudServiceServicer(object):
+class TransactionVerificationServiceServicer(object):
     """Missing associated documentation comment in .proto file."""
 
-    def CheckFraud(self, request, context):
+    def VerifyTransaction(self, request, context):
         """Missing associated documentation comment in .proto file."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
 
-def add_FraudServiceServicer_to_server(servicer, server):
+def add_TransactionVerificationServiceServicer_to_server(servicer, server):
     rpc_method_handlers = {
-            'CheckFraud': grpc.unary_unary_rpc_method_handler(
-                    servicer.CheckFraud,
-                    request_deserializer=fraud__detection__pb2.FraudRequest.FromString,
-                    response_serializer=fraud__detection__pb2.FraudResponse.SerializeToString,
+            'VerifyTransaction': grpc.unary_unary_rpc_method_handler(
+                    servicer.VerifyTransaction,
+                    request_deserializer=transaction__verification__pb2.TransactionRequest.FromString,
+                    response_serializer=transaction__verification__pb2.TransactionVerificationResponse.SerializeToString,
             ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
-            'hello.FraudService', rpc_method_handlers)
+            'transaction.TransactionVerificationService', rpc_method_handlers)
     server.add_generic_rpc_handlers((generic_handler,))
-    server.add_registered_method_handlers('hello.FraudService', rpc_method_handlers)
+    server.add_registered_method_handlers('transaction.TransactionVerificationService', rpc_method_handlers)
 
 
  # This class is part of an EXPERIMENTAL API.
-class FraudService(object):
+class TransactionVerificationService(object):
     """Missing associated documentation comment in .proto file."""
 
     @staticmethod
-    def CheckFraud(request,
+    def VerifyTransaction(request,
             target,
             options=(),
             channel_credentials=None,
@@ -83,9 +83,9 @@ class FraudService(object):
         return grpc.experimental.unary_unary(
             request,
             target,
-            '/hello.FraudService/CheckFraud',
-            fraud__detection__pb2.FraudRequest.SerializeToString,
-            fraud__detection__pb2.FraudResponse.FromString,
+            '/transaction.TransactionVerificationService/VerifyTransaction',
+            transaction__verification__pb2.TransactionRequest.SerializeToString,
+            transaction__verification__pb2.TransactionVerificationResponse.FromString,
             options,
             channel_credentials,
             insecure,

@@ -5,11 +5,11 @@ import os
 # The path of the stubs is relative to the current file, or absolute inside the container.
 # Change these lines only if strictly needed.
 FILE = __file__ if '__file__' in globals() else os.getenv("PYTHONFILE", "")
-suggestion_grpc_path = os.path.abspath(os.path.join(FILE, '../../../utils/pb/suggestion'))
+suggestion_grpc_path = os.path.abspath(os.path.join(FILE, '../../../utils/pb/suggestions'))
 sys.path.insert(0, suggestion_grpc_path)
 
-import suggestion_pb2 as suggestion
-import suggestion_pb2_grpc as suggestion_grpc
+import suggestions_pb2 as suggestion
+import suggestions_pb2_grpc as suggestion_grpc
 
 import grpc
 from concurrent import futures
@@ -20,8 +20,8 @@ class SuggestionService(suggestion_grpc.SuggestionServiceServicer):
     # Create an RPC function to get suggestions
     def GetSuggestions(self, request, context):
         # Assume we have a list of suggestions based on the request input (e.g., a category or query)
-        query = request.query
-        suggestions_list = self.generate_suggestions(query)
+        comment = request.comment
+        suggestions_list = self.generate_suggestions(comment)
 
         # Create a SuggestionsResponse object
         response = suggestion.SuggestionsResponse()
@@ -29,17 +29,17 @@ class SuggestionService(suggestion_grpc.SuggestionServiceServicer):
         response.suggestions.extend(suggestions_list)
 
         # Print the suggestions
-        print(f"Suggestions for query '{query}': {suggestions_list}")
+        print(f"Suggestions for comment '{comment}': {suggestions_list}")
         
         # Return the response object
         return response
     
-    def generate_suggestions(self, query):
+    def generate_suggestions(self, comment):
         # Example logic to generate suggestions based on the query
         # In a real-world case, this could query a database or an AI model
-        if query == "tech":
+        if comment == "tech":
             return ["Learn Python", "Master Kubernetes", "Explore AI"]
-        elif query == "health":
+        elif comment == "health":
             return ["Start yoga", "Eat more vegetables", "Get a workout routine"]
         else:
             return ["Explore more topics"]
