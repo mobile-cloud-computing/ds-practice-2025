@@ -1,15 +1,22 @@
 syntax = "proto3";
 
-package hello;
+package fraud;
 
-service HelloService {
-    rpc SayHello (HelloRequest) returns (HelloResponse);
+// Our new gRPC service name
+service FraudDetectionService {
+    // The method the Orchestrator will call
+    rpc CheckOrder (CheckOrderRequest) returns (CheckOrderResponse);
 }
 
-message HelloRequest {
-    string name = 1;
+// The request message
+message CheckOrderRequest {
+    // For this demo, let's assume we only need totalAmount to decide.
+    // You can add user data, item list, etc. as fields as needed.
+    double totalAmount = 1;
 }
 
-message HelloResponse {
-    string greeting = 1;
+// The response message
+message CheckOrderResponse {
+    bool isFraud = 1;
+    string reason = 2;
 }

@@ -1,0 +1,28 @@
+syntax = "proto3";
+
+package transaction;
+
+// Service definition
+service TransactionVerificationService {
+    rpc VerifyTransaction (TransactionRequest) returns (TransactionResponse);
+}
+
+// Request message
+message TransactionRequest {
+    string creditCardNumber = 1;
+    string expirationDate = 2;
+    string cvv = 3;
+    repeated Item items = 4;  // List of items in the order
+}
+
+// Define an item structure
+message Item {
+    string name = 1;
+    int32 quantity = 2;
+}
+
+// Response message
+message TransactionResponse {
+    bool valid = 1;
+    string reason = 2;
+}
