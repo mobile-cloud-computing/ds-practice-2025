@@ -1,7 +1,7 @@
 openapi: 3.0.0
 info:
   title: Online Bookshop Checkout API
-  version: 1.0.0
+  version: 1.1.0
 paths:
   /checkout:
     post:
@@ -11,26 +11,27 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/CheckoutRequest'
+              $ref: "#/components/schemas/CheckoutRequest"
       responses:
-        '200':
-          description: Order approval or rejection
+        "200":
+          description: Order approval or rejection with book suggestions
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/OrderStatusResponse'
-        '4xx':
+                $ref: "#/components/schemas/OrderStatusResponse"
+        "4xx":
           description: Client error
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
-        '5xx':
+                $ref: "#/components/schemas/ErrorResponse"
+        "5xx":
           description: Server error
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
+                $ref: "#/components/schemas/ErrorResponse"
+
 components:
   schemas:
     CheckoutRequest:
@@ -122,9 +123,10 @@ components:
           type: string
         status:
           type: string
-          description: 'Order status: "Order Approved" or "Order Rejected". If rejected, suggestedBooks is empty.'
+          description: 'Order status: "Order Approved" or "Order Rejected". If rejected, suggestedBooks will contain alternative recommendations.'
         suggestedBooks:
           type: array
+          description: "List of book recommendations fetched from an external API."
           items:
             type: object
             properties:
@@ -134,6 +136,14 @@ components:
                 type: string
               author:
                 type: string
+              description:
+                type: string
+              genre:
+                type: string
+              rating:
+                type: number
+              price:
+                type: number
 
     ErrorResponse:
       type: object

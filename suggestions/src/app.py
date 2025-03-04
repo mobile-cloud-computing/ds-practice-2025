@@ -1,62 +1,76 @@
 import sys
 import os
+import logging
+import grpc
+import requests  # Import requests to call third-party API
+from concurrent import futures
 
-# This set of lines are needed to import the gRPC stubs.
-# The path of the stubs is relative to the current file, or absolute inside the container.
-# Change these lines only if strictly needed.
 FILE = __file__ if '__file__' in globals() else os.getenv("PYTHONFILE", "")
 suggestion_grpc_path = os.path.abspath(os.path.join(FILE, '../../../utils/pb/suggestions'))
 sys.path.insert(0, suggestion_grpc_path)
 
+
+# Import gRPC generated classes
 import suggestions_pb2 as suggestion
 import suggestions_pb2_grpc as suggestion_grpc
 
-import grpc
-from concurrent import futures
+# Set up logging
+logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
+logger = logging.getLogger(__name__)
 
-# Create a class to define the server functions, derived from
-# suggestion_pb2_grpc.SuggestionServiceServicer
+# Third-party book API (Example: Open Library API)
+BOOK_API_URL = "https://openlibrary.org/search.json"
+
+
+
 class SuggestionService(suggestion_grpc.SuggestionServiceServicer):
-    # Create an RPC function to get suggestions
+
     def GetSuggestions(self, request, context):
-        # Assume we have a list of suggestions based on the request input (e.g., a category or query)
-        comment = request.comment
-        suggestions_list = self.generate_suggestions(comment)
-
-        # Create a SuggestionsResponse object
-        response = suggestion.SuggestionsResponse()
-        # Add the suggestions to the response object
-        response.suggestions.extend(suggestions_list)
-
-        # Print the suggestions
-        print(f"Suggestions for '{comment}': {suggestions_list}")
+        query = request.query
+        logger.info(f"Received request for suggestions based on query: {query}")
         
-        # Return the response object
+        books = self.fetch_books(query)
+
+        # Prepare response
+        response = suggestion.SuggestionsResponse()
+        response.suggestedBooks.extend(books)
+
+        logger.info(f"Returning {len(books)} suggestions for query '{query}'")
         return response
-    
-    def generate_suggestions(self, comment):
-        # Example logic to generate suggestions based on the query
-        # In a real-world case, this could query a database or an AI model
-        if comment == "tech":
-            return ["Learn Python", "Master Kubernetes", "Explore AI"]
-        elif comment == "health":
-            return ["Start yoga", "Eat more vegetables", "Get a workout routine"]
-        else:
-            return ["Explore more topics"]
+
+    def fetch_books(self, query):
+        try:
+            logger.debug(f"Fetching books from API for query: {query}")
+            response = requests.get(BOOK_API_URL, params={"q": query, "limit": 5})
+            response.raise_for_status()  # Raise an error for non-2xx status codes
+            data = response.json()
+
+            books = []
+            for doc in data.get("docs", [])[:5]:  # Get top 5 results
+                book = suggestion.Book(
+                    title=doc.get("title", "Unknown"),
+                    author=doc["author_name"][0] if "author_name" in doc else "Unknown",
+                    description="N/A",  # Open Library doesn't provide descriptions
+                    link=f"https://openlibrary.org{doc.get('key', '')}"
+                )
+                books.append(book)
+
+            logger.debug(f"Fetched {len(books)} books for query '{query}'")
+            return books
+        except Exception as e:
+            logger.error(f"Error fetching books: {e}")
+            return []
 
 def serve():
-    # Create a gRPC server
-    server = grpc.server(futures.ThreadPoolExecutor())
-    # Add SuggestionService
+    server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
     suggestion_grpc.add_SuggestionServiceServicer_to_server(SuggestionService(), server)
-    # Listen on port 50051
+
     port = "50053"
-    server.add_insecure_port("[::]:" + port)
-    # Start the server
+    server.add_insecure_port(f"[::]:{port}")
     server.start()
-    print("Server started. Listening on port 50051.")
-    # Keep thread alive
+
+    logger.info(f"Server started. Listening on port {port}.")
     server.wait_for_termination()
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     serve()

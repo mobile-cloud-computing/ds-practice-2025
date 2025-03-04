@@ -80,20 +80,29 @@ def call_transaction_verification(cvv, result):
 def call_suggestions(comment, result):
     try:
         print(f"Starting book suggestions request")
+        
+        # Ensure 'comment' matches the expected field in the proto file (probably 'query')
         with grpc.insecure_channel("suggestions:50053") as channel:
             stub = suggestions_grpc.SuggestionServiceStub(channel)
+            
+            # If the proto expects `query`, pass it as `query`
             response = stub.GetSuggestions(
-                suggestions.SuggestionRequest(comment=comment)
+                suggestions.SuggestionsRequest(query=comment)  # Assuming 'query' in the proto
             )
-            print(f"Book suggestions recieved")
+            print(f"Book suggestions received")
+            
+            # Convert the response to dictionary
             response_dict = MessageToDict(response)
-            suggestions_list = response_dict.get("suggestions", [])
+            
+            # Ensure the correct field name (suggestedBooks in the response)
+            suggestions_list = response_dict.get("suggestedBooks", [])
+            
+            # Put the suggestions in the result queue
             result.put(("suggestions", suggestions_list))
 
     except Exception as e:
         print(f"ERROR in suggestions service: {str(e)}")
         result.put(("suggestions", []))
-
 
 @app.route("/checkout", methods=["POST"])
 def checkout():
