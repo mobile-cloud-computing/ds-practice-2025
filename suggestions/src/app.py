@@ -29,7 +29,7 @@ class SuggestionService(suggestion_grpc.SuggestionServiceServicer):
         response.suggestions.extend(suggestions_list)
 
         # Print the suggestions
-        print(f"Suggestions for comment '{comment}': {suggestions_list}")
+        print(f"Suggestions for '{comment}': {suggestions_list}")
         
         # Return the response object
         return response

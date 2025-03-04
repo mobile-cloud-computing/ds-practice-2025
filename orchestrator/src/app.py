@@ -47,88 +47,119 @@ CORS(app, resources={r"/*": {"origins": "*"}})
 
 
 def call_fraud_detection(number, result):
-    with grpc.insecure_channel("fraud_detection:50051") as channel:
-        # Create a stub object.
-        stub = fraud_detection_grpc.FraudServiceStub(channel)
-        # Call the service through the stub object.
-        response = stub.CheckFraud(fraud_detection.FraudRequest(number=number))
-        result.put(("is_fraud", response.is_fraud))
+    try:
+        print(f"Starting fraud check request")
+        with grpc.insecure_channel("fraud_detection:50051") as channel:
+            stub = fraud_detection_grpc.FraudServiceStub(channel)
+            response = stub.CheckFraud(fraud_detection.FraudRequest(number=number))
+            print(f"Fraud check result recieved")
+            result.put(("is_fraud", response.is_fraud))
+    except Exception as e:
+        print(f"ERROR in fraud detection: {str(e)}")
+        result.put(("is_fraud", True))
 
 
 def call_transaction_verification(cvv, result):
-    with grpc.insecure_channel("transaction_verification:50052") as channel:
-        # Create a stub object.
-        stub = transaction_verification_grpc.TransactionVerificationServiceStub(channel)
-        # Call the service through the stub object.
-        response = stub.VerifyTransaction(
-            transaction_verification.TransactionRequest(id="123", cvv=int(cvv))
-        )
-        result.put(("is_verified", response.is_verified))
+    try:
+        print(f"Starting transaction verification request")
+        with grpc.insecure_channel("transaction_verification:50052") as channel:
+            stub = transaction_verification_grpc.TransactionVerificationServiceStub(
+                channel
+            )
+            response = stub.VerifyTransaction(
+                transaction_verification.TransactionRequest(id="123", cvv=int(cvv))
+            )
+            print(f"transaction verification result recieved")
+            result.put(("is_verified", response.is_verified))
+
+    except Exception as e:
+        print(f"ERROR in transaction verification: {str(e)}")
+        result.put(("is_verified", False))
 
 
 def call_suggestions(comment, result):
-    with grpc.insecure_channel("suggestions:50053") as channel:
-        # Create a stub object.
-        stub = suggestions_grpc.SuggestionServiceStub(channel)
-        # Call the service through the stub object.
-        response = stub.GetSuggestions(suggestions.SuggestionRequest(comment=comment))
+    try:
+        print(f"Starting book suggestions request")
+        with grpc.insecure_channel("suggestions:50053") as channel:
+            stub = suggestions_grpc.SuggestionServiceStub(channel)
+            response = stub.GetSuggestions(
+                suggestions.SuggestionRequest(comment=comment)
+            )
+            print(f"Book suggestions recieved")
+            response_dict = MessageToDict(response)
+            suggestions_list = response_dict.get("suggestions", [])
+            result.put(("suggestions", suggestions_list))
 
-        # Convert gRPC response to dictionary
-        response_dict = MessageToDict(response)
-        suggestions_list = response_dict.get("suggestions", [])
-
-        # Put suggestions directly into the result
-        result.put(("suggestions", suggestions_list))
+    except Exception as e:
+        print(f"ERROR in suggestions service: {str(e)}")
+        result.put(("suggestions", []))
 
 
 @app.route("/checkout", methods=["POST"])
 def checkout():
-    """
-    Responds with a JSON object containing the order ID, status, and suggested books.
-    """
-    # Get request object data to json
-    request_data = json.loads(request.data)
-    result_queue = queue.Queue()
+    try:
+        print(f"Received new checkout request")
 
-    threads = [
-        threading.Thread(
-            target=call_fraud_detection,
-            args=(request_data["creditCard"]["number"], result_queue),
-        ),
-        threading.Thread(
-            target=call_transaction_verification,
-            args=(request_data["creditCard"]["cvv"], result_queue),
-        ),
-        threading.Thread(
-            target=call_suggestions, args=(request_data["userComment"], result_queue)
-        ),
-    ]
+        request_data = json.loads(request.data)
+        result_queue = queue.Queue()
 
-    for thread in threads:
-        thread.start()
+        print(f"Processing order for user: {request_data.get('userId', 'unknown')}")
+        print(f"Creating worker threads")
+        threads = [
+            threading.Thread(
+                target=call_fraud_detection,
+                args=(request_data["creditCard"]["number"], result_queue),
+            ),
+            threading.Thread(
+                target=call_transaction_verification,
+                args=(request_data["creditCard"]["cvv"], result_queue),
+            ),
+            threading.Thread(
+                target=call_suggestions,
+                args=(request_data["userComment"], result_queue),
+            ),
+        ]
 
-    for thread in threads:
-        thread.join()
+        print(f"Starting worker threads")
+        for thread in threads:
+            thread.start()
 
-    results = {}
-    while not result_queue.empty():
-        key, value = result_queue.get()
-        results[key] = value
+        for thread in threads:
+            thread.join()
+        print(f"Threads processing completed")
 
-    order_status_response = {
-        "orderId": "12345",
-        "status": (
-            "Order Rejected"
-            if results.get("is_fraud", False) or not results.get("is_verified", False)
-            else "Order Approved"
-        ),
-        "suggestedBooks": [
-            {"bookId": str(i + 1), "title": title, "author": "Unknown"}
-            for i, title in enumerate(results.get("suggestions", []))
-        ],
-    }
+        results = {}
+        while not result_queue.empty():
+            key, value = result_queue.get()
+            results[key] = value
+        print(f"Final results: {results}")
 
-    return order_status_response
+        status = "Order Approved"
+        if results.get("is_fraud", False):
+            status = "Order Rejected (Fraud detected)"
+        elif not results.get("is_verified", False):
+            status = "Order Rejected (Transaction verification failed)"
+
+        print(f"Sending checkout response to user")
+
+        return {
+            "orderId": "12345",
+            "status": status,
+            "suggestedBooks": [
+                {"bookId": str(i + 1), "title": title, "author": "Unknown"}
+                for i, title in enumerate(results.get("suggestions", []))
+            ],
+        }
+
+    except json.JSONDecodeError:
+        print(f"ERROR: Invalid JSON received")
+        return jsonify({"error": "Invalid JSON"}), 400
+    except KeyError as e:
+        print(f"ERROR: Missing field {str(e)}")
+        return jsonify({"error": f"Missing required field: {str(e)}"}), 400
+    except Exception as e:
+        print(f"CRITICAL ERROR: {str(e)}")
+        return jsonify({"error": "Internal server error"}), 500
 
 
 if __name__ == "__main__":
