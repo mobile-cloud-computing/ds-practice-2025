@@ -7,9 +7,10 @@ WORKDIR /app
 
 # Copy the requirements file to the working directory
 COPY ./fraud_detection/requirements.txt .
-
+COPY ./fraud_detection/models/fraud_detection.pkl .
 # Install the Python dependencies
 RUN pip install --no-cache-dir -r requirements.txt
 
+RUN pip install --upgrade protobuf
 # Set the command to run the application
 CMD python utils/other/hotreload.py "fraud_detection/src/app.py"

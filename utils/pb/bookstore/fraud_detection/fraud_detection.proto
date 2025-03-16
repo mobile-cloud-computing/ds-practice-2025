@@ -1,0 +1,63 @@
+syntax = "proto3";
+
+package bookstore;
+
+
+
+// Service for detecting various types of fraud in orders
+service FraudDetectionService {
+    // Analyzes user behavior patterns to detect potential fraud
+    rpc DetectUserFraud (OrderInfo) returns (FraudDetectionResponse);
+    
+}
+
+message OrderInfo {
+    User user = 1;
+    CreditCard creditCard = 2;
+    string userComment = 3;
+    repeated OrderItem items = 4;
+    Address billingAddress = 5;
+    Address shippingAddress = 6;
+    string shippingMethod = 7;
+    bool giftWrapping = 8;
+    bool termsAccepted = 9;
+    // Contains all the user order information including user details,
+    // payment information, shipping details and order items
+}
+
+// Define a message for the order request
+
+
+// Define a message for the user
+message User {
+    string name = 1;
+    string contact = 2;
+    string cardHolderName = 3;
+}
+
+// Define a message for the credit card information
+message CreditCard {
+    string number = 1;
+    string expirationDate = 2;
+    string cvv = 3;
+}
+
+// Define a message for order items
+message OrderItem {
+    string name = 1;
+    int32 quantity = 2;
+}
+
+// Define a message for the address
+message Address {
+    string street = 1;
+    string city = 2;
+    string country = 3;
+}
+
+// Define a message for the fraud detection response
+message FraudDetectionResponse {
+    bool isFraudulent = 1;
+    string reason = 2;
+}
+

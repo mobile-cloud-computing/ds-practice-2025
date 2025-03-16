@@ -1,156 +1,361 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Checkout Page</title>
     <script src="https://cdn.tailwindcss.com"></script>
-</head>
-<body class="bg-gray-100 min-h-screen flex items-center justify-center overflow-y-auto">
+  </head>
+  <body
+    class="bg-gray-100 min-h-screen flex items-center justify-center overflow-y-auto"
+  >
     <div class="w-full max-w-2xl bg-white p-6 rounded-lg shadow-md">
-        <form id="checkoutForm">
-            <h1 class="text-2xl font-bold text-center text-gray-800 mb-6">Checkout Page</h1>
+      <form id="checkoutForm">
+        <h1 class="text-2xl font-bold text-center text-gray-800 mb-6">
+          Checkout Page
+        </h1>
 
-            <div class="mb-6">
-                <h2 class="text-lg font-semibold text-gray-700">Items</h2>
-                <ul id="itemList" class="list-none p-0 mt-2 space-y-2">
-                    <!-- Items will be dynamically rendered here -->
-                </ul>
-            </div>
+        <div class="mb-6">
+          <h2 class="text-lg font-semibold text-gray-700">Items</h2>
+          <ul id="itemList" class="list-none p-0 mt-2 space-y-2">
+            <!-- Items will be dynamically rendered here -->
+          </ul>
+        </div>
 
-            <div class="mb-4">
-                <label for="name" class="block text-sm font-medium text-gray-700">Name:</label>
-                <input type="text" id="name" name="name" value="John Doe" required class="w-full border border-gray-300 rounded-lg p-2 mt-1">
-            </div>
-            <div class="mb-4">
-                <label for="contact" class="block text-sm font-medium text-gray-700">Contact:</label>
-                <input type="email" id="contact" name="contact" value="john.doe@example.com" required class="w-full border border-gray-300 rounded-lg p-2 mt-1">
-            </div>
-            <div class="mb-4">
-                <label for="creditCard" class="block text-sm font-medium text-gray-700">Credit Card Number:</label>
-                <input type="text" id="creditCard" name="creditCard" value="4111111111111111" required class="w-full border border-gray-300 rounded-lg p-2 mt-1">
-            </div>
-            <div class="mb-4">
-                <label for="expirationDate" class="block text-sm font-medium text-gray-700">Expiration Date:</label>
-                <input type="text" id="expirationDate" name="expirationDate" value="12/25" required class="w-full border border-gray-300 rounded-lg p-2 mt-1">
-            </div>
-            <div class="mb-4">
-                <label for="cvv" class="block text-sm font-medium text-gray-700">CVV:</label>
-                <input type="text" id="cvv" name="cvv" value="123" required class="w-full border border-gray-300 rounded-lg p-2 mt-1">
-            </div>
-            <div class="mb-4">
-                <label for="userComment" class="block text-sm font-medium text-gray-700">Comment:</label>
-                <textarea id="userComment" name="userComment" class="w-full border border-gray-300 rounded-lg p-2 mt-1">Please handle with care.</textarea>
-            </div>
-            <div class="mb-4">
-                <label for="billingAddress" class="block text-sm font-medium text-gray-700">Billing Address:</label>
-                <input type="text" id="billingStreet" name="billingStreet" value="123 Main St" required class="w-full border border-gray-300 rounded-lg p-2 mt-1">
-                <input type="text" id="billingCity" name="billingCity" value="Springfield" required class="w-full border border-gray-300 rounded-lg p-2 mt-1">
-                <input type="text" id="billingState" name="billingState" value="IL" required class="w-full border border-gray-300 rounded-lg p-2 mt-1">
-                <input type="text" id="billingZip" name="billingZip" value="62701" required class="w-full border border-gray-300 rounded-lg p-2 mt-1">
-                <input type="text" id="billingCountry" name="billingCountry" value="USA" required class="w-full border border-gray-300 rounded-lg p-2 mt-1">
-            </div>
-            <div class="mb-4">
-                <label for="shippingMethod" class="block text-sm font-medium text-gray-700">Shipping Method:</label>
-                <select id="shippingMethod" name="shippingMethod" required class="w-full border border-gray-300 rounded-lg p-2 mt-1">
-                    <option value="Standard" selected>Standard</option>
-                    <option value="Express">Express</option>
-                    <option value="Next-Day">Next-Day</option>
-                </select>
-            </div>
-            <div class="mb-4 flex items-center">
-                <input type="checkbox" id="giftWrapping" name="giftWrapping" checked class="mr-2 border border-gray-300 rounded">
-                <label for="giftWrapping" class="text-sm font-medium text-gray-700">Gift Wrapping</label>
-            </div>
-            <div class="mb-4 flex items-center">
-                <input type="checkbox" id="terms" name="terms" checked required class="mr-2 border border-gray-300 rounded">
-                <label for="terms" class="text-sm font-medium text-gray-700">Accept Terms and Conditions</label>
-            </div>
-            <button type="submit" class="w-full bg-blue-600 text-white font-medium py-2 px-4 rounded-lg hover:bg-blue-700">Submit Order</button>
-        </form>
+        <div class="mb-4">
+          <label for="name" class="block text-sm font-medium text-gray-700"
+            >Name:</label
+          >
+          <input
+            type="text"
+            id="name"
+            name="name"
+            value="John Doe"
+            required
+            class="w-full border border-gray-300 rounded-lg p-2 mt-1"
+          />
+        </div>
+        <div class="mb-4">
+          <label for="contact" class="block text-sm font-medium text-gray-700"
+            >Contact:</label
+          >
+          <input
+            type="email"
+            id="contact"
+            name="contact"
+            value="john.doe@example.com"
+            required
+            class="w-full border border-gray-300 rounded-lg p-2 mt-1"
+          />
+        </div>
 
-        <div id="response" class="mt-6 p-4 border rounded-lg hidden"></div>
+        <!-- New Card Holder Name Field -->
+        <div class="mb-4">
+          <label
+            for="cardHolderName"
+            class="block text-sm font-medium text-gray-700"
+            >Card Holder Name:</label
+          >
+          <input
+            type="text"
+            id="cardHolderName"
+            name="cardHolderName"
+            value="John Doe"
+            required
+            class="w-full border border-gray-300 rounded-lg p-2 mt-1"
+          />
+        </div>
+
+        <div class="mb-4">
+          <label
+            for="creditCard"
+            class="block text-sm font-medium text-gray-700"
+            >Credit Card Number:</label
+          >
+          <input
+            type="text"
+            id="creditCard"
+            name="creditCard"
+            value="79927398713"
+            required
+            class="w-full border border-gray-300 rounded-lg p-2 mt-1"
+          />
+        </div>
+        <div class="mb-4">
+          <label
+            for="expirationDate"
+            class="block text-sm font-medium text-gray-700"
+            >Expiration Date:</label
+          >
+          <input
+            type="text"
+            id="expirationDate"
+            name="expirationDate"
+            value="12/25"
+            required
+            class="w-full border border-gray-300 rounded-lg p-2 mt-1"
+          />
+        </div>
+        <div class="mb-4">
+          <label for="cvv" class="block text-sm font-medium text-gray-700"
+            >CVV:</label
+          >
+          <input
+            type="text"
+            id="cvv"
+            name="cvv"
+            value="123"
+            required
+            class="w-full border border-gray-300 rounded-lg p-2 mt-1"
+          />
+        </div>
+
+        <div class="mb-4">
+          <label
+            for="userComment"
+            class="block text-sm font-medium text-gray-700"
+            >Comment:</label
+          >
+          <textarea
+            id="userComment"
+            name="userComment"
+            class="w-full border border-gray-300 rounded-lg p-2 mt-1"
+          >
+Please handle with care.</textarea
+          >
+        </div>
+
+        <!-- Updated Billing Address Section -->
+        <div class="mb-4">
+          <h2 class="text-lg font-semibold text-gray-700">Billing Address</h2>
+          <label
+            for="billingStreet"
+            class="block text-sm font-medium text-gray-700"
+            >Street / Apartment:</label
+          >
+          <input
+            type="text"
+            id="billingStreet"
+            name="billingStreet"
+            value="123 Main St"
+            required
+            class="w-full border border-gray-300 rounded-lg p-2 mt-1"
+          />
+          <label
+            for="billingCity"
+            class="block text-sm font-medium text-gray-700 mt-2"
+            >City:</label
+          >
+          <input
+            type="text"
+            id="billingCity"
+            name="billingCity"
+            value="Springfield"
+            required
+            class="w-full border border-gray-300 rounded-lg p-2 mt-1"
+          />
+          <label
+            for="billingCountry"
+            class="block text-sm font-medium text-gray-700 mt-2"
+            >Country:</label
+          >
+          <input
+            type="text"
+            id="billingCountry"
+            name="billingCountry"
+            value="USA"
+            required
+            class="w-full border border-gray-300 rounded-lg p-2 mt-1"
+          />
+        </div>
+
+        <!-- New Shipping Address Section -->
+        <div class="mb-4">
+          <h2 class="text-lg font-semibold text-gray-700">Shipping Address</h2>
+          <label
+            for="shippingStreet"
+            class="block text-sm font-medium text-gray-700"
+            >Street / Apartment:</label
+          >
+          <input
+            type="text"
+            id="shippingStreet"
+            name="shippingStreet"
+            value="123 Main St"
+            required
+            class="w-full border border-gray-300 rounded-lg p-2 mt-1"
+          />
+          <label
+            for="shippingCity"
+            class="block text-sm font-medium text-gray-700 mt-2"
+            >City:</label
+          >
+          <input
+            type="text"
+            id="shippingCity"
+            name="shippingCity"
+            value="Springfield"
+            required
+            class="w-full border border-gray-300 rounded-lg p-2 mt-1"
+          />
+          <label
+            for="shippingCountry"
+            class="block text-sm font-medium text-gray-700 mt-2"
+            >Country:</label
+          >
+          <input
+            type="text"
+            id="shippingCountry"
+            name="shippingCountry"
+            value="USA"
+            required
+            class="w-full border border-gray-300 rounded-lg p-2 mt-1"
+          />
+        </div>
+
+        <div class="mb-4">
+          <label
+            for="shippingMethod"
+            class="block text-sm font-medium text-gray-700"
+            >Shipping Method:</label
+          >
+          <select
+            id="shippingMethod"
+            name="shippingMethod"
+            required
+            class="w-full border border-gray-300 rounded-lg p-2 mt-1"
+          >
+            <option value="Standard" selected>Standard</option>
+            <option value="Express">Express</option>
+            <option value="Next-Day">Next-Day</option>
+          </select>
+        </div>
+        <div class="mb-4 flex items-center">
+          <input
+            type="checkbox"
+            id="giftWrapping"
+            name="giftWrapping"
+            checked
+            class="mr-2 border border-gray-300 rounded"
+          />
+          <label for="giftWrapping" class="text-sm font-medium text-gray-700"
+            >Gift Wrapping</label
+          >
+        </div>
+        <div class="mb-4 flex items-center">
+          <input
+            type="checkbox"
+            id="terms"
+            name="terms"
+            checked
+            required
+            class="mr-2 border border-gray-300 rounded"
+          />
+          <label for="terms" class="text-sm font-medium text-gray-700"
+            >Accept Terms and Conditions</label
+          >
+        </div>
+        <button
+          type="submit"
+          class="w-full bg-blue-600 text-white font-medium py-2 px-4 rounded-lg hover:bg-blue-700"
+        >
+          Submit Order
+        </button>
+      </form>
+
+      <div id="response" class="mt-6 p-4 border rounded-lg hidden"></div>
     </div>
 
     <script>
-        const items = [
-            { name: "Book A", quantity: 1 },
-            { name: "Book B", quantity: 2 }
-        ];
+      const items = [
+        { name: "Harry Potter and the Philosopher's Stone", quantity: 1 },
+        { name: "The Lord of the Rings", quantity: 2 },
+      ];
 
-        const itemListElement = document.getElementById('itemList');
-        items.forEach(item => {
-            const li = document.createElement('li');
-            li.textContent = `${item.name} - Quantity: ${item.quantity}`;
-            li.className = "bg-gray-100 p-3 rounded-lg";
-            itemListElement.appendChild(li);
-        });
+      const itemListElement = document.getElementById("itemList");
+      items.forEach((item) => {
+        const li = document.createElement("li");
+        li.textContent = `${item.name} - Quantity: ${item.quantity}`;
+        li.className = "bg-gray-100 p-3 rounded-lg";
+        itemListElement.appendChild(li);
+      });
 
-        document.getElementById('checkoutForm').addEventListener('submit', async function(event) {
-            event.preventDefault();
+      document
+        .getElementById("checkoutForm")
+        .addEventListener("submit", async function (event) {
+          event.preventDefault();
 
-            const formData = new FormData(event.target);
-            const data = {
-                user: {
-                    name: formData.get('name'),
-                    contact: formData.get('contact'),
-                },
-                creditCard: {
-                    number: formData.get('creditCard'),
-                    expirationDate: formData.get('expirationDate'),
-                    cvv: formData.get('cvv'),
-                },
-                userComment: formData.get('userComment'),
-                items: items,
-                billingAddress: {
-                    street: formData.get('billingStreet'),
-                    city: formData.get('billingCity'),
-                    state: formData.get('billingState'),
-                    zip: formData.get('billingZip'),
-                    country: formData.get('billingCountry'),
-                },
-                shippingMethod: formData.get('shippingMethod'),
-                giftWrapping: formData.get('giftWrapping') === 'on',
-                termsAccepted: formData.get('terms') === 'on',
-            };
+          const formData = new FormData(event.target);
+          const data = {
+            user: {
+              name: formData.get("name"),
+              contact: formData.get("contact"),
+              cardHolderName: formData.get("cardHolderName"),
+            },
+            creditCard: {
+              number: formData.get("creditCard"),
+              expirationDate: formData.get("expirationDate"),
+              cvv: formData.get("cvv"),
+            },
+            userComment: formData.get("userComment"),
+            items: items,
+            billingAddress: {
+              street: formData.get("billingStreet"),
+              city: formData.get("billingCity"),
+              country: formData.get("billingCountry"),
+            },
+            shippingAddress: {
+              street: formData.get("shippingStreet"),
+              city: formData.get("shippingCity"),
+              country: formData.get("shippingCountry"),
+            },
+            shippingMethod: formData.get("shippingMethod"),
+            giftWrapping: formData.get("giftWrapping") === "on",
+            termsAccepted: formData.get("terms") === "on",
+          };
 
-            try {
-                const response = await fetch('http://localhost:8081/checkout', {
-                    method: 'POST',
-                    body: JSON.stringify(data),
-                });
+          try {
+            const response = await fetch("http://localhost:8081/checkout", {
+              method: "POST",
+              body: JSON.stringify(data),
+            });
 
-                const result = await response.json();
-                const responseDiv = document.getElementById('response');
+            const result = await response.json();
+            const responseDiv = document.getElementById("response");
 
-                if (response.ok) {
-                    const suggestedBooks = result.suggestedBooks.map(book => `<li>${book.title} by ${book.author}</li>`).join('');
-                    responseDiv.innerHTML = `
-                        <strong>Order status: ${result.status}</strong><br>
-                        Order ID: ${result.orderId}<br>
-                        ${result.status === "Order Approved" ?
-                            `Suggested Books:
-                            <ul class="list-disc pl-5 mt-2 space-y-1">${suggestedBooks}</ul>`
-                        : ``
-                        }
-                    `;
-                    color = result.status === 'Order Approved' ? 'green' : 'red';
-                    responseDiv.className = `mt-6 p-4 border rounded-lg bg-${color}-100 text-${color}-700`;
-                } else {
-                    responseDiv.textContent = `Error: ${result.error.message}`;
-                    responseDiv.className = "mt-6 p-4 border rounded-lg bg-red-100 text-red-700";
-                }
-
-                responseDiv.style.display = 'block';
-                // scroll to the bottom of the page
-                window.scrollTo(0, document.body.scrollHeight);
-            } catch (error) {
-                const responseDiv = document.getElementById('response');
-                responseDiv.textContent = `Unexpected error occurred: ${error.message}`;
-                responseDiv.className = "mt-6 p-4 border rounded-lg bg-red-100 text-red-700";
-                responseDiv.style.display = 'block';
+            if (response.ok) {
+              const suggestedBooks = result.suggestedBooks
+                .map((book) => `<li>${book.title} by ${book.author}</li>`)
+                .join("");
+              responseDiv.innerHTML = `
+            <strong>Order status: ${result.status}</strong><br>
+            Order ID: ${result.orderId}<br>
+            ${
+              result.status === "Order Approved"
+                ? `Suggested Books:
+              <ul class="list-disc pl-5 mt-2 space-y-1">${suggestedBooks}</ul>`
+                : ``
             }
+          `;
+              const color =
+                result.status === "Order Approved" ? "green" : "red";
+              responseDiv.className = `mt-6 p-4 border rounded-lg bg-${color}-100 text-${color}-700`;
+            } else {
+              responseDiv.textContent = `Error: ${result.error.message}`;
+              responseDiv.className =
+                "mt-6 p-4 border rounded-lg bg-red-100 text-red-700";
+            }
+
+            responseDiv.style.display = "block";
+            window.scrollTo(0, document.body.scrollHeight);
+          } catch (error) {
+            const responseDiv = document.getElementById("response");
+            responseDiv.textContent = `Unexpected error occurred: ${error.message}`;
+            responseDiv.className =
+              "mt-6 p-4 border rounded-lg bg-red-100 text-red-700";
+            responseDiv.style.display = "block";
+          }
         });
     </script>
-</body>
+  </body>
 </html>

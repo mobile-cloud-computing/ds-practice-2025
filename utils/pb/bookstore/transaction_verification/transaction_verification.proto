@@ -1,0 +1,52 @@
+syntax = "proto3";
+
+package bookstore;
+
+
+
+// Service for detecting various types of fraud in orders
+service TransactionVerificationService {
+    // Analyzes user behavior patterns to detect potential fraud
+    rpc VerifyTransaction (TransactionVerificationRequest) returns (TransactionVerificationResponse);
+    
+    
+    // Clears historical fraud detection data for a user
+   //rpc ClearData (ClearDataRequest) returns (ClearDataResponse);
+}
+message TransactionUser{
+    string name = 1;
+    string contact = 2;
+}
+
+
+message TransactionCreditCard{
+    string number = 1;
+    string expirationDate =2;
+    string cvv = 3;
+}
+
+message TransactionItem{
+    string name = 1;
+    int32 quantity = 2;
+}
+
+message TransactionBillingAddress{
+    string street = 1;
+    string city = 2;
+    string state = 3;
+    string zip = 4;
+    string country = 5;
+}
+
+message TransactionVerificationRequest {
+    TransactionUser user = 1;
+    TransactionCreditCard creditCard = 2;
+    repeated TransactionItem items = 3;
+    TransactionBillingAddress billingAddress = 4;
+    bool termsAndConditionsAccepted = 5;
+}
+
+message TransactionVerificationResponse {
+    bool verification = 1;
+    string errors = 2;
+}

@@ -1,0 +1,27 @@
+
+### CHECKOUT SERVICE
+GET http://localhost:8081/Checkout
+Content-Type: application/json
+
+{
+    "order_id": "1234567890",
+    "user_id": "user123"
+}   
+
+### Fraud Detection Service
+GET http://localhost:50051/DetectUserFraud
+Content-Type: application/json
+
+{
+    "order_id": "1234567890",
+    "user_id": "user123"
+}   
+
+### Credit Card number validation
+### 4532015112830366 - valid
+### 4532015112830367 - invalid
+
+### billing address and shipping address 
+### 123 Main St, Anytown, USA - valid
+### Narva Mnt 27 ,Tallinn ,Estonia - valid 
+### the request must fail when the billing and shipping addres are different because of high fraud probablity 

@@ -130,9 +130,9 @@ components:
             properties:
               bookId:
                 type: string
-              title:
+              book_title:
                 type: string
-              author:
+              book_author:
                 type: string
 
     ErrorResponse:

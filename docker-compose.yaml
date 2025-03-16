@@ -1,4 +1,4 @@
-version: '3'
+version: "3"
 services:
   frontend:
     build:
@@ -57,3 +57,49 @@ services:
       - ./utils:/app/utils
       # Mount the fraud_detection/src directory in the current directory to the /app/fraud_detection/src directory in the container
       - ./fraud_detection/src:/app/fraud_detection/src
+
+  transaction_verification:
+    build:
+      # Use the current directory as the build context
+      # This allows us to access the files in the current directory inside the Dockerfile
+      context: ./
+      # Use the Dockerfile in the fraud_detection directorys
+      dockerfile: ./transaction_verification/Dockerfile
+    ports:
+      # Expose port 50051 on the host, and map port 50051 of the container to port 50051 on the host
+      - 50052:50052
+    environment:
+      # Pass the environment variables to the container
+      # The PYTHONUNBUFFERED environment variable ensures that the output from the application is logged to the console
+      - PYTHONUNBUFFERED=TRUE
+      # The PYTHONFILE environment variable specifies the absolute entry point of the application
+      # Check app.py in the fraud_detection directory to see how this is used
+      - PYTHONFILE=/app/transaction_verification/src/app.py
+    volumes:
+      # Mount the utils directory in the current directory to the /app/utils directory in the container
+      - ./utils:/app/utils
+      # Mount the fraud_detection/src directory in the current directory to the /app/fraud_detection/src directory in the container
+      - ./transaction_verification/src:/app/transaction_verification/src
+
+  suggestions:
+    build:
+      # Use the current directory as the build context
+      # This allows us to access the files in the current directory inside the Dockerfile
+      context: ./
+      # Use the Dockerfile in the fraud_detection directorys
+      dockerfile: ./suggestions/Dockerfile
+    ports:
+      # Expose port 50051 on the host, and map port 50051 of the container to port 50051 on the host
+      - 50053:50053
+    environment:
+      # Pass the environment variables to the container
+      # The PYTHONUNBUFFERED environment variable ensures that the output from the application is logged to the console
+      - PYTHONUNBUFFERED=TRUE
+      # The PYTHONFILE environment variable specifies the absolute entry point of the application
+      # Check app.py in the fraud_detection directory to see how this is used
+      - PYTHONFILE=/app/transaction_verification/src/app.py
+    volumes:
+      # Mount the utils directory in the current directory to the /app/utils directory in the container
+      - ./utils:/app/utils
+      # Mount the fraud_detection/src directory in the current directory to the /app/fraud_detection/src directory in the container
+      - ./suggestions/src:/app/suggestions/src

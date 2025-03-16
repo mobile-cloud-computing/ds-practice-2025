@@ -1,1 +1,27 @@
-__pycache__
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+
+# Virtual environment
+venv/
+.venv/
+
+# Environment variables
+.env
+
+# Build and distribution directories
+build/
+dist/
+*.egg-info/
+
+# Logs and temporary files
+*.log
+*.tmp
+
+# IDE and editor configurations
+.vscode/
+.idea/
+
+# Dependency manager lock files
+Pipfile.lock
+poetry.lock
