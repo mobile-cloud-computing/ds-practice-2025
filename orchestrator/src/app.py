@@ -18,10 +18,13 @@ FILE = __file__ if '__file__' in globals() else os.getenv("PYTHONFILE", "")
 fraud_path = os.path.abspath(os.path.join(FILE, '../../../utils/pb/fraud_detection'))
 tx_path = os.path.abspath(os.path.join(FILE, '../../../utils/pb/transaction_verification'))
 sugg_path = os.path.abspath(os.path.join(FILE, '../../../utils/pb/suggestions'))
+queue_path = os.path.abspath(os.path.join(FILE, '../../../utils/pb/order_queue'))
+
 # Add directories to system path
 sys.path.insert(0, fraud_path)
 sys.path.insert(0, tx_path)
 sys.path.insert(0, sugg_path)
+sys.path.insert(0, queue_path)
 
 # Import gRPC modules for Fraud Detection, Transaction Verification, and Suggestions
 import fraud_detection_pb2 as fd_pb2
@@ -33,6 +36,9 @@ import transaction_verification_pb2_grpc as tv_grpc
 import suggestions_pb2 as sugg_pb2
 import suggestions_pb2_grpc as sugg_grpc
 
+import order_queue_pb2 as oq_pb2
+import order_queue_pb2_grpc as oq_grpc
+
 app = Flask(__name__)
 CORS(app)
 
@@ -40,6 +46,7 @@ CORS(app)
 FRAUD_ADDR = "fraud_detection:50051"
 TX_ADDR = "transaction_verification:50052"
 SUGG_ADDR = "suggestions:50053"
+QUEUE_ADDR = "order_queue:50054"
 
 # Merge multiple vector clocks into a single one
 def merge_clocks(*clock_strings):
@@ -65,6 +72,22 @@ class WorkerThread(threading.Thread):
     def run(self):
         # Call the target function
         self.result = self._target(*self._args)
+
+def enqueue_order(order_id, items, user_data, credit_card):
+    with grpc.insecure_channel(QUEUE_ADDR) as channel:
+        stub = oq_grpc.OrderQueueServiceStub(channel)
+        order_data = oq_pb2.OrderData(
+            orderId=order_id,
+            userData=oq_pb2.UserData(
+                name=user_data["name"],
+                contact=user_data["contact"],
+                address=oq_pb2.Address(**user_data["address"])
+            ),
+            creditCard=oq_pb2.CreditCard(**credit_card),
+            items=[oq_pb2.OrderItem(name=item["name"], quantity=item["quantity"]) for item in items]
+        )
+        stub.EnqueueOrder(order_data)
+        logger.info(f"[Orchestrator] Order {order_id} sent to order queue.")
 
 ### Flask Routes ###
 @app.route("/", methods=["GET"])
@@ -221,6 +244,8 @@ def checkout():
     }
     logger.info(f"[Orchestrator] Final decision for order {order_id}: Order Approved")
     return jsonify(response_payload), 200
+
+    
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)

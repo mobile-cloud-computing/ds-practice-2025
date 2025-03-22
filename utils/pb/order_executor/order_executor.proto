@@ -1,0 +1,8 @@
+syntax = "proto3";
+
+import "google/protobuf/empty.proto";
+
+// for the order executor.
+service OrderExecutorService {
+  rpc SendToken(google.protobuf.Empty) returns (google.protobuf.Empty);
+}

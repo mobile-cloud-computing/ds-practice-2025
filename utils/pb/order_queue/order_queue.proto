@@ -1,0 +1,30 @@
+syntax = "proto3";
+
+import "google/protobuf/empty.proto";
+
+// Message representing an individual order item.
+message OrderItem {
+  string name = 1;
+  int32 quantity = 2;
+}
+
+// Message representing an order.
+message OrderData {
+  string orderId = 1;
+  repeated OrderItem items = 2;
+  string userData = 3;
+  string creditCard = 4;
+}
+
+// If no order is available, the returned message will be empty.
+message OptionalOrder {
+  OrderData order = 1;
+}
+
+// Order Queue Service definition.
+service OrderQueueService {
+  // Enqueues an order and returns an empty message.
+  rpc EnqueueOrder (OrderData) returns (google.protobuf.Empty);
+  // Dequeues the highest priority order and returns it.
+  rpc DequeueOrder (google.protobuf.Empty) returns (OptionalOrder);
+}
