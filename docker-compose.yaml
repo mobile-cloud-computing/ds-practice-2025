@@ -14,6 +14,8 @@ services:
       # Mount the frontend directory
       - ./frontend/src:/usr/share/nginx/html
   orchestrator:
+    env_file:
+      - .env
     build:
       # Use the current directory as the build context
       # This allows us to access the files in the current directory inside the Dockerfile
@@ -35,7 +37,10 @@ services:
       - ./utils:/app/utils
       # Mount the orchestrator/src directory in the current directory to the /app/orchestrator/src directory in the container
       - ./orchestrator/src:/app/orchestrator/src
+      - ./orchestrator/logs:/app/orchestrator/logs
   fraud_detection:
+    env_file:
+      - .env
     build:
       # Use the current directory as the build context
       # This allows us to access the files in the current directory inside the Dockerfile
@@ -57,3 +62,107 @@ services:
       - ./utils:/app/utils
       # Mount the fraud_detection/src directory in the current directory to the /app/fraud_detection/src directory in the container
       - ./fraud_detection/src:/app/fraud_detection/src
+  suggestions:
+    build:
+      context: ./
+      dockerfile: ./suggestions/Dockerfile
+    env_file:
+      - .env
+    ports:
+      - 50053:50053
+    environment:
+      # Pass the environment variables to the container
+      # The PYTHONUNBUFFERED environment variable ensures that the output from the application is logged to the console
+      - PYTHONUNBUFFERED=TRUE
+      # The PYTHONFILE environment variable specifies the absolute entry point of the application
+      - PYTHONFILE=/app/suggestions/src/app.py
+    volumes:
+      # Mount the utils directory in the current directory to the /app/utils directory in the container
+      - ./utils:/app/utils
+      - ./suggestions/src:/app/suggestions/src
+      - ./ai/models:/app/ai/models/
+
+  postgres:
+    build:
+      context: .
+      dockerfile: ./db/Dockerfile
+    image: bookstore_postgres
+    container_name: bookstore_postgres
+    volumes:
+      - ./postgres_data:/var/lib/postgresql/data
+      - ./db/init-extensions.sql:/docker-entrypoint-initdb.d/init-extensions.sql
+      - ./db/dummy_data/bookstore.sql:/docker-entrypoint-initdb.d/bookstore.sql 
+    env_file:
+      - .env
+    ports:
+      - "5432:5432"
+
+  transaction_verification:
+    env_file:
+      - .env
+    build:
+      # Use the current directory as the build context
+      # This allows us to access the files in the current directory inside the Dockerfile
+      context: ./
+      # Use the Dockerfile in the fraud_detection directorys
+      dockerfile: ./transaction_verification/Dockerfile
+    ports:
+      # Expose port 50052 on the host, and map port 50052 of the container to port 50051 on the host
+      - 50052:50052
+    environment:
+      # Pass the environment variables to the container
+      # The PYTHONUNBUFFERED environment variable ensures that the output from the application is logged to the console
+      - PYTHONUNBUFFERED=TRUE
+      # The PYTHONFILE environment variable specifies the absolute entry point of the application
+      # Check app.py in the fraud_detection directory to see how this is used
+      - PYTHONFILE=/app/transaction_verification/src/app.py
+    volumes:
+      # Mount the utils directory in the current directory to the /app/utils directory in the container
+      - ./utils:/app/utils
+      # Mount the transection_verification/src directory in the current directory to the /app/transection_verification/src directory in the container
+      - ./transaction_verification/src:/app/transaction_verification/src
+  
+  redis:
+    image: redis:7
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: ["redis-server", "--appendonly", "yes"]
+
+  order_executor:
+    env_file:
+      - .env
+    build:
+      context: .
+      dockerfile: ./order_executor/Dockerfile
+    depends_on:
+      - suggestions
+      - transaction_verification
+      - fraud_detection
+      - redis
+    environment:
+      - PYTHONUNBUFFERED=TRUE
+      - NODE_ID=${NODE_ID}
+      - PYTHONFILE=/app/order_executor/src/app.py
+    volumes:
+      - ./utils:/app/utils
+      - ./order_executor/src:/app/order_executor/src
+    command: ["python", "order_executor/src/app.py"]
+    
+  order_debug:
+    build:
+      context: .
+      dockerfile: ./order_executor/Dockerfile
+    volumes:
+      - ./order_executor/src:/app/order_executor/src
+      - ./utils:/app/utils
+    command: ["python", "order_executor/src/debug.py"]
+
+
+volumes:
+    redis_data:
+
+  
+
+

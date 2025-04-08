@@ -1,15 +1,51 @@
 syntax = "proto3";
 
-package hello;
+import "google/protobuf/struct.proto";
 
-service HelloService {
-    rpc SayHello (HelloRequest) returns (HelloResponse);
+package fraud_Detection;
+
+service FraudDetectionService {
+    // New method to store or initialize the order data
+    rpc InitializeOrder (FraudInitRequest) returns (FraudInitResponse);
+
+    // Existing method that does the real fraud check
+    rpc CheckFraud (FraudRequest) returns (FraudResponse);
 }
 
-message HelloRequest {
-    string name = 1;
+// New message for the initialization phase
+message FraudInitRequest {
+    double amount = 1;
+    string ip_address = 2;
+    string email = 3;
+    string billing_country = 4;
+    string billing_city = 5;
+    string payment_method = 6;
+    string order_id = 7;
+    map<string, int32> vectorClock = 8; 
 }
 
-message HelloResponse {
-    string greeting = 1;
+message FraudInitResponse {
+    bool success = 1;
+    map<string, int32> vectorClock = 2; 
+}
+
+
+// Existing
+message FraudRequest {
+    double amount = 1;
+    string ip_address = 2;
+    string email = 3;
+    string billing_country = 4;
+    string billing_city = 5;
+    string payment_method = 6;
+    string order_id = 7;
+    map<string, int32> vectorClock = 8; 
+}
+
+message FraudResponse {
+    double fraud_probability = 1;
+    string action = 2;
+    google.protobuf.Struct details = 3;
+    repeated string reasons = 4;
+    map<string, int32> vectorClock = 5; 
 }

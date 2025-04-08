@@ -1,0 +1,10 @@
+grpcio==1.70.0
+grpcio-tools==1.70.0
+protobuf==5.29.3
+watchdog==6.0.0
+pgvector==0.3.6
+SQLAlchemy==2.0.38
+sentence-transformers==3.4.1
+transformers==4.41.2
+python-dotenv==1.0.1
+psycopg2-binary==2.9.10

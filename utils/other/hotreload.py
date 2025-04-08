@@ -14,7 +14,8 @@ Usage:
 python hotreload.py <script>
 """
 
-DIR_TO_WATCH = '/app'
+DIR_TO_WATCH = "/app"
+
 
 class OnAnyModifiedFileHandler(FileSystemEventHandler):
     def __init__(self, script, process):
@@ -24,7 +25,11 @@ class OnAnyModifiedFileHandler(FileSystemEventHandler):
         self.idle_time = 0.5  # Time in seconds to consider a file as "closed"
 
     def on_modified(self, event):
-        if event.is_directory or '__pycache__' in event.src_path:
+        if (
+            event.is_directory
+            or ".log" in event.src_path
+            or "__pycache__" in event.src_path
+        ):
             return  # Ignore directories and __pycache__
 
         # Track pending files and their last modification time
@@ -40,7 +45,9 @@ class OnAnyModifiedFileHandler(FileSystemEventHandler):
                 del self.pending_files[file_path]
 
         if files_to_restart:
-            print(f"Detected closed files: {files_to_restart}. Restarting: {self.script}")
+            print(
+                f"Detected closed files: {files_to_restart}. Restarting: {self.script}"
+            )
             sys.stdout.flush()
             self.restart_script()
 
@@ -70,8 +77,8 @@ def main(script):
     observer.join()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     if len(sys.argv) != 2:
-        print(f'Usage: {sys.argv[0]} <script>')
+        print(f"Usage: {sys.argv[0]} <script>")
         sys.exit(1)
     main(sys.argv[1])

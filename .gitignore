@@ -1,1 +1,7 @@
 __pycache__
+.env
+books.csv
+postgres_data/
+ai/
+.vscode/
+logs/

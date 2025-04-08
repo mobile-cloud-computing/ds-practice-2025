@@ -1,15 +1,11 @@
-# Use an official Python runtime as the base image
-FROM python:3.11
 
-# Set the working directory in the container
-# Both the utils and src folders will be mounted as volumes, please see docker-compose.yaml
+FROM python:3.11
 WORKDIR /app
 
-# Copy the requirements file to the working directory
 COPY ./fraud_detection/requirements.txt .
 
-# Install the Python dependencies
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Set the command to run the application
+COPY fraud_detection /app/fraud_detection
+
 CMD python utils/other/hotreload.py "fraud_detection/src/app.py"

@@ -1,0 +1,19 @@
+sequenceDiagram
+    participant User
+    participant REST API
+    participant Transaction Verification Service
+    participant Fraud Detection Service
+    participant Suggestions Service
+    participant PostgreSQL
+
+    User->>REST API: Initiates checkout request
+    REST API-->>+Transaction Verification Service: Validate credit card (Luhn Algorithm)
+    REST API-->>+Fraud Detection Service: Analyze transaction risk
+    REST API-->>+Suggestions Service: Fetch book recommendations
+    
+    Fraud Detection Service-->>REST API: Risk assessment
+    Suggestions Service-->>PostgreSQL: Query book metadata (pgvector)
+    PostgreSQL-->>Suggestions Service: Return book similarity results
+    Suggestions Service-->>REST API: Recommended books
+
+    REST API->>User: Returns checkout response (success/fail) + recommendations
