@@ -58,6 +58,10 @@
                     <option value="Next-Day">Next-Day</option>
                 </select>
             </div>
+            <div class="mb-4">
+                <label for="discountCode" class="block text-sm font-medium text-gray-700">Discount Code:</label>
+                <input type="text" id="discountCode" name="discountCode" class="w-full border border-gray-300 rounded-lg p-2 mt-1">
+            </div>
             <div class="mb-4 flex items-center">
                 <input type="checkbox" id="giftWrapping" name="giftWrapping" checked class="mr-2 border border-gray-300 rounded">
                 <label for="giftWrapping" class="text-sm font-medium text-gray-700">Gift Wrapping</label>
@@ -110,6 +114,7 @@
                     country: formData.get('billingCountry'),
                 },
                 shippingMethod: formData.get('shippingMethod'),
+                discountCode: formData.get('discountCode') || null,
                 giftWrapping: formData.get('giftWrapping') === 'on',
                 termsAccepted: formData.get('terms') === 'on',
             };
