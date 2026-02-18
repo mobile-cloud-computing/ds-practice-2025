@@ -31,7 +31,8 @@ def detect_fraud(card_number, order_amount):
 # Flask is a web framework for Python.
 # It allows you to build a web application quickly.
 # For more information, see https://flask.palletsprojects.com/en/latest/
-from flask import Flask, logging, request
+from flask import Flask, request
+import logging
 from flask_cors import CORS
 import json
 
@@ -66,20 +67,17 @@ def checkout():
     from concurrent.futures import ThreadPoolExecutor
 
     try:
-        logging.info("Received checkout request", extra={'request_data': request.data})
+        logging.info(f"Received checkout request: {request.data}")
 
         card_info = request_data.get('creditCard', {})
         card_number = card_info.get('number', '')
         order_amount = card_info.get('orderAmount', 0)
 
         with ThreadPoolExecutor() as executor:
-            logging.info("Submitting fraud detection task to executor", extra={'card_number': card_number, 'order_amount': order_amount})
+            logging.info(f"Submitting fraud detection task to executor: card_number={card_number}, order_amount={order_amount}")
             future = executor.submit(detect_fraud, card_number, order_amount)
             is_fraud = future.result()
-        logging.info("Fraud detection completed", extra={'is_fraud': is_fraud})
-
-
-   
+        logging.info(f"Fraud detection completed: is_fraud={is_fraud}")
 
         # Dummy response following the provided YAML specification for the bookstore
         order_status_response = {
@@ -93,7 +91,7 @@ def checkout():
 
         return order_status_response
     except Exception as e:
-        logging.error("Error processing checkout request", extra={'error': str(e)})
+        logging.error(f"Error processing checkout request: {e}")
         return {'error': 'An error occurred while processing the checkout request'}, 500
 
 

@@ -24,7 +24,7 @@ class FraudDetectionService(fraud_detection_grpc.FraudDetectionServiceServicer):
         # Set the is_fraud field of the response object
         response.is_fraud = order_amount > 1000 or card_number.startswith("999")  # Example logic: flag as fraud if amount > 1000 and card starts with '4'
         # Print the transaction details and the fraud detection result
-        print(f"Received transaction: {request.transaction_id}, amount: {order_amount}, is_fraud: {response.is_fraud}")
+        print(f"Received transaction: [no id], amount: {order_amount}, is_fraud: {response.is_fraud}")
         # Return the response object
         return response
 
