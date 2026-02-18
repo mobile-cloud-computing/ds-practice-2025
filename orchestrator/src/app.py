@@ -11,15 +11,20 @@ import fraud_detection_pb2 as fraud_detection
 import fraud_detection_pb2_grpc as fraud_detection_grpc
 
 import grpc
+import logging
 
-def greet(name='you'):
-    # Establish a connection with the fraud-detection gRPC service.
-    with grpc.insecure_channel('fraud_detection:50051') as channel:
-        # Create a stub object.
-        stub = fraud_detection_grpc.HelloServiceStub(channel)
-        # Call the service through the stub object.
-        response = stub.SayHello(fraud_detection.HelloRequest(name=name))
-    return response.greeting
+def detect(card_number, order_amount):
+    try:
+        # Establish a connection with the fraud-detection gRPC service.
+        with grpc.insecure_channel('fraud_detection:50051') as channel:
+            # Create a stub object.
+            stub = fraud_detection_grpc.FraudDetectionServiceStub(channel)
+            # Call the service through the stub object.
+            response = stub.CheckFraud(fraud_detection.FraudRequest(card_number=card_number, order_amount=order_amount))
+        return response.is_fraud
+    except Exception as e:
+        logging.error(f"gRPC Call Failed: {e}")
+        return True # default to fraud if error
 
 # Import Flask.
 # Flask is a web framework for Python.
@@ -41,7 +46,7 @@ def index():
     Responds with 'Hello, [name]' when a GET request is made to '/' endpoint.
     """
     # Test the fraud-detection gRPC service.
-    response = greet(name='orchestrator')
+    response = detect(card_number='999123123123', order_amount=200)
     # Return the response.
     return response
 
@@ -55,10 +60,17 @@ def checkout():
     # Print request object data
     print("Request Data:", request_data.get('items'))
 
+    # Extract values needed for fraud check
+    card_number = request_data.get('creditCard', {}).get('number', '')
+    order_amount = str(sum(item.get('quantity', 0) for item in request_data.get('items', [])))
+
+    # Call fraud detection gRPC service
+    is_fraud = detect(card_number=card_number, order_amount=order_amount)
+
     # Dummy response following the provided YAML specification for the bookstore
     order_status_response = {
         'orderId': '12345',
-        'status': 'Order Approved',
+        'status': 'Order Denied' if is_fraud else 'Order Approved',
         'suggestedBooks': [
             {'bookId': '123', 'title': 'The Best Book', 'author': 'Author 1'},
             {'bookId': '456', 'title': 'The Second Best Book', 'author': 'Author 2'}
