@@ -2,7 +2,7 @@ syntax = "proto3";
 
 package fraud;
 
-service FraudDetectioneService {
+service FraudDetectionegit addService {
     rpc DetectFraud (FraudDetectionRequest) returns (FraudDetectionResponse);
 }
 
