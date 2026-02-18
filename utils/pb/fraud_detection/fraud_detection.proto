@@ -1,15 +1,16 @@
 syntax = "proto3";
 
-package hello;
+package fraud_detection;
 
-service HelloService {
-    rpc SayHello (HelloRequest) returns (HelloResponse);
+service FraudDetectionService {
+  rpc CheckFraud (OrderRequest) returns (FraudResponse);
 }
 
-message HelloRequest {
-    string name = 1;
+message OrderRequest {
+  string order_json = 1;
 }
 
-message HelloResponse {
-    string greeting = 1;
+message FraudResponse {
+  bool fraud_detected = 1;
+  string reason = 2;
 }
