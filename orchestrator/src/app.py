@@ -12,14 +12,14 @@ import fraud_detection_pb2_grpc as fraud_detection_grpc
 
 import grpc
 
-def greet(name='you'):
+def detect_fraud(card_nr, order_ammount):
     # Establish a connection with the fraud-detection gRPC service.
     with grpc.insecure_channel('fraud_detection:50051') as channel:
         # Create a stub object.
-        stub = fraud_detection_grpc.HelloServiceStub(channel)
+        stub = fraud_detection_grpc.FraudDetectionServiceStub(channel)
         # Call the service through the stub object.
-        response = stub.SayHello(fraud_detection.HelloRequest(name=name))
-    return response.greeting
+        response = stub.checkFraud(fraud_detection.FraudRequest(card_nr=card_nr, order_ammount=order_ammount))
+    return response.is_fraud
 
 # Import Flask.
 # Flask is a web framework for Python.
@@ -40,10 +40,8 @@ def index():
     """
     Responds with 'Hello, [name]' when a GET request is made to '/' endpoint.
     """
-    # Test the fraud-detection gRPC service.
-    response = greet(name='orchestrator')
     # Return the response.
-    return response
+    return "hello orchestrator"
 
 @app.route('/checkout', methods=['POST'])
 def checkout():
@@ -53,12 +51,17 @@ def checkout():
     # Get request object data to json
     request_data = json.loads(request.data)
     # Print request object data
-    print("Request Data:", request_data.get('items'))
+    print("Request Data:", request_data)
+
+    is_fraud = detect_fraud(request_data["creditCard"]["number"], sum([item["quantity"] for item in request_data["items"]]))
+
+
+
 
     # Dummy response following the provided YAML specification for the bookstore
     order_status_response = {
         'orderId': '12345',
-        'status': 'Order Approved',
+        'status': ('odred declined' if is_fraud else 'Order Approved'),
         'suggestedBooks': [
             {'bookId': '123', 'title': 'The Best Book', 'author': 'Author 1'},
             {'bookId': '456', 'title': 'The Second Best Book', 'author': 'Author 2'}
