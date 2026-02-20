@@ -40,8 +40,10 @@ def index():
     """
     Responds with 'Hello, [name]' when a GET request is made to '/' endpoint.
     """
+    # Test the fraud-detection gRPC service.
+    response = greet(name='orchestrator')
     # Return the response.
-    return "hello orchestrator"
+    return response
 
 @app.route('/checkout', methods=['POST'])
 def checkout():
