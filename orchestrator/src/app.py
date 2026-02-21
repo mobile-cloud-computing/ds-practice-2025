@@ -13,6 +13,8 @@ sys.path.insert(0, pb_root)
 
 from fraud_detection import fraud_detection_pb2 as fd_pb2
 from fraud_detection import fraud_detection_pb2_grpc as fd_grpc
+from transaction_verification import transaction_verification_pb2 as tv_pb2
+from transaction_verification import transaction_verification_pb2_grpc as tv_grpc
 
 # Flask app setup 
 app = Flask(__name__)
@@ -28,6 +30,17 @@ def call_fraud_detection(order_dict):
         req = fd_pb2.OrderRequest(order_json=json.dumps(order_dict))
         resp = stub.CheckFraud(req, timeout=3)
         return resp.fraud_detected, resp.reason
+
+
+def call_transaction_verification(order_dict):
+    """
+    Calls transaction_verification gRPC service and returns (is_valid: bool, reason: str)
+    """
+    with grpc.insecure_channel("transaction_verification:50052") as channel:
+        stub = tv_grpc.TransactionVerificationServiceStub(channel)
+        req = tv_pb2.TransactionRequest(order_json=json.dumps(order_dict))
+        resp = stub.VerifyTransaction(req, timeout=3)
+        return resp.is_valid, resp.reason
 
 
 @app.route("/", methods=["GET"])
@@ -62,7 +75,12 @@ def checkout():
     fraud_detected, fraud_reason = call_fraud_detection(request_data)
     print("Fraud result:", fraud_detected, fraud_reason)
 
-    approved = not fraud_detected
+    # Call transaction verification
+    transaction_valid, transaction_reason = call_transaction_verification(request_data)
+    print("Transaction result:", transaction_valid, transaction_reason)
+
+    # Consolidate results: reject if fraud detected OR transaction invalid
+    approved = (not fraud_detected) and transaction_valid
 
     order_status_response = {
         "orderId": "12345",
