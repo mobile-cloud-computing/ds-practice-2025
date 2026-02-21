@@ -8,7 +8,7 @@ import logging
 # The path of the stubs is relative to the current file, or absolute inside the container.
 # Change these lines only if strictly needed.
 FILE = __file__ if '__file__' in globals() else os.getenv("PYTHONFILE", "")
-pb_root = os.path.abspath(os.path.join(FILE, "../../../utils/pb"))
+pb_root = os.path.abspath(os.path.join(FILE, "../../../../utils/pb"))
 sys.path.insert(0, pb_root)
 
 from fraud_detection import fraud_detection_pb2 as fd_pb2

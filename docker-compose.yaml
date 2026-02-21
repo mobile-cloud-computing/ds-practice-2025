@@ -2,56 +2,56 @@ services:
   frontend:
     build:
       context: ./
-      dockerfile: ./frontend/Dockerfile
+      dockerfile: ./services/frontend/Dockerfile
     ports:
       - "8080:80"
     volumes:
-      - ./frontend/src:/usr/share/nginx/html
+      - ./services/frontend/src:/usr/share/nginx/html
   orchestrator:
     build:
       context: ./
-      dockerfile: ./orchestrator/Dockerfile
+      dockerfile: ./services/orchestrator/Dockerfile
     ports:
       - 8081:5000
     environment:
       - PYTHONUNBUFFERED=TRUE
-      - PYTHONFILE=/app/orchestrator/src/app.py
+      - PYTHONFILE=/app/services/orchestrator/src/app.py
     volumes:
       - ./utils:/app/utils
-      - ./orchestrator/src:/app/orchestrator/src
+      - ./services/orchestrator/src:/app/services/orchestrator/src
   fraud_detection:
     build:
       context: ./
-      dockerfile: ./fraud_detection/Dockerfile
+      dockerfile: ./services/fraud_detection/Dockerfile
     ports:
       - 50051:50051
     environment:
       - PYTHONUNBUFFERED=TRUE
-      - PYTHONFILE=/app/fraud_detection/src/app.py
+      - PYTHONFILE=/app/services/fraud_detection/src/app.py
     volumes:
       - ./utils:/app/utils
-      - ./fraud_detection/src:/app/fraud_detection/src
+      - ./services/fraud_detection/src:/app/services/fraud_detection/src
   transaction_verification:
     build:
       context: ./
-      dockerfile: ./transaction_verification/Dockerfile
+      dockerfile: ./services/transaction_verification/Dockerfile
     ports:
       - 50052:50052
     environment:
       - PYTHONUNBUFFERED=TRUE
-      - PYTHONFILE=/app/transaction_verification/src/app.py
+      - PYTHONFILE=/app/services/transaction_verification/src/app.py
     volumes:
       - ./utils:/app/utils
-      - ./transaction_verification/src:/app/transaction_verification/src
+      - ./services/transaction_verification/src:/app/services/transaction_verification/src
   suggestions:
     build:
       context: ./
-      dockerfile: ./suggestions/Dockerfile
+      dockerfile: ./services/suggestions/Dockerfile
     ports:
       - 50053:50053
     environment:
       - PYTHONUNBUFFERED=TRUE
-      - PYTHONFILE=/app/suggestions/src/app.py
+      - PYTHONFILE=/app/services/suggestions/src/app.py
     volumes:
       - ./utils:/app/utils
-      - ./suggestions/src:/app/suggestions/src
+      - ./services/suggestions/src:/app/services/suggestions/src

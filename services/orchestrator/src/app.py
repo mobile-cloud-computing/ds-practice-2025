@@ -13,7 +13,7 @@ log = logging.getLogger("orchestrator")
 
 # Import gRPC generated stubs 
 FILE = __file__ if '__file__' in globals() else os.getenv("PYTHONFILE", "")
-pb_root = os.path.abspath(os.path.join(FILE, "../../../utils/pb"))
+pb_root = os.path.abspath(os.path.join(FILE, "../../../../utils/pb"))
 sys.path.insert(0, pb_root)
 
 from fraud_detection import fraud_detection_pb2 as fd_pb2

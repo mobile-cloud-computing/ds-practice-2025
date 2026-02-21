@@ -6,10 +6,10 @@ FROM python:3.11
 WORKDIR /app
 
 # Copy the requirements file to the working directory
-COPY ./transaction_verification/requirements.txt .
+COPY ./services/suggestions/requirements.txt .
 
 # Install the Python dependencies
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Set the command to run the application
-CMD python utils/other/hotreload.py "transaction_verification/src/app.py"
+CMD python utils/other/hotreload.py "services/suggestions/src/app.py"
