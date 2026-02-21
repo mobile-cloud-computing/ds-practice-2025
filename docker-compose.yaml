@@ -19,6 +19,7 @@ services:
     volumes:
       - ./utils:/app/utils
       - ./services/orchestrator/src:/app/services/orchestrator/src
+      - ./services/orchestrator/tests:/app/services/orchestrator/tests
   fraud_detection:
     build:
       context: ./
@@ -31,6 +32,7 @@ services:
     volumes:
       - ./utils:/app/utils
       - ./services/fraud_detection/src:/app/services/fraud_detection/src
+      - ./services/fraud_detection/tests:/app/services/fraud_detection/tests
   transaction_verification:
     build:
       context: ./
@@ -43,6 +45,7 @@ services:
     volumes:
       - ./utils:/app/utils
       - ./services/transaction_verification/src:/app/services/transaction_verification/src
+      - ./services/transaction_verification/tests:/app/services/transaction_verification/tests
   suggestions:
     build:
       context: ./
@@ -55,3 +58,4 @@ services:
     volumes:
       - ./utils:/app/utils
       - ./services/suggestions/src:/app/services/suggestions/src
+      - ./services/suggestions/tests:/app/services/suggestions/tests

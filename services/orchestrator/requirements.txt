@@ -10,3 +10,6 @@ protobuf>=5.26.1
 Werkzeug==3.0.1
 Flask-CORS==4.0.0
 watchdog==6.0.0
+pytest==8.0.0
+pytest-cov==4.1.0
+pytest-mock==3.12.0

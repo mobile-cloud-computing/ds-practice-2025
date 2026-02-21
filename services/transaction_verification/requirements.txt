@@ -2,3 +2,6 @@ grpcio==1.78.0
 grpcio-tools==1.78.0
 protobuf>=5.26.1
 watchdog==6.0.0
+pytest==8.0.0
+pytest-cov==4.1.0
+pytest-mock==3.12.0
