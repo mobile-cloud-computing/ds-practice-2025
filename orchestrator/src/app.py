@@ -28,6 +28,26 @@ app = Flask(__name__)
 CORS(app, resources={r"/*": {"origins": "*"}})
 
 
+def mask_sensitive_data(data):
+    """
+    Mask sensitive data
+    """
+    if not isinstance(data, dict):
+        return data
+    
+    masked = data.copy()
+
+    if 'creditCard' in masked and isinstance(masked['creditCard'], dict):
+        cc = masked['creditCard'].copy()
+        if 'number' in cc and cc['number']:
+            cc['number'] = '****' + str(cc['number'])[-4:] if len(str(cc['number'])) >= 4 else '****'
+        if 'cvv' in cc:
+            cc['cvv'] = '***'
+        masked['creditCard'] = cc
+    
+    return masked
+
+
 def call_fraud_detection(order_dict):
     """
     Calls fraud_detection gRPC service and returns (fraud_detected: bool, reason: str)
@@ -72,25 +92,38 @@ def index():
 
 @app.route("/checkout", methods=["POST"])
 def checkout():
-    print("CONTENT-TYPE:", request.content_type)
-    print("RAW DATA:", request.data[:500])
+    log.info(f"Received checkout request - Content-Type: {request.content_type}")
+    
     # Parse JSON safely
     request_data = request.get_json(silent=True)
     if request_data is None and request.data:
         try:
             request_data = json.loads(request.data.decode("utf-8"))
-        except Exception:
+        except Exception as e:
+            log.error(f"Failed to parse JSON: {e}")
             request_data = None
 
-    print("FULL REQUEST:", request_data)
+    log.info(f"Parsed request (masked): {mask_sensitive_data(request_data)}")
+    
     if request_data is None:
-        return jsonify({"error": {"message": "Invalid or missing JSON body"}}), 400
+        return jsonify({"error": {"code": "INVALID_JSON", "message": "Invalid or missing JSON body"}}), 400
 
+    # Validate required fields according to API contract
     items = request_data.get("items")
     if not isinstance(items, list) or len(items) == 0:
-        return jsonify({"error": {"message": "items must be a non-empty list"}}), 400
+        return jsonify({"error": {"code": "INVALID_ITEMS", "message": "items must be a non-empty list"}}), 400
+    
+    # Validate user information
+    user = request_data.get("user")
+    if not user or not isinstance(user, dict):
+        return jsonify({"error": {"code": "MISSING_USER", "message": "user information is required"}}), 400
+    
+    # Validate credit card information
+    credit_card = request_data.get("creditCard")
+    if not credit_card or not isinstance(credit_card, dict):
+        return jsonify({"error": {"code": "MISSING_CREDIT_CARD", "message": "creditCard information is required"}}), 400
 
-    print("Request items:", items)
+    log.info(f"Request validation passed - {len(items)} items")
 
     # Prepare shared storage for thread results
     results = {}
@@ -100,31 +133,40 @@ def checkout():
         log.info("Thread: Starting fraud detection")
         try:
             fraud_detected, fraud_reason = call_fraud_detection(request_data)
-            results['fraud'] = {'detected': fraud_detected, 'reason': fraud_reason}
+            results['fraud'] = {'detected': fraud_detected, 'reason': fraud_reason, 'error': None}
             log.info(f"Thread: Fraud detection completed - detected={fraud_detected}")
+        except grpc.RpcError as e:
+            log.error(f"Thread: Fraud detection gRPC error - {e.code()}: {e.details()}")
+            results['fraud'] = {'detected': True, 'reason': 'Fraud detection service unavailable', 'error': 'SERVICE_UNAVAILABLE'}
         except Exception as e:
-            log.error(f"Thread: Fraud detection failed - {e}")
-            results['fraud'] = {'detected': True, 'reason': 'Service error'}
+            log.error(f"Thread: Fraud detection unexpected error - {e}")
+            results['fraud'] = {'detected': True, 'reason': 'Fraud detection service error', 'error': 'SERVICE_ERROR'}
     
     def worker_transaction_verification():
         log.info("Thread: Starting transaction verification")
         try:
             is_valid, reason = call_transaction_verification(request_data)
-            results['transaction'] = {'valid': is_valid, 'reason': reason}
+            results['transaction'] = {'valid': is_valid, 'reason': reason, 'error': None}
             log.info(f"Thread: Transaction verification completed - valid={is_valid}")
+        except grpc.RpcError as e:
+            log.error(f"Thread: Transaction verification gRPC error - {e.code()}: {e.details()}")
+            results['transaction'] = {'valid': False, 'reason': 'Transaction verification service unavailable', 'error': 'SERVICE_UNAVAILABLE'}
         except Exception as e:
-            log.error(f"Thread: Transaction verification failed - {e}")
-            results['transaction'] = {'valid': False, 'reason': 'Service error'}
+            log.error(f"Thread: Transaction verification unexpected error - {e}")
+            results['transaction'] = {'valid': False, 'reason': 'Transaction verification service error', 'error': 'SERVICE_ERROR'}
     
     def worker_suggestions():
         log.info("Thread: Starting suggestions")
         try:
             books = call_suggestions(request_data)
-            results['suggestions'] = {'books': books}
+            results['suggestions'] = {'books': books, 'error': None}
             log.info(f"Thread: Suggestions completed - {len(books)} books")
+        except grpc.RpcError as e:
+            log.error(f"Thread: Suggestions gRPC error - {e.code()}: {e.details()}")
+            results['suggestions'] = {'books': [], 'error': 'SERVICE_UNAVAILABLE'}
         except Exception as e:
-            log.error(f"Thread: Suggestions failed - {e}")
-            results['suggestions'] = {'books': []}
+            log.error(f"Thread: Suggestions unexpected error - {e}")
+            results['suggestions'] = {'books': [], 'error': 'SERVICE_ERROR'}
     
     # Create worker threads
     thread_fraud = threading.Thread(target=worker_fraud_detection, name="FraudThread")
@@ -142,20 +184,45 @@ def checkout():
     log.info("All threads completed")
     
     # Extract results from shared dict
-    fraud_detected = results.get('fraud', {}).get('detected', True)
-    fraud_reason = results.get('fraud', {}).get('reason', 'Unknown')
-    transaction_valid = results.get('transaction', {}).get('valid', False)
-    transaction_reason = results.get('transaction', {}).get('reason', 'Unknown')
-    suggested_books = results.get('suggestions', {}).get('books', [])
+    fraud_data = results.get('fraud', {})
+    fraud_detected = fraud_data.get('detected', True)
+    fraud_reason = fraud_data.get('reason', 'Unknown')
+    fraud_error = fraud_data.get('error')
     
-    print("Fraud result:", fraud_detected, fraud_reason)
-    print("Transaction result:", transaction_valid, transaction_reason)
-    print("Suggestions result:", len(suggested_books), "books")
+    transaction_data = results.get('transaction', {})
+    transaction_valid = transaction_data.get('valid', False)
+    transaction_reason = transaction_data.get('reason', 'Unknown')
+    transaction_error = transaction_data.get('error')
+    
+    suggestions_data = results.get('suggestions', {})
+    suggested_books = suggestions_data.get('books', [])
+    suggestions_error = suggestions_data.get('error')
+    
+    log.info(f"Results - Fraud: {fraud_detected} ({fraud_reason}), Transaction: {transaction_valid} ({transaction_reason}), Suggestions: {len(suggested_books)} books")
+
+    # Check if any critical service failed
+    if fraud_error or transaction_error:
+        error_details = []
+        if fraud_error:
+            error_details.append("fraud_detection")
+        if transaction_error:
+            error_details.append("transaction_verification")
+        
+        log.error(f"Critical services unavailable: {', '.join(error_details)}")
+        return jsonify({
+            "error": {
+                "code": "SERVICE_UNAVAILABLE",
+                "message": f"One or more backend services are unavailable: {', '.join(error_details)}"
+            }
+        }), 503
 
     # Consolidate results: reject if fraud detected OR transaction invalid
     approved = (not fraud_detected) and transaction_valid
     if not approved:
         suggested_books = []
+        log.info(f"Order rejected - Fraud: {fraud_detected}, Valid: {transaction_valid}")
+    else:
+        log.info("Order approved")
 
     order_status_response = {
         "orderId": "12345",
