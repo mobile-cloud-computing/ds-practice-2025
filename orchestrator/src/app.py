@@ -15,6 +15,8 @@ from fraud_detection import fraud_detection_pb2 as fd_pb2
 from fraud_detection import fraud_detection_pb2_grpc as fd_grpc
 from transaction_verification import transaction_verification_pb2 as tv_pb2
 from transaction_verification import transaction_verification_pb2_grpc as tv_grpc
+from suggestions import suggestions_pb2 as sg_pb2
+from suggestions import suggestions_pb2_grpc as sg_grpc
 
 # Flask app setup 
 app = Flask(__name__)
@@ -41,6 +43,20 @@ def call_transaction_verification(order_dict):
         req = tv_pb2.TransactionRequest(order_json=json.dumps(order_dict))
         resp = stub.VerifyTransaction(req, timeout=3)
         return resp.is_valid, resp.reason
+
+
+def call_suggestions(order_dict):
+    """
+    Calls suggestions gRPC service and returns list of book suggestions
+    """
+    with grpc.insecure_channel("suggestions:50053") as channel:
+        stub = sg_grpc.SuggestionsServiceStub(channel)
+        req = sg_pb2.SuggestionsRequest(order_json=json.dumps(order_dict))
+        resp = stub.GetSuggestions(req, timeout=3)
+        return [
+            {"bookId": book.book_id, "title": book.title, "author": book.author}
+            for book in resp.books
+        ]
 
 
 @app.route("/", methods=["GET"])
@@ -82,13 +98,16 @@ def checkout():
     # Consolidate results: reject if fraud detected OR transaction invalid
     approved = (not fraud_detected) and transaction_valid
 
+    # Get suggestions only if order approved
+    suggested_books = []
+    if approved:
+        suggested_books = call_suggestions(request_data)
+        print("Suggestions result:", len(suggested_books), "books")
+
     order_status_response = {
         "orderId": "12345",
         "status": "Order Approved" if approved else "Order Rejected",
-        "suggestedBooks": [] if not approved else [
-            {"bookId": "123", "title": "The Best Book", "author": "Author 1"},
-            {"bookId": "456", "title": "The Second Best Book", "author": "Author 2"}
-        ]
+        "suggestedBooks": suggested_books
     }
 
     return jsonify(order_status_response), 200

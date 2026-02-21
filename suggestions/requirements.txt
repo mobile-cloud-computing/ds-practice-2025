@@ -1,0 +1,4 @@
+grpcio==1.78.0
+grpcio-tools==1.78.0
+protobuf>=5.26.1
+watchdog==6.0.0
