@@ -2,9 +2,14 @@ import os
 import sys
 import json
 import grpc
+import logging
+import threading
 
 from flask import Flask, request, jsonify
 from flask_cors import CORS
+
+logging.basicConfig(level=logging.INFO)
+log = logging.getLogger("orchestrator")
 
 # Import gRPC generated stubs 
 FILE = __file__ if '__file__' in globals() else os.getenv("PYTHONFILE", "")
@@ -87,22 +92,70 @@ def checkout():
 
     print("Request items:", items)
 
-    # Call fraud detection
-    fraud_detected, fraud_reason = call_fraud_detection(request_data)
+    # Prepare shared storage for thread results
+    results = {}
+    
+    # Define worker functions that store results in the shared dict
+    def worker_fraud_detection():
+        log.info("Thread: Starting fraud detection")
+        try:
+            fraud_detected, fraud_reason = call_fraud_detection(request_data)
+            results['fraud'] = {'detected': fraud_detected, 'reason': fraud_reason}
+            log.info(f"Thread: Fraud detection completed - detected={fraud_detected}")
+        except Exception as e:
+            log.error(f"Thread: Fraud detection failed - {e}")
+            results['fraud'] = {'detected': True, 'reason': 'Service error'}
+    
+    def worker_transaction_verification():
+        log.info("Thread: Starting transaction verification")
+        try:
+            is_valid, reason = call_transaction_verification(request_data)
+            results['transaction'] = {'valid': is_valid, 'reason': reason}
+            log.info(f"Thread: Transaction verification completed - valid={is_valid}")
+        except Exception as e:
+            log.error(f"Thread: Transaction verification failed - {e}")
+            results['transaction'] = {'valid': False, 'reason': 'Service error'}
+    
+    def worker_suggestions():
+        log.info("Thread: Starting suggestions")
+        try:
+            books = call_suggestions(request_data)
+            results['suggestions'] = {'books': books}
+            log.info(f"Thread: Suggestions completed - {len(books)} books")
+        except Exception as e:
+            log.error(f"Thread: Suggestions failed - {e}")
+            results['suggestions'] = {'books': []}
+    
+    # Create worker threads
+    thread_fraud = threading.Thread(target=worker_fraud_detection, name="FraudThread")
+    thread_transaction = threading.Thread(target=worker_transaction_verification, name="TransactionThread")
+    thread_suggestions = threading.Thread(target=worker_suggestions, name="SuggestionsThread")
+    
+    log.info("Starting all worker threads")
+    thread_fraud.start()
+    thread_transaction.start()
+    thread_suggestions.start()
+    
+    thread_fraud.join()
+    thread_transaction.join()
+    thread_suggestions.join()
+    log.info("All threads completed")
+    
+    # Extract results from shared dict
+    fraud_detected = results.get('fraud', {}).get('detected', True)
+    fraud_reason = results.get('fraud', {}).get('reason', 'Unknown')
+    transaction_valid = results.get('transaction', {}).get('valid', False)
+    transaction_reason = results.get('transaction', {}).get('reason', 'Unknown')
+    suggested_books = results.get('suggestions', {}).get('books', [])
+    
     print("Fraud result:", fraud_detected, fraud_reason)
-
-    # Call transaction verification
-    transaction_valid, transaction_reason = call_transaction_verification(request_data)
     print("Transaction result:", transaction_valid, transaction_reason)
+    print("Suggestions result:", len(suggested_books), "books")
 
     # Consolidate results: reject if fraud detected OR transaction invalid
     approved = (not fraud_detected) and transaction_valid
-
-    # Get suggestions only if order approved
-    suggested_books = []
-    if approved:
-        suggested_books = call_suggestions(request_data)
-        print("Suggestions result:", len(suggested_books), "books")
+    if not approved:
+        suggested_books = []
 
     order_status_response = {
         "orderId": "12345",
