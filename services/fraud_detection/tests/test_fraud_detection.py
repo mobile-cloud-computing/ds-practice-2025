@@ -44,7 +44,7 @@ class TestFraudDetectionService:
             "creditCard": {"number": "4532015112830366", "expirationDate": "12/25", "cvv": "123"},
             "items": [{"name": "Book A", "quantity": 50}]
         }
-        request = fd_pb2.FraudRequest(order_json=json.dumps(order))
+        request = fd_pb2.OrderRequest(order_json=json.dumps(order))
         response = self.service.CheckFraud(request, self.context)
         
         assert response.fraud_detected == True
@@ -57,7 +57,7 @@ class TestFraudDetectionService:
             "creditCard": {"number": "4532015112830366", "expirationDate": "12/25", "cvv": "123"},
             "items": [{"name": "Book A", "quantity": 2}]
         }
-        request = fd_pb2.FraudRequest(order_json=json.dumps(order))
+        request = fd_pb2.OrderRequest(order_json=json.dumps(order))
         response = self.service.CheckFraud(request, self.context)
         
         assert response.fraud_detected == True
@@ -70,7 +70,7 @@ class TestFraudDetectionService:
             "creditCard": {"number": "4532015112830366", "expirationDate": "12/25", "cvv": "123"},
             "items": [{"name": "Book A", "quantity": 2}]
         }
-        request = fd_pb2.FraudRequest(order_json=json.dumps(order))
+        request = fd_pb2.OrderRequest(order_json=json.dumps(order))
         response = self.service.CheckFraud(request, self.context)
         
         assert response.fraud_detected == True
@@ -83,7 +83,7 @@ class TestFraudDetectionService:
             "creditCard": {"number": "1234-5678-9012-3456", "expirationDate": "12/25", "cvv": "123"},
             "items": [{"name": "Book A", "quantity": 2}]
         }
-        request = fd_pb2.FraudRequest(order_json=json.dumps(order))
+        request = fd_pb2.OrderRequest(order_json=json.dumps(order))
         response = self.service.CheckFraud(request, self.context)
         
         assert response.fraud_detected == True
@@ -91,7 +91,7 @@ class TestFraudDetectionService:
 
     def test_invalid_json(self):
         """Test handling of invalid JSON"""
-        request = fd_pb2.FraudRequest(order_json="invalid json{{{")
+        request = fd_pb2.OrderRequest(order_json="invalid json{{{")
         response = self.service.CheckFraud(request, self.context)
         
         assert response.fraud_detected == True
@@ -107,7 +107,7 @@ class TestFraudDetectionService:
                 {"name": "Book B", "quantity": 25}
             ]
         }
-        request = fd_pb2.FraudRequest(order_json=json.dumps(order))
+        request = fd_pb2.OrderRequest(order_json=json.dumps(order))
         response = self.service.CheckFraud(request, self.context)
         
         assert response.fraud_detected == True
@@ -120,7 +120,7 @@ class TestFraudDetectionService:
             "creditCard": {"number": "4532015112830366", "expirationDate": "12/25", "cvv": "123"},
             "items": [{"name": "Book A", "quantity": 49}]
         }
-        request = fd_pb2.FraudRequest(order_json=json.dumps(order))
+        request = fd_pb2.OrderRequest(order_json=json.dumps(order))
         response = self.service.CheckFraud(request, self.context)
         
         assert response.fraud_detected == False
@@ -133,7 +133,7 @@ class TestFraudDetectionService:
             "creditCard": {"number": "4532015112830366", "expirationDate": "12/25", "cvv": "123"},
             "items": []
         }
-        request = fd_pb2.FraudRequest(order_json=json.dumps(order))
+        request = fd_pb2.OrderRequest(order_json=json.dumps(order))
         response = self.service.CheckFraud(request, self.context)
         
         assert response.fraud_detected == False
@@ -146,7 +146,7 @@ class TestFraudDetectionService:
             "creditCard": {"number": "4532015112830366", "expirationDate": "12/25", "cvv": "123"},
             "items": [{"name": "Book A", "quantity": 2}]
         }
-        request = fd_pb2.FraudRequest(order_json=json.dumps(order))
+        request = fd_pb2.OrderRequest(order_json=json.dumps(order))
         response = self.service.CheckFraud(request, self.context)
         
         assert response.fraud_detected == True
@@ -159,7 +159,7 @@ class TestFraudDetectionService:
             "creditCard": {"number": "1234567890123", "expirationDate": "12/25", "cvv": "123"},
             "items": [{"name": "Book A", "quantity": 2}]
         }
-        request = fd_pb2.FraudRequest(order_json=json.dumps(order))
+        request = fd_pb2.OrderRequest(order_json=json.dumps(order))
         response = self.service.CheckFraud(request, self.context)
         
         assert response.fraud_detected == False
@@ -172,7 +172,7 @@ class TestFraudDetectionService:
             "creditCard": {"number": "1234567890123456789", "expirationDate": "12/25", "cvv": "123"},
             "items": [{"name": "Book A", "quantity": 2}]
         }
-        request = fd_pb2.FraudRequest(order_json=json.dumps(order))
+        request = fd_pb2.OrderRequest(order_json=json.dumps(order))
         response = self.service.CheckFraud(request, self.context)
         
         assert response.fraud_detected == False

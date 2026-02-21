@@ -30,6 +30,7 @@ jobs:
       working-directory: ./utils/pb/fraud_detection
       run: |
         python -m grpc_tools.protoc -I. --python_out=. --grpc_python_out=. fraud_detection.proto
+        sed -i 's/^import fraud_detection_pb2/from . import fraud_detection_pb2/' fraud_detection_pb2_grpc.py
         
     - name: Run tests with pytest
       working-directory: ./services/fraud_detection
@@ -67,6 +68,7 @@ jobs:
       working-directory: ./utils/pb/transaction_verification
       run: |
         python -m grpc_tools.protoc -I. --python_out=. --grpc_python_out=. transaction_verification.proto
+        sed -i 's/^import transaction_verification_pb2/from . import transaction_verification_pb2/' transaction_verification_pb2_grpc.py
         
     - name: Run tests with pytest
       working-directory: ./services/transaction_verification
@@ -104,6 +106,7 @@ jobs:
       working-directory: ./utils/pb/suggestions
       run: |
         python -m grpc_tools.protoc -I. --python_out=. --grpc_python_out=. suggestions.proto
+        sed -i 's/^import suggestions_pb2/from . import suggestions_pb2/' suggestions_pb2_grpc.py
         
     - name: Run tests with pytest
       working-directory: ./services/suggestions
@@ -142,6 +145,9 @@ jobs:
         python -m grpc_tools.protoc -I./utils/pb/fraud_detection --python_out=./utils/pb/fraud_detection --grpc_python_out=./utils/pb/fraud_detection ./utils/pb/fraud_detection/fraud_detection.proto
         python -m grpc_tools.protoc -I./utils/pb/transaction_verification --python_out=./utils/pb/transaction_verification --grpc_python_out=./utils/pb/transaction_verification ./utils/pb/transaction_verification/transaction_verification.proto
         python -m grpc_tools.protoc -I./utils/pb/suggestions --python_out=./utils/pb/suggestions --grpc_python_out=./utils/pb/suggestions ./utils/pb/suggestions/suggestions.proto
+        sed -i 's/^import fraud_detection_pb2/from . import fraud_detection_pb2/' ./utils/pb/fraud_detection/fraud_detection_pb2_grpc.py
+        sed -i 's/^import transaction_verification_pb2/from . import transaction_verification_pb2/' ./utils/pb/transaction_verification/transaction_verification_pb2_grpc.py
+        sed -i 's/^import suggestions_pb2/from . import suggestions_pb2/' ./utils/pb/suggestions/suggestions_pb2_grpc.py
         
     - name: Run tests with pytest
       working-directory: ./services/orchestrator
