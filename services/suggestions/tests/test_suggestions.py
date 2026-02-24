@@ -2,6 +2,7 @@ import sys
 import os
 import json
 import pytest
+from unittest.mock import patch
 
 # Setup path to import the service
 FILE = __file__
@@ -91,23 +92,34 @@ class TestSuggestionsService:
         assert len(response.books) == 3
 
     def test_multiple_calls_may_return_different_books(self):
-        """Test that suggestions are randomized (multiple calls may differ)"""
+        """Test that suggestions use random.sample for randomization"""
         order = {
             "user": {"name": "John Doe", "contact": "john@example.com"},
             "items": [{"name": "Book A", "quantity": 2}]
         }
         request = sg_pb2.SuggestionsRequest(order_json=json.dumps(order))
         
-        # Call 10 times and collect all book IDs
-        all_book_ids = set()
-        for _ in range(10):
-            response = self.service.GetSuggestions(request, self.context)
-            for book in response.books:
-                all_book_ids.add(book.book_id)
-        
-        # With randomization, we should see more than 3 different books across 10 calls
-        # (This test might occasionally fail due to randomness, but probability is very low)
-        assert len(all_book_ids) > 3, "Suggestions don't appear to be randomized"
+        # Mock random.sample to return predictable results
+        with patch('app.random.sample') as mock_sample:
+            # Configure mock to return different sets of books on each call
+            mock_sample.side_effect = [
+                [BOOK_CATALOG[0], BOOK_CATALOG[1], BOOK_CATALOG[2]],  # First call
+                [BOOK_CATALOG[3], BOOK_CATALOG[4], BOOK_CATALOG[5]],  # Second call
+            ]
+            
+            # First call
+            response1 = self.service.GetSuggestions(request, self.context)
+            assert len(response1.books) == 3
+            assert response1.books[0].book_id == "101"
+            
+            # Second call
+            response2 = self.service.GetSuggestions(request, self.context)
+            assert len(response2.books) == 3
+            assert response2.books[0].book_id == "104"
+            
+            # Verify random.sample was called with correct arguments
+            assert mock_sample.call_count == 2
+            mock_sample.assert_called_with(BOOK_CATALOG, 3)
 
     def test_book_catalog_has_expected_size(self):
         """Test that BOOK_CATALOG contains expected number of books"""

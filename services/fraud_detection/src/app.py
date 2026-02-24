@@ -21,7 +21,7 @@ logging.basicConfig(level=logging.INFO)
 log = logging.getLogger("fraud_detection")
 
 # Create a class to define the server functions, derived from
-# fraud_detection_pb2_grpc.HelloServiceServicer
+# fraud_detection_pb2_grpc.FraudDetectionServiceServicer
 class FraudDetectionService(fd_grpc.FraudDetectionServiceServicer):
     def CheckFraud(self, request, context):
         log.info("CheckFraud called")
