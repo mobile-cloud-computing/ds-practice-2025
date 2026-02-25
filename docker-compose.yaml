@@ -69,6 +69,7 @@ services:
     environment:
       - PYTHONUNBUFFERED=TRUE
       - PYTHONFILE=/app/suggestions/src/app.py
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
     volumes:
       - ./utils:/app/utils
       - ./suggestions/src:/app/suggestions/src
