@@ -46,7 +46,7 @@ def index():
     Responds with 'Hello, [name]' when a GET request is made to '/' endpoint.
     """
     # Test the fraud-detection gRPC service.
-    response = detect(card_number='999123123123', order_amount=200)
+    response = 'Hello, orchestrator!'
     # Return the response.
     return response
 
