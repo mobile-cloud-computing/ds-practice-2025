@@ -1,0 +1,16 @@
+syntax = "proto3";
+
+package transaction_verification;
+
+message VerificationRequest {
+  string card_number = 1;
+  float order_amount = 2;
+}
+
+message VerificationResponse {
+  bool is_valid = 1;
+}
+
+service TransactionVerificationService {
+  rpc VerifyTransaction (VerificationRequest) returns (VerificationResponse);
+}
