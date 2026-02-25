@@ -77,6 +77,14 @@ def get_suggestions(user_id):
         print(f"Error connecting to suggestions service: {e}")
         return []
 
+
+def parse_suggestion(suggestion_line):
+    text = (suggestion_line or '').strip()
+    if ' by ' in text:
+        parts = text.split(' by ', 1)
+        return {'title': parts[0].strip(), 'author': parts[1].strip()}
+    return {'title': text, 'author': 'Unknown'}
+
     
 # Import Flask.
 # Flask is a web framework for Python.
@@ -158,8 +166,7 @@ def checkout():
             'orderId': '12345',
             'status': status,
             'suggestedBooks': [
-                {'bookId': str(i + 1), 'title': title, 'author': 'Unknown'}
-                for i, title in enumerate(suggested_titles)
+                parse_suggestion(title) for title in suggested_titles[:3]
             ]
         }
 

@@ -19,20 +19,56 @@ class SuggestionsService(suggestions_grpc.SuggestionsServiceServicer):
     # Create an RPC function to get suggestions
     def GetSuggestions(self, request, context):
         user_id = request.user_id
+        selected_books = ["Harry Potter and the Philosopher's Stone by J.K. Rowling", "The Hobbit by J.R.R. Tolkien"]
+        selected_titles = [book.split(' by ')[0].strip() for book in selected_books]
 
         # Create a SuggestionsResponse object
         response = suggestions.SuggestionsResponse()
         # Set the suggestions field of the response object
-    
+
         client = genai.Client(api_key=os.environ["GEMINI_API_KEY"])
 
-        input_promt = "suggest me books to read based on my user id: " + user_id + " in the form of a list of book titles"
+        input_promt = (
+            "You are a bookstore recommendation assistant. "
+            f"User id: {user_id}. "
+            f"Selected books: {selected_books}. "
+            "Suggest exactly 3 additional books related to selected books. "
+            "Rules: suggestions must be different from selected books. "
+            "Output strictly 3 lines, each line in exact format: Title by Author. "
+            "No numbering, no bullets, no extra text."
+        )
         print(f"Generating suggestions for user: {user_id} with prompt: {input_promt}")
         response_ai = client.models.generate_content(
             model="gemini-2.5-flash-lite", contents=input_promt
         )
 
-        response.suggestions.extend(response_ai.text.split('\n')) 
+        clean = []
+        selected_titles_lower = {title.lower() for title in selected_titles}
+
+        for line in response_ai.text.split('\n'):
+            entry = line.strip()
+            if not entry or len(clean) >= 3:
+                continue
+
+            if ' by ' in entry:
+                title = entry.split(' by ', 1)[0].strip()
+                if title.lower() not in selected_titles_lower and entry not in clean:
+                    clean.append(entry)
+            elif entry not in clean:
+                clean.append(entry)
+
+        fallback = [
+            "Dune by Frank Herbert",
+            "1984 by George Orwell",
+            "Foundation by Isaac Asimov"
+        ]
+        for item in fallback:
+            if len(clean) >= 3:
+                break
+            if item not in clean:
+                clean.append(item)
+
+        response.suggestions.extend(clean)
         # Print the user id and the suggestions sent back
         print(f"Received suggestion request for user: {user_id}, sending suggestions: {response.suggestions}")
         # Return the response object
