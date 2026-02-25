@@ -10,6 +10,11 @@ sys.path.insert(0, fraud_detection_grpc_path)
 import fraud_detection_pb2 as fraud_detection
 import fraud_detection_pb2_grpc as fraud_detection_grpc
 
+suggestions_grpc_path = os.path.abspath(os.path.join(FILE, '../../../utils/pb/suggestions'))
+sys.path.insert(0, suggestions_grpc_path)
+import suggestions_pb2 as suggestions
+import suggestions_pb2_grpc as suggestions_grpc
+
 import grpc
 import logging
 
@@ -25,6 +30,18 @@ def detect(card_number, order_amount):
     except Exception as e:
         logging.error(f"gRPC Call Failed: {e}")
         return True # default to fraud if error
+
+def get_suggestions(items):
+    try:
+        with grpc.insecure_channel('suggestions:50053') as channel:
+            stub = suggestions_grpc.SuggestionsServiceStub(channel)
+            # Build the request from checkout items
+            book_items = [suggestions.BookItem(name=item.get('name', ''), quantity=item.get('quantity', 0)) for item in items]
+            response = stub.GetSuggestions(suggestions.SuggestionsRequest(items=book_items))
+        return [{'bookId': book.bookId, 'title': book.title, 'author': book.author} for book in response.books]
+    except Exception as e:
+        logging.error(f"gRPC Call Failed: {e}")
+        return []
 
 # Import Flask.
 # Flask is a web framework for Python.
@@ -50,6 +67,16 @@ def index():
     # Return the response.
     return response
 
+@app.route('/suggestions', methods=['POST'])
+def suggestions_endpoint():
+    """
+    Tests the suggestions gRPC service by returning suggested books for given items.
+    """
+    request_data = json.loads(request.data)
+    items = request_data.get('items', [])
+    suggested_books = get_suggestions(items)
+    return {'suggestedBooks': suggested_books}
+
 @app.route('/checkout', methods=['POST'])
 def checkout():
     """
@@ -67,14 +94,15 @@ def checkout():
     # Call fraud detection gRPC service
     is_fraud = detect(card_number=card_number, order_amount=order_amount)
 
-    # Dummy response following the provided YAML specification for the bookstore
+    # Call suggestions gRPC service
+    items = request_data.get('items', [])
+    suggested_books = get_suggestions(items)
+
+    # Build response following the provided YAML specification for the bookstore
     order_status_response = {
         'orderId': '12345',
         'status': 'Order Denied' if is_fraud else 'Order Approved',
-        'suggestedBooks': [
-            {'bookId': '123', 'title': 'The Best Book', 'author': 'Author 1'},
-            {'bookId': '456', 'title': 'The Second Best Book', 'author': 'Author 2'}
-        ]
+        'suggestedBooks': suggested_books
     }
 
     return order_status_response
