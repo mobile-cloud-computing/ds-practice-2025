@@ -57,3 +57,15 @@ services:
       - ./utils:/app/utils
       # Mount the fraud_detection/src directory in the current directory to the /app/fraud_detection/src directory in the container
       - ./fraud_detection/src:/app/fraud_detection/src
+  transaction_verification:
+    build:
+      context: ./
+      dockerfile: ./transaction_verification/Dockerfile
+    ports:
+      - 50052:50052
+    environment:
+      - PYTHONUNBUFFERED=TRUE
+      - PYTHONFILE=/app/transaction_verification/src/app.py
+    volumes:
+      - ./utils:/app/utils
+      - ./transaction_verification/src:/app/transaction_verification/src

@@ -124,19 +124,36 @@
                 const responseDiv = document.getElementById('response');
 
                 if (response.ok) {
-                    const suggestedBooks = result.suggestedBooks.map(book => `<li>${book.title} by ${book.author}</li>`).join('');
+                    const responseDiv = document.getElementById('response');
+
+                    const suggestedBooksHtml = (result.suggestedBooks || [])
+                        .map(book => `<li>${book.title} by ${book.author}</li>`)
+                        .join('');
+
+                    const reasonsHtml = (result.reasons || [])
+                        .map(reason => `<li>${reason}</li>`)
+                        .join('');
+
                     responseDiv.innerHTML = `
                         <strong>Order status: ${result.status}</strong><br>
-                        Order ID: ${result.orderId}<br>
-                        ${result.status === "Order Approved" ?
-                            `Suggested Books:
-                            <ul class="list-disc pl-5 mt-2 space-y-1">${suggestedBooks}</ul>`
-                        : ``
+
+                        ${result.status === "Order Rejected" && reasonsHtml
+                            ? `Validation errors:
+                            <ul class="list-disc pl-5 mt-2 space-y-1">${reasonsHtml}</ul>`
+                            : ""
+                        }
+
+                        ${result.status === "Order Approved" && suggestedBooksHtml
+                            ? `Suggested Books:
+                            <ul class="list-disc pl-5 mt-2 space-y-1">${suggestedBooksHtml}</ul>`
+                            : ""
                         }
                     `;
-                    color = result.status === 'Order Approved' ? 'green' : 'red';
+
+                    const color = result.status === "Order Approved" ? "green" : "red";
                     responseDiv.className = `mt-6 p-4 border rounded-lg bg-${color}-100 text-${color}-700`;
-                } else {
+                }
+                else {
                     responseDiv.textContent = `Error: ${result.error.message}`;
                     responseDiv.className = "mt-6 p-4 border rounded-lg bg-red-100 text-red-700";
                 }

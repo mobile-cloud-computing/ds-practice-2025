@@ -1,0 +1,33 @@
+syntax = "proto3";
+
+package transaction_verification;
+
+service TransactionVerificationService {
+    rpc VerifyTransaction(TransactionVerificationRequest) returns (TransactionVerificationResponse);
+}
+
+message Item {
+    string name = 1;
+    int32 quantity = 2;
+}
+
+message TransactionVerificationRequest {
+    string transaction_id = 1;
+    string purchaser_name = 2;
+    string purchaser_email = 3;
+    string credit_card_number = 4;
+    string credit_card_expiration = 5;
+    string credit_card_cvv = 6;
+    string billing_street = 7;
+    string billing_city = 8;
+    string billing_state = 9;
+    string billing_zip = 10;
+    string billing_country = 11;
+    repeated Item items = 12;
+    bool terms_accepted = 13;
+}
+
+message TransactionVerificationResponse {
+    bool is_valid = 1;
+    repeated string reasons = 2;
+}
