@@ -10,6 +10,11 @@ sys.path.insert(0, fraud_detection_grpc_path)
 import fraud_detection_pb2 as fraud_detection
 import fraud_detection_pb2_grpc as fraud_detection_grpc
 
+suggestions_grpc_path = os.path.abspath(os.path.join(FILE, '../../../utils/pb/suggestions'))
+sys.path.insert(0, suggestions_grpc_path)
+import suggestions_pb2 as suggestions
+import suggestions_pb2_grpc as suggestions_grpc
+
 import grpc
 
 def detect_fraud(card_number, order_amount):
@@ -24,6 +29,17 @@ def detect_fraud(card_number, order_amount):
     except Exception as e:
         print(f"Error connecting to fraud detection service: {e}")
         return False  # Default to not fraud if there's an error
+
+
+def get_suggestions(user_id):
+    try:
+        with grpc.insecure_channel('suggestions:50053') as channel:
+            stub = suggestions_grpc.SuggestionsServiceStub(channel)
+            response = stub.GetSuggestions(suggestions.SuggestionsRequest(user_id=str(user_id)))
+        return list(response.suggestions)
+    except Exception as e:
+        print(f"Error connecting to suggestions service: {e}")
+        return []
 
     
 
@@ -72,20 +88,27 @@ def checkout():
         card_info = request_data.get('creditCard', {})
         card_number = card_info.get('number', '')
         order_amount = card_info.get('orderAmount', 0)
+        user_id = request_data.get('userId', 'anonymous')
 
         with ThreadPoolExecutor() as executor:
             logging.info(f"Submitting fraud detection task to executor: card_number={card_number}, order_amount={order_amount}")
-            future = executor.submit(detect_fraud, card_number, order_amount)
-            is_fraud = future.result()
+            fraud_future = executor.submit(detect_fraud, card_number, order_amount)
+            suggestions_future = executor.submit(get_suggestions, user_id)
+            is_fraud = fraud_future.result()
+            suggested_titles = suggestions_future.result()
         logging.info(f"Fraud detection completed: is_fraud={is_fraud}")
+
+        # add static examples to suggestions
+        if not is_fraud:
+            suggested_titles.extend(["Book C", "Book D", "Book E"])
 
         # Dummy response following the provided YAML specification for the bookstore
         order_status_response = {
             'orderId': '12345',
             'status': 'Order Approved' if not is_fraud else 'Order Declined due to suspected fraud',
             'suggestedBooks': [
-                {'bookId': '123', 'title': 'The Best Book', 'author': 'Author 1'},
-                {'bookId': '456', 'title': 'The Second Best Book', 'author': 'Author 2'}
+                {'bookId': str(i + 1), 'title': title, 'author': 'Unknown'}
+                for i, title in enumerate(suggested_titles)
             ]
         }
 
