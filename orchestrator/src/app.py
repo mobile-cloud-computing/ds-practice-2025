@@ -36,6 +36,7 @@ def verify_transaction(user, items, card_number, card_expiry, card_cvv, order_am
                 description=item.get('description', ''),
                 price=float(item.get('price', 0))
             ) for item in items]
+            print(f"Verifying transaction for user: {user_data.name}, items: {[item.item_id for item in item_msgs]}, card_number: {card_number}, order_amount: {order_amount}")
             # Build request
             req = transaction_verification.TransactionVerificationRequest(
                 user=user_data,
@@ -46,6 +47,7 @@ def verify_transaction(user, items, card_number, card_expiry, card_cvv, order_am
                 order_amount=order_amount
             )
             response = stub.VerifyTransaction(req)
+            print(f"Transaction verification response: is_verified={response.is_verified}")
         return response.is_verified
     except Exception as e:
         print(f"Error connecting to transaction verification service: {e}")
@@ -132,7 +134,9 @@ def checkout():
             'address': address_str
         }
         items = request_data.get('items', [])
+
         with ThreadPoolExecutor() as executor:
+            # THreadPoolExecutor allows us to run multiple tasks concurrently
             logging.info(f"Submitting fraud detection task to executor: card_number={card_number}, order_amount={order_amount}")
             fraud_future = executor.submit(detect_fraud, card_number, order_amount)
             transaction_future = executor.submit(verify_transaction, user_data, items, card_number, card_expiry, card_cvv, order_amount)

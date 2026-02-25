@@ -1,5 +1,6 @@
 import sys
 import os
+import logging
 
 
 # Import the gRPC stubs for transaction verification
@@ -23,6 +24,7 @@ class TransactionVerificationService(transaction_verification_grpc.TransactionVe
 
         is_valid = True
         reasons = []
+        #Simple validation logic for demonstration purposes
         if not user.name or not user.email or not user.address:
             is_valid = False
             reasons.append("Missing user data.")

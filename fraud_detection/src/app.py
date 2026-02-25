@@ -18,7 +18,6 @@ class FraudDetectionService(fraud_detection_grpc.FraudDetectionServiceServicer):
     def DetectFraud(self, request, context):
         card_number = request.card_number
         order_amount = request.order_amount
-
         # Create a FraudDetectionResponse object
         response = fraud_detection.FraudDetectionResponse()
         # Set the is_fraud field of the response object

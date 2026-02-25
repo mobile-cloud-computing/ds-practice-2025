@@ -12,8 +12,9 @@ import suggestions_pb2_grpc as suggestions_grpc
 
 import grpc
 from concurrent import futures
-from google import genai
-    
+
+import google.genai as genai
+
 class SuggestionsService(suggestions_grpc.SuggestionsServiceServicer):
     # Create an RPC function to get suggestions
     def GetSuggestions(self, request, context):
@@ -22,9 +23,8 @@ class SuggestionsService(suggestions_grpc.SuggestionsServiceServicer):
         # Create a SuggestionsResponse object
         response = suggestions.SuggestionsResponse()
         # Set the suggestions field of the response object
-        
-        # The client gets the API key from the environment variable `GEMINI_API_KEY`.
-        client = genai.Client()
+    
+        client = genai.Client(api_key=os.environ["GEMINI_API_KEY"])
 
         input_promt = "suggest me books to read based on my user id: " + user_id + " in the form of a list of book titles"
         print(f"Generating suggestions for user: {user_id} with prompt: {input_promt}")
@@ -32,7 +32,7 @@ class SuggestionsService(suggestions_grpc.SuggestionsServiceServicer):
             model="gemini-2.5-flash-lite", contents=input_promt
         )
 
-        response.suggestions.extend([response_ai.text.split('\n')])  # Example static suggestions
+        response.suggestions.extend(response_ai.text.split('\n')) 
         # Print the user id and the suggestions sent back
         print(f"Received suggestion request for user: {user_id}, sending suggestions: {response.suggestions}")
         # Return the response object

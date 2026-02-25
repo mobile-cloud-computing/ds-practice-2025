@@ -10,3 +10,4 @@ protobuf==5.29.6
 Werkzeug==3.0.1
 Flask-CORS==4.0.0
 watchdog==6.0.0
+google-genai==0.1.0
