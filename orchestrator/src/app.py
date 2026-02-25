@@ -17,17 +17,20 @@ sys.path.insert(0, transaction_verification_grpc_path)
 import transaction_verification_pb2 as transaction_verification
 import transaction_verification_pb2_grpc as transaction_verification_grpc
 
+suggestions_grpc_path = os.path.abspath(os.path.join(FILE, '../../../utils/pb/suggestions'))
+sys.path.insert(0, suggestions_grpc_path)
+import suggestions_pb2 as suggestions
+import suggestions_pb2_grpc as suggestions_grpc
+
 def verify_transaction(user, items, card_number, card_expiry, card_cvv, order_amount):
     try:
         with grpc.insecure_channel('transaction_verification:50052') as channel:
             stub = transaction_verification_grpc.TransactionVerificationServiceStub(channel)
-            # Build UserData message
             user_data = transaction_verification.UserData(
                 name=user.get('name', ''),
                 email=user.get('email', ''),
                 address=user.get('address', '')
             )
-            # Build Item messages
             item_msgs = [transaction_verification.Item(
                 item_id=str(item.get('itemId', '')),
                 description=item.get('description', ''),
@@ -48,7 +51,6 @@ def verify_transaction(user, items, card_number, card_expiry, card_cvv, order_am
         print(f"Error connecting to transaction verification service: {e}")
         return False
 
-
 def detect_fraud(card_number, order_amount):
     try:
         # Establish a connection with the fraud-detection gRPC service.
@@ -61,6 +63,17 @@ def detect_fraud(card_number, order_amount):
     except Exception as e:
         print(f"Error connecting to fraud detection service: {e}")
         return False  # Default to not fraud if there's an error
+
+
+def get_suggestions(user_id):
+    try:
+        with grpc.insecure_channel('suggestions:50053') as channel:
+            stub = suggestions_grpc.SuggestionsServiceStub(channel)
+            response = stub.GetSuggestions(suggestions.SuggestionsRequest(user_id=str(user_id)))
+        return list(response.suggestions)
+    except Exception as e:
+        print(f"Error connecting to suggestions service: {e}")
+        return []
 
     
 # Import Flask.
@@ -108,6 +121,7 @@ def checkout():
         card_expiry = card_info.get('expirationDate', '')
         card_cvv = card_info.get('cvv', '')
         order_amount = card_info.get('orderAmount', 0)
+        user_id = request_data.get('userId', 'anonymous')
 
         user_info = request_data.get('user', {})
         address = request_data.get('billingAddress', {})
@@ -119,10 +133,13 @@ def checkout():
         }
         items = request_data.get('items', [])
         with ThreadPoolExecutor() as executor:
+            logging.info(f"Submitting fraud detection task to executor: card_number={card_number}, order_amount={order_amount}")
             fraud_future = executor.submit(detect_fraud, card_number, order_amount)
             transaction_future = executor.submit(verify_transaction, user_data, items, card_number, card_expiry, card_cvv, order_amount)
-            is_fraud = fraud_future.result()
             is_verified = transaction_future.result()
+            suggestions_future = executor.submit(get_suggestions, user_id)
+            is_fraud = fraud_future.result()
+            suggested_titles = suggestions_future.result()
         logging.info(f"Fraud detection completed: is_fraud={is_fraud}")
         logging.info(f"Transaction verification completed: is_verified={is_verified}")
 
@@ -137,8 +154,8 @@ def checkout():
             'orderId': '12345',
             'status': status,
             'suggestedBooks': [
-                {'bookId': '123', 'title': 'The Best Book', 'author': 'Author 1'},
-                {'bookId': '456', 'title': 'The Second Best Book', 'author': 'Author 2'}
+                {'bookId': str(i + 1), 'title': title, 'author': 'Unknown'}
+                for i, title in enumerate(suggested_titles)
             ]
         }
 

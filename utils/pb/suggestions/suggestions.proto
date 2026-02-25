@@ -1,0 +1,15 @@
+syntax = "proto3";
+
+package suggestions;
+
+service SuggestionsService {
+    rpc GetSuggestions (SuggestionsRequest) returns (SuggestionsResponse);
+}
+
+message SuggestionsRequest {
+    string user_id = 1;
+}
+
+message SuggestionsResponse {
+    repeated string suggestions = 1;
+}
