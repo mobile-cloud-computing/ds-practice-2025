@@ -3,14 +3,20 @@ syntax = "proto3";
 package transaction_verification;
 
 message VerificationRequest {
-  string card_number = 1;
-  float order_amount = 2;
+  string name = 1;
+  string email = 2;
+  string card_number = 3;
+  string expiration_date = 4;
+  string cvv = 5;
 }
 
 message VerificationResponse {
   bool is_valid = 1;
+  string message = 2;
 }
 
 service TransactionVerificationService {
-  rpc VerifyTransaction (VerificationRequest) returns (VerificationResponse);
+  rpc VerifyTransaction (VerificationRequest)
+      returns (VerificationResponse);
 }
+
