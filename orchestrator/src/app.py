@@ -98,10 +98,6 @@ def checkout():
             suggested_titles = suggestions_future.result()
         logging.info(f"Fraud detection completed: is_fraud={is_fraud}")
 
-        # add static examples to suggestions
-        if not is_fraud:
-            suggested_titles.extend(["Book C", "Book D", "Book E"])
-
         # Dummy response following the provided YAML specification for the bookstore
         order_status_response = {
             'orderId': '12345',

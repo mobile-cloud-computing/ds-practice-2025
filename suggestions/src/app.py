@@ -1,9 +1,6 @@
 import sys
 import os
 
-from fraud_detection.src.app import FraudDetectionService
-from utils.pb import fraud_detection
-
 # This set of lines are needed to import the gRPC stubs.
 # The path of the stubs is relative to the current file, or absolute inside the container.
 # Change these lines only if strictly needed.
