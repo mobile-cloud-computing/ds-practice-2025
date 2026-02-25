@@ -56,6 +56,7 @@ def verify_transaction(payload: dict):
         card_number = cc.get("number", "")
         expiration_date = cc.get("expirationDate", "") or cc.get("expiry", "")
         cvv = cc.get("cvv", "")
+        billing = payload.get("billingAddress", {}) or {}
 
         logging.info(
             f"Verification payload extracted: "
@@ -71,6 +72,13 @@ def verify_transaction(payload: dict):
                 card_number=card_number,
                 expiration_date=expiration_date,
                 cvv=cvv,
+                billing_address=transaction_verification.BillingAddress(
+                    street=billing.get("street", ""),
+                    city=billing.get("city", ""),
+                    state=billing.get("state", ""),
+                    zip=billing.get("zip", ""),
+                    country=billing.get("country", ""),
+                )
             )
 
             logging.info("Calling TransactionVerification gRPC service")

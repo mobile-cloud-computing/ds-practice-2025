@@ -28,7 +28,7 @@ class TransactionVerificationService(tv_grpc.TransactionVerificationServiceServi
                 is_valid=False,
                 message="Invalid card number"
             )
-        
+
         if not request.cvv.isdigit() or len(request.cvv) not in [3, 4]:
             return tv_pb2.VerificationResponse(
                 is_valid=False,
@@ -36,7 +36,7 @@ class TransactionVerificationService(tv_grpc.TransactionVerificationServiceServi
             )
 
         try:
-            exp = datetime.strptime(request.expiration_date, "%m/%Y")
+            exp = datetime.strptime(request.expiration_date, "%m/%y")
             if exp < datetime.now():
                 return tv_pb2.VerificationResponse(
                     is_valid=False,
@@ -47,11 +47,50 @@ class TransactionVerificationService(tv_grpc.TransactionVerificationServiceServi
                 is_valid=False,
                 message="Invalid expiration format"
             )
+        
+        
+        #Billing Address Checks
+
+
+        addr = request.billing_address
+
+        if not addr.street or len(addr.street.strip()) < 5:
+            return tv_pb2.VerificationResponse(
+                is_valid=False,
+                message="Invalid billing street"
+            )
+
+        if not addr.city or len(addr.city.strip()) < 2:
+            return tv_pb2.VerificationResponse(
+                is_valid=False,
+                message="Invalid billing city"
+            )
+
+        if not addr.state.replace(" ", "").isalpha():
+            return tv_pb2.VerificationResponse(
+                is_valid=False,
+                message="Invalid billing state"
+            )
+
+        if not addr.zip.isdigit() or len(addr.zip) != 5:
+            return tv_pb2.VerificationResponse(
+                is_valid=False,
+                message="Invalid billing ZIP code"
+            )
+
+        
+        if not addr.country or len(addr.country.strip()) < 2:
+            return tv_pb2.VerificationResponse(
+                is_valid=False,
+                message="Invalid billing country"
+            )
 
         return tv_pb2.VerificationResponse(
             is_valid=True,
             message="Transaction valid"
         )
+    
+    
     
 def serve():
     server = grpc.server(futures.ThreadPoolExecutor())

@@ -2,12 +2,21 @@ syntax = "proto3";
 
 package transaction_verification;
 
+message BillingAddress {
+  string street = 1;
+  string city = 2;
+  string state = 3;
+  string zip = 4;
+  string country = 5;
+}
+
 message VerificationRequest {
   string name = 1;
   string email = 2;
   string card_number = 3;
   string expiration_date = 4;
   string cvv = 5;
+  BillingAddress billing_address = 6;
 }
 
 message VerificationResponse {
@@ -19,4 +28,6 @@ service TransactionVerificationService {
   rpc VerifyTransaction (VerificationRequest)
       returns (VerificationResponse);
 }
+
+
 
