@@ -1,16 +1,53 @@
 import sys
 import os
+import grpc
 
 # This set of lines are needed to import the gRPC stubs.
 # The path of the stubs is relative to the current file, or absolute inside the container.
 # Change these lines only if strictly needed.
 FILE = __file__ if '__file__' in globals() else os.getenv("PYTHONFILE", "")
+
 fraud_detection_grpc_path = os.path.abspath(os.path.join(FILE, '../../../utils/pb/fraud_detection'))
 sys.path.insert(0, fraud_detection_grpc_path)
 import fraud_detection_pb2 as fraud_detection
 import fraud_detection_pb2_grpc as fraud_detection_grpc
 
-import grpc
+transaction_verification_grpc_path = os.path.abspath(os.path.join(FILE, '../../../utils/pb/transaction_verification'))
+sys.path.insert(0, transaction_verification_grpc_path)
+import transaction_verification_pb2 as transaction_verification
+import transaction_verification_pb2_grpc as transaction_verification_grpc
+
+def verify_transaction(user, items, card_number, card_expiry, card_cvv, order_amount):
+    try:
+        with grpc.insecure_channel('transaction_verification:50052') as channel:
+            stub = transaction_verification_grpc.TransactionVerificationServiceStub(channel)
+            # Build UserData message
+            user_data = transaction_verification.UserData(
+                name=user.get('name', ''),
+                email=user.get('email', ''),
+                address=user.get('address', '')
+            )
+            # Build Item messages
+            item_msgs = [transaction_verification.Item(
+                item_id=str(item.get('itemId', '')),
+                description=item.get('description', ''),
+                price=float(item.get('price', 0))
+            ) for item in items]
+            # Build request
+            req = transaction_verification.TransactionVerificationRequest(
+                user=user_data,
+                items=item_msgs,
+                card_number=card_number,
+                card_expiry=card_expiry,
+                card_cvv=card_cvv,
+                order_amount=order_amount
+            )
+            response = stub.VerifyTransaction(req)
+        return response.is_verified
+    except Exception as e:
+        print(f"Error connecting to transaction verification service: {e}")
+        return False
+
 
 def detect_fraud(card_number, order_amount):
     try:
@@ -26,7 +63,6 @@ def detect_fraud(card_number, order_amount):
         return False  # Default to not fraud if there's an error
 
     
-
 # Import Flask.
 # Flask is a web framework for Python.
 # It allows you to build a web application quickly.
@@ -57,8 +93,6 @@ def checkout():
     """
     Responds with a JSON object containing the order ID, status, and suggested books.
     """
-
-    
     # Get request object data to json
     request_data = json.loads(request.data)
     # Print request object data
@@ -71,18 +105,37 @@ def checkout():
 
         card_info = request_data.get('creditCard', {})
         card_number = card_info.get('number', '')
+        card_expiry = card_info.get('expirationDate', '')
+        card_cvv = card_info.get('cvv', '')
         order_amount = card_info.get('orderAmount', 0)
 
+        user_info = request_data.get('user', {})
+        address = request_data.get('billingAddress', {})
+        address_str = ', '.join([str(address.get(k, '')) for k in ['street', 'city', 'state', 'zip', 'country']])
+        user_data = {
+            'name': user_info.get('name', ''),
+            'email': user_info.get('contact', ''),
+            'address': address_str
+        }
+        items = request_data.get('items', [])
         with ThreadPoolExecutor() as executor:
-            logging.info(f"Submitting fraud detection task to executor: card_number={card_number}, order_amount={order_amount}")
-            future = executor.submit(detect_fraud, card_number, order_amount)
-            is_fraud = future.result()
+            fraud_future = executor.submit(detect_fraud, card_number, order_amount)
+            transaction_future = executor.submit(verify_transaction, user_data, items, card_number, card_expiry, card_cvv, order_amount)
+            is_fraud = fraud_future.result()
+            is_verified = transaction_future.result()
         logging.info(f"Fraud detection completed: is_fraud={is_fraud}")
+        logging.info(f"Transaction verification completed: is_verified={is_verified}")
 
-        # Dummy response following the provided YAML specification for the bookstore
+        if is_fraud:
+            status = 'Order Declined due to suspected fraud'
+        elif not is_verified:
+            status = 'Order Declined due to invalid transaction'
+        else:
+            status = 'Order Approved'
+
         order_status_response = {
             'orderId': '12345',
-            'status': 'Order Approved' if not is_fraud else 'Order Declined due to suspected fraud',
+            'status': status,
             'suggestedBooks': [
                 {'bookId': '123', 'title': 'The Best Book', 'author': 'Author 1'},
                 {'bookId': '456', 'title': 'The Second Best Book', 'author': 'Author 2'}
