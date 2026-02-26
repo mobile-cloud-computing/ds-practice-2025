@@ -25,18 +25,21 @@ import suggestions_pb2_grpc as suggestions_grpc
 def verify_transaction(user, items, card_number, card_expiry, card_cvv, order_amount):
     try:
         with grpc.insecure_channel('transaction_verification:50052') as channel:
+            # Create a stub object.
             stub = transaction_verification_grpc.TransactionVerificationServiceStub(channel)
             user_data = transaction_verification.UserData(
                 name=user.get('name', ''),
                 email=user.get('email', ''),
                 address=user.get('address', '')
             )
-            item_msgs = [transaction_verification.Item(
-                item_id=str(item.get('itemId', '')),
-                description=item.get('description', ''),
-                price=float(item.get('price', 0))
-            ) for item in items]
-            print(f"Verifying transaction for user: {user_data.name}, items: {[item.item_id for item in item_msgs]}, card_number: {card_number}, order_amount: {order_amount}")
+            # Convert items to protobuf format
+            item_msgs = [
+                transaction_verification.Item(
+                    name=str(item.get('name', '')),
+                    quantity=float(item.get('quantity', 0))
+                ) for item in items
+            ]
+            print(f"Verifying transaction for user: {user_data.name}, items: {[item.name for item in item_msgs]}, card_number: {card_number}, order_amount: {order_amount}")
             # Build request
             req = transaction_verification.TransactionVerificationRequest(
                 user=user_data,
@@ -66,10 +69,11 @@ def detect_fraud(card_number, order_amount):
         print(f"Error connecting to fraud detection service: {e}")
         return False  # Default to not fraud if there's an error
 
-
 def get_suggestions(user_id):
+    # Connect to the suggestions gRPC service and get book suggestions 
     try:
         with grpc.insecure_channel('suggestions:50053') as channel:
+            # Create a stub object.
             stub = suggestions_grpc.SuggestionsServiceStub(channel)
             response = stub.GetSuggestions(suggestions.SuggestionsRequest(user_id=str(user_id)))
         return list(response.suggestions)
@@ -77,15 +81,15 @@ def get_suggestions(user_id):
         print(f"Error connecting to suggestions service: {e}")
         return []
 
-
 def parse_suggestion(suggestion_line):
+    # Parse a suggestion line in the format "Title by Author" and return a dictionary with 'title' and 'author' keys.
     text = (suggestion_line or '').strip()
     if ' by ' in text:
         parts = text.split(' by ', 1)
         return {'title': parts[0].strip(), 'author': parts[1].strip()}
     return {'title': text, 'author': 'Unknown'}
 
-    
+
 # Import Flask.
 # Flask is a web framework for Python.
 # It allows you to build a web application quickly.
@@ -94,6 +98,7 @@ from flask import Flask, request
 import logging
 from flask_cors import CORS
 import json
+from concurrent.futures import ThreadPoolExecutor
 
 # Create a simple Flask app.
 app = Flask(__name__)
@@ -118,14 +123,9 @@ def checkout():
     """
     # Get request object data to json
     request_data = json.loads(request.data)
-    # Print request object data
-    print("Request Data:", request_data.get('items'))
-
-    from concurrent.futures import ThreadPoolExecutor
-
     try:
-        logging.info(f"Received checkout request: {request.data}")
-
+        print(f"Received checkout request: {request.data}")
+        # Extract necessary information from the request data
         card_info = request_data.get('creditCard', {})
         card_number = card_info.get('number', '')
         card_expiry = card_info.get('expirationDate', '')
@@ -154,7 +154,7 @@ def checkout():
             suggested_titles = suggestions_future.result()
         logging.info(f"Fraud detection completed: is_fraud={is_fraud}")
         logging.info(f"Transaction verification completed: is_verified={is_verified}")
-
+        # Prepare the order status based on fraud detection and transaction verification results
         if is_fraud:
             status = 'Order Declined due to suspected fraud'
         elif not is_verified:
@@ -174,7 +174,6 @@ def checkout():
     except Exception as e:
         logging.error(f"Error processing checkout request: {e}")
         return {'error': 'An error occurred while processing the checkout request'}, 500
-
 
 if __name__ == '__main__':
     # Run the app in debug mode to enable hot reloading.

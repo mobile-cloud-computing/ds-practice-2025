@@ -16,6 +16,7 @@ from concurrent import futures
 class TransactionVerificationService(transaction_verification_grpc.TransactionVerificationServiceServicer):
     # Create an RPC function to verify transaction
     def VerifyTransaction(self, request, context):
+        # Extract transaction details from the request object
         user = request.user
         items = request.items
         card_number = request.card_number

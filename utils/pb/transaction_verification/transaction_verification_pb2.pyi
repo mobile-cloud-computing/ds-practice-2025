@@ -16,14 +16,12 @@ class UserData(_message.Message):
     def __init__(self, name: _Optional[str] = ..., email: _Optional[str] = ..., address: _Optional[str] = ...) -> None: ...
 
 class Item(_message.Message):
-    __slots__ = ("item_id", "description", "price")
-    ITEM_ID_FIELD_NUMBER: _ClassVar[int]
-    DESCRIPTION_FIELD_NUMBER: _ClassVar[int]
-    PRICE_FIELD_NUMBER: _ClassVar[int]
-    item_id: str
-    description: str
-    price: float
-    def __init__(self, item_id: _Optional[str] = ..., description: _Optional[str] = ..., price: _Optional[float] = ...) -> None: ...
+    __slots__ = ("name", "quantity")
+    NAME_FIELD_NUMBER: _ClassVar[int]
+    QUANTITY_FIELD_NUMBER: _ClassVar[int]
+    name: str
+    quantity: float
+    def __init__(self, name: _Optional[str] = ..., quantity: _Optional[float] = ...) -> None: ...
 
 class TransactionVerificationRequest(_message.Message):
     __slots__ = ("user", "items", "card_number", "card_expiry", "card_cvv", "order_amount")

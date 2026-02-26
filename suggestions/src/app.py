@@ -38,13 +38,14 @@ class SuggestionsService(suggestions_grpc.SuggestionsServiceServicer):
             "No numbering, no bullets, no extra text."
         )
         print(f"Generating suggestions for user: {user_id} with prompt: {input_promt}")
+        # Generate suggestions using Gemini 2.5 Flash Lite model
         response_ai = client.models.generate_content(
             model="gemini-2.5-flash-lite", contents=input_promt
         )
 
         clean = []
         selected_titles_lower = {title.lower() for title in selected_titles}
-
+        # Process the response to extract suggestions, ensuring they are in the correct format and not duplicates of selected books
         for line in response_ai.text.split('\n'):
             entry = line.strip()
             if not entry or len(clean) >= 3:
@@ -56,7 +57,7 @@ class SuggestionsService(suggestions_grpc.SuggestionsServiceServicer):
                     clean.append(entry)
             elif entry not in clean:
                 clean.append(entry)
-
+        # If the model does not return 3 valid suggestions, add fallback suggestions to ensure we always return 3 suggestions
         fallback = [
             "Dune by Frank Herbert",
             "1984 by George Orwell",

@@ -24,7 +24,7 @@ _sym_db = _symbol_database.Default()
 
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n@utils/pb/transaction_verification/transaction_verification.proto\x12\x0btransaction\"8\n\x08UserData\x12\x0c\n\x04name\x18\x01 \x01(\t\x12\r\n\x05\x65mail\x18\x02 \x01(\t\x12\x0f\n\x07\x61\x64\x64ress\x18\x03 \x01(\t\";\n\x04Item\x12\x0f\n\x07item_id\x18\x01 \x01(\t\x12\x13\n\x0b\x64\x65scription\x18\x02 \x01(\t\x12\r\n\x05price\x18\x03 \x01(\x02\"\xb9\x01\n\x1eTransactionVerificationRequest\x12#\n\x04user\x18\x01 \x01(\x0b\x32\x15.transaction.UserData\x12 \n\x05items\x18\x02 \x03(\x0b\x32\x11.transaction.Item\x12\x13\n\x0b\x63\x61rd_number\x18\x03 \x01(\t\x12\x13\n\x0b\x63\x61rd_expiry\x18\x04 \x01(\t\x12\x10\n\x08\x63\x61rd_cvv\x18\x05 \x01(\t\x12\x14\n\x0corder_amount\x18\x06 \x01(\x02\"6\n\x1fTransactionVerificationResponse\x12\x13\n\x0bis_verified\x18\x01 \x01(\x08\x32\x90\x01\n\x1eTransactionVerificationService\x12n\n\x11VerifyTransaction\x12+.transaction.TransactionVerificationRequest\x1a,.transaction.TransactionVerificationResponseb\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n@utils/pb/transaction_verification/transaction_verification.proto\x12\x0btransaction\"8\n\x08UserData\x12\x0c\n\x04name\x18\x01 \x01(\t\x12\r\n\x05\x65mail\x18\x02 \x01(\t\x12\x0f\n\x07\x61\x64\x64ress\x18\x03 \x01(\t\"&\n\x04Item\x12\x0c\n\x04name\x18\x01 \x01(\t\x12\x10\n\x08quantity\x18\x02 \x01(\x02\"\xb9\x01\n\x1eTransactionVerificationRequest\x12#\n\x04user\x18\x01 \x01(\x0b\x32\x15.transaction.UserData\x12 \n\x05items\x18\x02 \x03(\x0b\x32\x11.transaction.Item\x12\x13\n\x0b\x63\x61rd_number\x18\x03 \x01(\t\x12\x13\n\x0b\x63\x61rd_expiry\x18\x04 \x01(\t\x12\x10\n\x08\x63\x61rd_cvv\x18\x05 \x01(\t\x12\x14\n\x0corder_amount\x18\x06 \x01(\x02\"6\n\x1fTransactionVerificationResponse\x12\x13\n\x0bis_verified\x18\x01 \x01(\x08\x32\x90\x01\n\x1eTransactionVerificationService\x12n\n\x11VerifyTransaction\x12+.transaction.TransactionVerificationRequest\x1a,.transaction.TransactionVerificationResponseb\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
@@ -34,11 +34,11 @@ if not _descriptor._USE_C_DESCRIPTORS:
   _globals['_USERDATA']._serialized_start=81
   _globals['_USERDATA']._serialized_end=137
   _globals['_ITEM']._serialized_start=139
-  _globals['_ITEM']._serialized_end=198
-  _globals['_TRANSACTIONVERIFICATIONREQUEST']._serialized_start=201
-  _globals['_TRANSACTIONVERIFICATIONREQUEST']._serialized_end=386
-  _globals['_TRANSACTIONVERIFICATIONRESPONSE']._serialized_start=388
-  _globals['_TRANSACTIONVERIFICATIONRESPONSE']._serialized_end=442
-  _globals['_TRANSACTIONVERIFICATIONSERVICE']._serialized_start=445
-  _globals['_TRANSACTIONVERIFICATIONSERVICE']._serialized_end=589
+  _globals['_ITEM']._serialized_end=177
+  _globals['_TRANSACTIONVERIFICATIONREQUEST']._serialized_start=180
+  _globals['_TRANSACTIONVERIFICATIONREQUEST']._serialized_end=365
+  _globals['_TRANSACTIONVERIFICATIONRESPONSE']._serialized_start=367
+  _globals['_TRANSACTIONVERIFICATIONRESPONSE']._serialized_end=421
+  _globals['_TRANSACTIONVERIFICATIONSERVICE']._serialized_start=424
+  _globals['_TRANSACTIONVERIFICATIONSERVICE']._serialized_end=568
 # @@protoc_insertion_point(module_scope)

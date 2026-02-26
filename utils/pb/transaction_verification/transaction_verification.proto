@@ -14,9 +14,8 @@ message UserData {
 }
 
 message Item {
-    string item_id = 1;
-    string description = 2;
-    float price = 3;
+    string name = 1;
+    float quantity = 2;
 }
 
 message TransactionVerificationRequest {
