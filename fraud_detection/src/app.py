@@ -1,6 +1,9 @@
 import sys
 import os
 import joblib
+import pandas as pd
+import numpy as np
+from sklearn.ensemble import RandomForestClassifier
 
 # load
 fraud_ai = joblib.load("./fraud_detection/ai/fraud_model.joblib")
