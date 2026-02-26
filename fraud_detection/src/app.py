@@ -1,5 +1,9 @@
 import sys
 import os
+import joblib
+
+# load
+fraud_ai = joblib.load("./fraud_detection/ai/fraud_model.joblib")
 
 # This set of lines are needed to import the gRPC stubs.
 # The path of the stubs is relative to the current file, or absolute inside the container.
@@ -21,7 +25,8 @@ class FraudDetectionService(fraud_detection_grpc.FraudDetectionServiceServicer):
         # Create a FraudDetectionResponse object
         response = fraud_detection.FraudDetectionResponse()
         # Set the is_fraud field of the response object
-        response.is_fraud = order_amount > 1000 or card_number.startswith("999")  # Example logic: flag as fraud if amount > 1000 and card starts with '4'
+        response.is_fraud = True if fraud_ai.predict([[order_amount, card_number]])[0] else False
+
         # Print the transaction details and the fraud detection result
         print(f"Received transaction: [no id], amount: {order_amount}, is_fraud: {response.is_fraud}")
         # Return the response object
