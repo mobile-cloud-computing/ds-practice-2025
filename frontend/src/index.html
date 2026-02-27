@@ -73,6 +73,17 @@
     </div>
 
     <script>
+
+        // No injections
+        function escapeHtml(s) {
+            return String(s)
+                .replaceAll("&", "&amp;")
+                .replaceAll("<", "&lt;")
+                .replaceAll(">", "&gt;")
+                .replaceAll('"', "&quot;")
+                .replaceAll("'", "&#039;");
+        }
+
         const items = [
             { name: "Book A", quantity: 1 },
             { name: "Book B", quantity: 2 }
@@ -117,6 +128,7 @@
             try {
                 const response = await fetch('http://localhost:8081/checkout', {
                     method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(data),
                 });
 
@@ -124,31 +136,39 @@
                 const responseDiv = document.getElementById('response');
 
                 if (response.ok) {
-                    const responseDiv = document.getElementById('response');
-
                     const suggestedBooksHtml = (result.suggestedBooks || [])
                         .map(book => `<li>${book.title} by ${book.author}</li>`)
                         .join('');
 
-                    const reasonsHtml = (result.reasons || [])
-                        .map(reason => `<li>${reason}</li>`)
-                        .join('');
+                    const reasons = Array.isArray(result.reasons) ? result.reasons : [];
+                    const reasonsHtml = reasons.map(r => `<li>${escapeHtml(r)}</li>`).join('');
 
-                    responseDiv.innerHTML = `
-                        <strong>Order status: ${result.status}</strong><br>
+                    if (result.status === "Order Approved") {
+                        responseDiv.className =
+                            "mt-6 p-6 border rounded-lg bg-green-50 text-green-800";
 
-                        ${result.status === "Order Rejected" && reasonsHtml
-                            ? `Validation errors:
-                            <ul class="list-disc pl-5 mt-2 space-y-1">${reasonsHtml}</ul>`
-                            : ""
-                        }
+                        responseDiv.innerHTML = `
+                            <h2 class="text-xl font-semibold mb-2">✅ Order Approved</h2>
+                            <p>Your order has been successfully processed.</p>
+                        `;
+                    } else if (result.status === "Order Rejected") {
+                        const reasons = Array.isArray(result.reasons) ? result.reasons : [];
 
-                        ${result.status === "Order Approved" && suggestedBooksHtml
-                            ? `Suggested Books:
-                            <ul class="list-disc pl-5 mt-2 space-y-1">${suggestedBooksHtml}</ul>`
-                            : ""
-                        }
-                    `;
+                        const reasonsHtml = reasons
+                            .map(r => `<li>${escapeHtml(r)}</li>`)
+                            .join('');
+
+                        responseDiv.className =
+                            "mt-6 p-6 border rounded-lg bg-red-50 text-red-800";
+
+                        responseDiv.innerHTML = `
+                            <h2 class="text-xl font-semibold mb-3">❌ Order Rejected</h2>
+                            <p class="mb-2">Please fix the following issues:</p>
+                            <ul class="list-disc pl-6 space-y-1">
+                            ${reasonsHtml}
+                            </ul>
+                        `;
+                    }
 
                     const color = result.status === "Order Approved" ? "green" : "red";
                     responseDiv.className = `mt-6 p-4 border rounded-lg bg-${color}-100 text-${color}-700`;

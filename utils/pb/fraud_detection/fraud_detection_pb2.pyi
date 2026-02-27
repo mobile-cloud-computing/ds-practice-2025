@@ -1,6 +1,7 @@
+from google.protobuf.internal import containers as _containers
 from google.protobuf import descriptor as _descriptor
 from google.protobuf import message as _message
-from typing import ClassVar as _ClassVar, Optional as _Optional
+from typing import ClassVar as _ClassVar, Iterable as _Iterable, Optional as _Optional
 
 DESCRIPTOR: _descriptor.FileDescriptor
 
@@ -39,9 +40,9 @@ class FraudDetectionRequest(_message.Message):
     def __init__(self, transaction_id: _Optional[str] = ..., purchaser_name: _Optional[str] = ..., purchaser_email: _Optional[str] = ..., credit_card_number: _Optional[str] = ..., billing_street: _Optional[str] = ..., billing_city: _Optional[str] = ..., billing_state: _Optional[str] = ..., billing_zip: _Optional[str] = ..., billing_country: _Optional[str] = ...) -> None: ...
 
 class FraudDetectionResponse(_message.Message):
-    __slots__ = ("is_fraud", "reason")
+    __slots__ = ("is_fraud", "reasons")
     IS_FRAUD_FIELD_NUMBER: _ClassVar[int]
-    REASON_FIELD_NUMBER: _ClassVar[int]
+    REASONS_FIELD_NUMBER: _ClassVar[int]
     is_fraud: bool
-    reason: str
-    def __init__(self, is_fraud: bool = ..., reason: _Optional[str] = ...) -> None: ...
+    reasons: _containers.RepeatedScalarFieldContainer[str]
+    def __init__(self, is_fraud: bool = ..., reasons: _Optional[_Iterable[str]] = ...) -> None: ...

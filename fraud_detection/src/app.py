@@ -117,13 +117,10 @@ class FraudDetectionService(fraud_detection_grpc.FraudDetectionServiceServicer):
             reasons.append("Billing address does not look realistic")
 
         is_fraud = len(reasons) > 0
-        reason = "; ".join(reasons) if reasons else "No obvious fraud indicators found"
-        print(
-            f"Fraud check for transaction={request.transaction_id}: "
-            f"is_fraud={is_fraud}, reason={reason}"
+        return fraud_detection.FraudDetectionResponse(
+            is_fraud=is_fraud,
+            reasons=reasons,
         )
-
-        return fraud_detection.FraudDetectionResponse(is_fraud=is_fraud, reason=reason)
 
 
 def serve():

@@ -32,5 +32,5 @@ message FraudDetectionRequest {
 
 message FraudDetectionResponse {
     bool is_fraud = 1;
-    string reason = 2;
+    repeated string reasons = 2;
 }

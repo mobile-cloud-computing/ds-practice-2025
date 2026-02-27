@@ -15,6 +15,28 @@ import transaction_verification_pb2_grpc as transaction_verification_grpc
 
 import grpc
 from concurrent import futures
+import logging
+import time
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="===LOG=== %(asctime)s %(levelname)s %(name)s %(message)s",
+)
+logger = logging.getLogger("transaction_verification")
+
+
+def _mask_card(card_number: str) -> str:
+    digits = "".join(ch for ch in (card_number or "") if ch.isdigit())
+    if len(digits) < 4:
+        return "****"
+    return f"****{digits[-4:]}"
+
+
+def _email_domain(email: str) -> str:
+    email = (email or "").strip()
+    if "@" not in email:
+        return "unknown"
+    return email.split("@", 1)[1]
 
 
 def _is_non_empty(value: str) -> bool:
@@ -100,55 +122,99 @@ class TransactionVerificationService(
     transaction_verification_grpc.TransactionVerificationServiceServicer
 ):
     def VerifyTransaction(self, request, context):
-        reasons = []
+        started = time.perf_counter()
+        metadata = dict(context.invocation_metadata())
+        correlation_id = metadata.get("x-correlation-id", request.transaction_id or "unknown")
 
-        if not _is_non_empty(request.transaction_id):
-            reasons.append("Missing transaction ID")
-        if not _is_non_empty(request.purchaser_name):
-            reasons.append("Missing purchaser name")
-        if not _is_non_empty(request.purchaser_email):
-            reasons.append("Missing purchaser email")
-        elif not _is_valid_email(request.purchaser_email):
-            reasons.append("Purchaser email format is invalid")
-
-        if not _is_non_empty(request.credit_card_number):
-            reasons.append("Missing credit card number")
-        elif not _is_luhn_valid(request.credit_card_number):
-            reasons.append("Credit card number is invalid")
-
-        if not _is_non_empty(request.credit_card_expiration):
-            reasons.append("Missing credit card expiration")
-        elif not _is_valid_expiration(request.credit_card_expiration):
-            reasons.append("Credit card expiration is invalid or expired")
-
-        if not _is_non_empty(request.credit_card_cvv):
-            reasons.append("Missing credit card CVV")
-        elif not _is_valid_cvv(request.credit_card_cvv):
-            reasons.append("Credit card CVV is invalid")
-
-        if not _is_non_empty(request.billing_street):
-            reasons.append("Missing billing street")
-        if not _is_non_empty(request.billing_city):
-            reasons.append("Missing billing city")
-        if not _is_non_empty(request.billing_state):
-            reasons.append("Missing billing state")
-        if not _is_non_empty(request.billing_zip):
-            reasons.append("Missing billing zip")
-        elif not _is_valid_billing_zip(request.billing_zip):
-            reasons.append("Billing zip format is invalid")
-        if not _is_non_empty(request.billing_country):
-            reasons.append("Missing billing country")
-
-        reasons.extend(_validate_items(request.items))
-
-        if not request.terms_accepted:
-            reasons.append("Terms and conditions must be accepted")
-
-        is_valid = len(reasons) == 0
-        return transaction_verification.TransactionVerificationResponse(
-            is_valid=is_valid,
-            reasons=reasons,
+        logger.info(
+            "cid=%s event=verification_received transaction_id=%s email_domain=%s card=%s billing_country=%s item_count=%s",
+            correlation_id,
+            request.transaction_id,
+            _email_domain(request.purchaser_email),
+            _mask_card(request.credit_card_number),
+            request.billing_country,
+            len(request.items),
         )
+
+        try:
+            reasons = []
+
+            if not _is_non_empty(request.transaction_id):
+                reasons.append("Missing transaction ID")
+            if not _is_non_empty(request.purchaser_name):
+                reasons.append("Missing purchaser name")
+            if not _is_non_empty(request.purchaser_email):
+                reasons.append("Missing purchaser email")
+            elif not _is_valid_email(request.purchaser_email):
+                reasons.append("Purchaser email format is invalid")
+
+            if not _is_non_empty(request.credit_card_number):
+                reasons.append("Missing credit card number")
+            elif not _is_luhn_valid(request.credit_card_number):
+                reasons.append("Credit card number is invalid")
+
+            if not _is_non_empty(request.credit_card_expiration):
+                reasons.append("Missing credit card expiration")
+            elif not _is_valid_expiration(request.credit_card_expiration):
+                reasons.append("Credit card expiration is invalid or expired")
+
+            if not _is_non_empty(request.credit_card_cvv):
+                reasons.append("Missing credit card CVV")
+            elif not _is_valid_cvv(request.credit_card_cvv):
+                reasons.append("Credit card CVV is invalid")
+
+            if not _is_non_empty(request.billing_street):
+                reasons.append("Missing billing street")
+            if not _is_non_empty(request.billing_city):
+                reasons.append("Missing billing city")
+            if not _is_non_empty(request.billing_state):
+                reasons.append("Missing billing state")
+            if not _is_non_empty(request.billing_zip):
+                reasons.append("Missing billing zip")
+            elif not _is_valid_billing_zip(request.billing_zip):
+                reasons.append("Billing zip format is invalid")
+            if not _is_non_empty(request.billing_country):
+                reasons.append("Missing billing country")
+
+            reasons.extend(_validate_items(request.items))
+
+            if not request.terms_accepted:
+                reasons.append("Terms and conditions must be accepted")
+
+            is_valid = len(reasons) == 0
+            latency_ms = (time.perf_counter() - started) * 1000
+            if is_valid:
+                logger.info(
+                    "cid=%s event=verification_completed is_valid=true reason_count=0 latency_ms=%.2f",
+                    correlation_id,
+                    latency_ms,
+                )
+            else:
+                logger.warning(
+                    "cid=%s event=verification_completed is_valid=false reason_count=%s latency_ms=%.2f reasons=%s",
+                    correlation_id,
+                    len(reasons),
+                    latency_ms,
+                    reasons,
+                )
+
+            return transaction_verification.TransactionVerificationResponse(
+                is_valid=is_valid,
+                reasons=reasons,
+            )
+        except Exception:
+            latency_ms = (time.perf_counter() - started) * 1000
+            logger.exception(
+                "cid=%s event=verification_exception latency_ms=%.2f",
+                correlation_id,
+                latency_ms,
+            )
+            context.set_code(grpc.StatusCode.INTERNAL)
+            context.set_details("Internal error during transaction verification")
+            return transaction_verification.TransactionVerificationResponse(
+                is_valid=False,
+                reasons=["Internal verification error"],
+            )
 
 
 def serve():
@@ -159,9 +225,11 @@ def serve():
     port = "50052"
     server.add_insecure_port("[::]:" + port)
     server.start()
-    print("Server started. Listening on port 50052.")
+    logger.info("Server started. Listening on port %s.", port)
     server.wait_for_termination()
 
 
 if __name__ == '__main__':
     serve()
+
+
