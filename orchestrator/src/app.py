@@ -18,16 +18,6 @@ import fraud_detection_pb2_grpc as fraud_detection_grpc
 import grpc
 import uuid
 
-def greet(name='you'):
-    # Establish a connection with the fraud-detection gRPC service.
-    with grpc.insecure_channel('fraud_detection:50051') as channel:
-        # Create a stub object.
-        stub = fraud_detection_grpc.HelloServiceStub(channel)
-        # Call the service through the stub object.
-        response = stub.SayHello(fraud_detection.HelloRequest(name=name))
-    return response.greeting
-
-
 def verify_transaction(checkout_data):
     user = checkout_data.get("user", {})
     credit_card = checkout_data.get("creditCard", {})
@@ -36,7 +26,7 @@ def verify_transaction(checkout_data):
 
     with grpc.insecure_channel('transaction_verification:50052') as channel:
         stub = transaction_verification_grpc.TransactionVerificationServiceStub(channel)
-        
+
         response = stub.VerifyTransaction(
             transaction_verification.TransactionVerificationRequest(
                 transaction_id=checkout_data['orderId'],
@@ -66,21 +56,14 @@ def verify_transaction(checkout_data):
 def detect_fraud(checkout_data):
     user = checkout_data.get("user", {})
     credit_card = checkout_data.get("creditCard", {})
-    billing_address = checkout_data.get("billingAddress", {})
 
     with grpc.insecure_channel('fraud_detection:50051') as channel:
         stub = fraud_detection_grpc.FraudDetectionServiceStub(channel)
         response = stub.DetectFraud(
             fraud_detection.FraudDetectionRequest(
                 transaction_id=checkout_data['orderId'],
-                purchaser_name=user.get("name", ""),
                 purchaser_email=user.get("contact", ""),
                 credit_card_number=credit_card.get("number", ""),
-                billing_street=billing_address.get("street", ""),
-                billing_city=billing_address.get("city", ""),
-                billing_state=billing_address.get("state", ""),
-                billing_zip=billing_address.get("zip", ""),
-                billing_country=billing_address.get("country", ""),
             )
         )
     return response
@@ -105,17 +88,6 @@ logging.basicConfig(
     format="===LOG=== %(levelname)s %(asctime)s %(name)s %(message)s"
 )
 logger = logging.getLogger("orchestrator")
-
-# Define a GET endpoint.
-@app.route('/', methods=['GET'])
-def index():
-    """
-    Responds with 'Hello, [name]' when a GET request is made to '/' endpoint.
-    """
-    # Test the fraud-detection gRPC service.
-    response = greet(name='orchestrator')
-    # Return the response.
-    return response
 
 @app.route('/checkout', methods=['POST'])
 def checkout():
@@ -148,6 +120,7 @@ def checkout():
     if fraud_check.is_fraud:
         order_status_response = {
             'status': 'Order Rejected',
+            'reasons': [fraud_check.reason],
             'suggestedBooks': []
         }
         print(f"Order rejected due to fraud check: {fraud_check.reason}")
