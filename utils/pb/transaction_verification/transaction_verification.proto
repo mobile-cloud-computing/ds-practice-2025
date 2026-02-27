@@ -1,0 +1,18 @@
+syntax = "proto3";
+
+package transaction_verification;
+
+service transactionService {
+    rpc verifyTransaction (PayRequest) returns (PayResponse);
+}
+
+message PayRequest {
+    string card_nr = 1;
+    int64 order_id = 2;
+    float money = 3;
+}
+
+message PayResponse {
+    bool verified = 1;
+    int64 order_id = 2;
+}

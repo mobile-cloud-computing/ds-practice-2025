@@ -6,9 +6,13 @@ import os
 # Change these lines only if strictly needed.
 FILE = __file__ if '__file__' in globals() else os.getenv("PYTHONFILE", "")
 fraud_detection_grpc_path = os.path.abspath(os.path.join(FILE, '../../../utils/pb/fraud_detection'))
+transaction_verification_grpc_path = os.path.abspath(os.path.join(FILE, '../../../utils/pb/transaction_verification'))
 sys.path.insert(0, fraud_detection_grpc_path)
 import fraud_detection_pb2 as fraud_detection
 import fraud_detection_pb2_grpc as fraud_detection_grpc
+sys.path.insert(0, transaction_verification_grpc_path)
+import transaction_verification_pb2 as transaction_verification
+import transaction_verification_pb2_grpc as transaction_verification_grpc
 
 import grpc
 
@@ -20,6 +24,17 @@ def detect_fraud(card_nr, order_ammount):
         # Call the service through the stub object.
         response = stub.checkFraud(fraud_detection.FraudRequest(card_nr=card_nr, order_ammount=order_ammount))
     return response.is_fraud
+
+def verify_transaction(card_nr, order_id, money):
+    with grpc.insecure_channel('transaction_verification:50052') as channel:
+        # Create a stub object.
+        stub = transaction_verification_grpc.transactionServiceStub(channel)
+        # Call the service through the stub object.
+        if isinstance(order_id, bytes):
+            order_id = int.from_bytes(order_id)
+        response = stub.verifyTransaction(transaction_verification.PayRequest(card_nr=str(card_nr), order_id=order_id, money=money))
+        if response.order_id != order_id: return False
+    return response.verified
 
 # Import Flask.
 # Flask is a web framework for Python.
@@ -53,8 +68,12 @@ def checkout():
     # Print request object data
     print("Request Data:", request_data)
 
-    is_fraud = detect_fraud(request_data["creditCard"]["number"], sum([item["quantity"] for item in request_data["items"]]))
+    quantity = sum([item["quantity"] for item in request_data["items"]])
 
+    is_fraud = detect_fraud(request_data["creditCard"]["number"], quantity)
+
+    if not verify_transaction(request_data["creditCard"]["number"], os.urandom(4), quantity):
+        is_fraud = True
 
 
 
