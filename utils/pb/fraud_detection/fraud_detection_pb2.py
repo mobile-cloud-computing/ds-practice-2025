@@ -14,23 +14,17 @@ _sym_db = _symbol_database.Default()
 
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x15\x66raud_detection.proto\x12\x05hello\"\x1c\n\x0cHelloRequest\x12\x0c\n\x04name\x18\x01 \x01(\t\"!\n\rHelloResponse\x12\x10\n\x08greeting\x18\x01 \x01(\t\"\xef\x01\n\x15\x46raudDetectionRequest\x12\x16\n\x0etransaction_id\x18\x01 \x01(\t\x12\x16\n\x0epurchaser_name\x18\x02 \x01(\t\x12\x17\n\x0fpurchaser_email\x18\x03 \x01(\t\x12\x1a\n\x12\x63redit_card_number\x18\x04 \x01(\t\x12\x16\n\x0e\x62illing_street\x18\x05 \x01(\t\x12\x14\n\x0c\x62illing_city\x18\x06 \x01(\t\x12\x15\n\rbilling_state\x18\x07 \x01(\t\x12\x13\n\x0b\x62illing_zip\x18\x08 \x01(\t\x12\x17\n\x0f\x62illing_country\x18\t \x01(\t\";\n\x16\x46raudDetectionResponse\x12\x10\n\x08is_fraud\x18\x01 \x01(\x08\x12\x0f\n\x07reasons\x18\x02 \x03(\t2E\n\x0cHelloService\x12\x35\n\x08SayHello\x12\x13.hello.HelloRequest\x1a\x14.hello.HelloResponse2c\n\x15\x46raudDetectionService\x12J\n\x0b\x44\x65tectFraud\x12\x1c.hello.FraudDetectionRequest\x1a\x1d.hello.FraudDetectionResponseb\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x15\x66raud_detection.proto\x12\x0f\x66raud_detection\"d\n\x15\x46raudDetectionRequest\x12\x16\n\x0etransaction_id\x18\x01 \x01(\t\x12\x17\n\x0fpurchaser_email\x18\x02 \x01(\t\x12\x1a\n\x12\x63redit_card_number\x18\x03 \x01(\t\";\n\x16\x46raudDetectionResponse\x12\x10\n\x08is_fraud\x18\x01 \x01(\x08\x12\x0f\n\x07reasons\x18\x02 \x03(\t2w\n\x15\x46raudDetectionService\x12^\n\x0b\x44\x65tectFraud\x12&.fraud_detection.FraudDetectionRequest\x1a\'.fraud_detection.FraudDetectionResponseb\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
 _builder.BuildTopDescriptorsAndMessages(DESCRIPTOR, 'fraud_detection_pb2', _globals)
 if _descriptor._USE_C_DESCRIPTORS == False:
   DESCRIPTOR._options = None
-  _globals['_HELLOREQUEST']._serialized_start=32
-  _globals['_HELLOREQUEST']._serialized_end=60
-  _globals['_HELLORESPONSE']._serialized_start=62
-  _globals['_HELLORESPONSE']._serialized_end=95
-  _globals['_FRAUDDETECTIONREQUEST']._serialized_start=98
-  _globals['_FRAUDDETECTIONREQUEST']._serialized_end=337
-  _globals['_FRAUDDETECTIONRESPONSE']._serialized_start=339
-  _globals['_FRAUDDETECTIONRESPONSE']._serialized_end=398
-  _globals['_HELLOSERVICE']._serialized_start=400
-  _globals['_HELLOSERVICE']._serialized_end=469
-  _globals['_FRAUDDETECTIONSERVICE']._serialized_start=471
-  _globals['_FRAUDDETECTIONSERVICE']._serialized_end=570
+  _globals['_FRAUDDETECTIONREQUEST']._serialized_start=42
+  _globals['_FRAUDDETECTIONREQUEST']._serialized_end=142
+  _globals['_FRAUDDETECTIONRESPONSE']._serialized_start=144
+  _globals['_FRAUDDETECTIONRESPONSE']._serialized_end=203
+  _globals['_FRAUDDETECTIONSERVICE']._serialized_start=205
+  _globals['_FRAUDDETECTIONSERVICE']._serialized_end=324
 # @@protoc_insertion_point(module_scope)

@@ -54,16 +54,6 @@ transaction_verification_stub = transaction_verification_grpc.TransactionVerific
 fraud_detection_channel = grpc.insecure_channel(FRAUD_DETECTION_ADDR)
 fraud_detection_stub = fraud_detection_grpc.FraudDetectionServiceStub(fraud_detection_channel)
 
-fraud_hello_stub = fraud_detection_grpc.HelloServiceStub(fraud_detection_channel)
-
-
-def greet(name="you"):
-    # Reuse the existing fraud_detection_channel via a module-level stub.
-    response = fraud_hello_stub.SayHello(
-        fraud_detection.HelloRequest(name=name),
-        timeout=RPC_TIMEOUT_SECONDS,
-    )
-    return response.greeting
 
 def _mask_card(card_number):
     digits = "".join(ch for ch in str(card_number or "") if ch.isdigit())
@@ -146,18 +136,11 @@ def verify_transaction(checkout_data, correlation_id):
 def detect_fraud(checkout_data, correlation_id):
     user = checkout_data.get("user", {})
     credit_card = checkout_data.get("creditCard", {})
-    billing_address = checkout_data.get("billingAddress", {})
 
     request_message = fraud_detection.FraudDetectionRequest(
         transaction_id=checkout_data.get("orderId", ""),
-        purchaser_name=user.get("name", ""),
         purchaser_email=user.get("contact", ""),
         credit_card_number=credit_card.get("number", ""),
-        billing_street=billing_address.get("street", ""),
-        billing_city=billing_address.get("city", ""),
-        billing_state=billing_address.get("state", ""),
-        billing_zip=billing_address.get("zip", ""),
-        billing_country=billing_address.get("country", ""),
     )
 
     rpc_start = time.perf_counter()
@@ -185,17 +168,6 @@ def detect_fraud(checkout_data, correlation_id):
         )
         return False, None, "Fraud detection service unavailable", latency_ms
     
-
-# Define a GET endpoint.
-@app.route('/', methods=['GET'])
-def index():
-    """
-    Responds with 'Hello, [name]' when a GET request is made to '/' endpoint.
-    """
-    # Test the fraud-detection gRPC service.
-    response = greet(name='orchestrator')
-    # Return the response.
-    return response
 
 @app.route('/checkout', methods=['POST'])
 def checkout():

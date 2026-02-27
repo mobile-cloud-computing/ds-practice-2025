@@ -1,6 +1,8 @@
 import sys
 import os
-import re
+import hashlib
+import logging
+import time
 
 # This set of lines are needed to import the gRPC stubs.
 # The path of the stubs is relative to the current file, or absolute inside the container.
@@ -14,127 +16,134 @@ import fraud_detection_pb2_grpc as fraud_detection_grpc
 import grpc
 from concurrent import futures
 
-# Create a class to define the server functions, derived from
-# fraud_detection_pb2_grpc.HelloServiceServicer
-class HelloService(fraud_detection_grpc.HelloServiceServicer):
-    # Create an RPC function to say hello
-    def SayHello(self, request, context):
-        # Create a HelloResponse object
-        response = fraud_detection.HelloResponse()
-        # Set the greeting field of the response object
-        response.greeting = "Hello, " + request.name
-        # Print the greeting message
-        print(response.greeting)
-        # Return the response object
-        return response
+logging.basicConfig(
+    level=logging.INFO,
+    format="===LOG=== %(asctime)s %(levelname)s %(name)s %(message)s",
+)
+logger = logging.getLogger("fraud_detection")
+
+# Card BIN prefixes associated with high-fraud prepaid/gift card ranges
+_SUSPICIOUS_BIN_PREFIXES = {"400000", "411111", "520000", "530000", "601100"}
+
+# Disposable / temporary email domains
+_DISPOSABLE_EMAIL_DOMAINS = {
+    "tempmail.com", "throwaway.email", "guerrillamail.com",
+    "mailinator.com", "fakeinbox.com", "yopmail.com",
+}
 
 
-def _looks_like_real_name(name):
-    cleaned_name = name.strip()
-
-    tokens = [token for token in cleaned_name.split() if token]
-    if len(tokens) < 2:
-        return False
-
-    blocked_tokens = {"test", "unknown", "n/a", "na", "asdf", "qwerty"}
-    for token in tokens:
-        token_lower = token.lower()
-        if token_lower in blocked_tokens:
-            return False
-        # 2 letter minimum, only letters, hyphens, apostrophes, spaces
-        if not re.fullmatch(r"[A-Za-z][A-Za-z'\- ]{1,}", token):
-            return False
-
-    return True
+def _mask_card(card_number):
+    digits = "".join(ch for ch in str(card_number or "") if ch.isdigit())
+    if len(digits) < 4:
+        return "****"
+    return f"****{digits[-4:]}"
 
 
-def _is_luhn_valid(card_number):
-    digits_only = "".join(ch for ch in card_number if ch.isdigit())
-    if not 13 <= len(digits_only) <= 19:
-        return False
-    if len(set(digits_only)) == 1:
-        return False
-
-    checksum = 0
-    should_double = False
-    for digit in reversed(digits_only):
-        value = int(digit)
-        if should_double:
-            value *= 2
-            if value > 9:
-                value -= 9
-        checksum += value
-        should_double = not should_double
-
-    return checksum % 10 == 0
+def _check_card_blocklist(card_number):
+    """Flag if the card BIN (first 6 digits) is in a known-suspicious set."""
+    digits = "".join(ch for ch in card_number if ch.isdigit())
+    if len(digits) >= 6 and digits[:6] in _SUSPICIOUS_BIN_PREFIXES:
+        return "Credit card BIN is in a high-risk range"
+    return None
 
 
-def _looks_like_real_address(street, city, state, zip_code, country):
-    # Require all fields
-    if not street or not city or not state or not zip_code or not country:
-        return False
+def _check_disposable_email(email):
+    """Flag if the purchaser uses a known disposable email provider."""
+    email = (email or "").strip().lower()
+    if "@" in email:
+        domain = email.rsplit("@", 1)[1]
+        if domain in _DISPOSABLE_EMAIL_DOMAINS:
+            return "Purchaser email uses a disposable email provider"
+    return None
 
-    street_clean = street.strip()
-    city_clean = city.strip()
-    state_clean = state.strip()
-    zip_clean = zip_code.strip()
-    country_clean = country.strip()
 
-    if len(city_clean) < 2 or not re.fullmatch(r"[A-Za-z][A-Za-z \.'\-]{1,}", city_clean):
-        return False
-    if len(state_clean) < 2 or not re.fullmatch(r"[A-Za-z][A-Za-z \.'\-]{1,}", state_clean):
-        return False
+def _check_risk_score(transaction_id, card_number, email):
+    """Deterministic risk score derived from a hash of transaction fields.
 
-    if not re.fullmatch(r"[A-Za-z0-9 -]{3,10}", zip_clean):
-        return False
-    if not re.search(r"\d", zip_clean):
-        return False
-
-    blocked_values = {"test", "unknown", "n/a", "na", "asdf", "qwerty"}
-    if city_clean.lower() in blocked_values or street_clean.lower() in blocked_values:
-        return False
-
-    return True
+    If the score exceeds a threshold, flag as suspicious.  This simulates
+    a model score without any external calls.
+    """
+    payload = f"{transaction_id}:{card_number}:{email}"
+    digest = hashlib.sha256(payload.encode()).hexdigest()
+    # Use last 4 hex chars as a 0-65535 score
+    score = int(digest[-4:], 16)
+    # ~1.5 % of transactions will exceed the threshold (score >= 64000)
+    if score >= 64000:
+        return f"Transaction risk score is elevated ({score})"
+    return None
 
 
 class FraudDetectionService(fraud_detection_grpc.FraudDetectionServiceServicer):
     def DetectFraud(self, request, context):
-        reasons = []
+        started = time.perf_counter()
+        metadata = dict(context.invocation_metadata())
+        correlation_id = metadata.get("x-correlation-id", request.transaction_id or "unknown")
 
-        if not _looks_like_real_name(request.purchaser_name):
-            reasons.append("Name does not look realistic")
-
-        if not _is_luhn_valid(request.credit_card_number):
-            reasons.append("Credit card number is invalid")
-
-        if not _looks_like_real_address(
-            request.billing_street,
-            request.billing_city,
-            request.billing_state,
-            request.billing_zip,
-            request.billing_country,
-        ):
-            reasons.append("Billing address does not look realistic")
-
-        is_fraud = len(reasons) > 0
-        return fraud_detection.FraudDetectionResponse(
-            is_fraud=is_fraud,
-            reasons=reasons,
+        logger.info(
+            "cid=%s event=fraud_check_received transaction_id=%s card=%s",
+            correlation_id,
+            request.transaction_id,
+            _mask_card(request.credit_card_number),
         )
+
+        try:
+            checks = [
+                _check_card_blocklist(request.credit_card_number),
+                _check_disposable_email(request.purchaser_email),
+                _check_risk_score(
+                    request.transaction_id,
+                    request.credit_card_number,
+                    request.purchaser_email,
+                ),
+            ]
+            reasons = [r for r in checks if r is not None]
+
+            is_fraud = len(reasons) > 0
+            latency_ms = (time.perf_counter() - started) * 1000
+            if is_fraud:
+                logger.warning(
+                    "cid=%s event=fraud_check_completed is_fraud=true reason_count=%s latency_ms=%.2f reasons=%s",
+                    correlation_id,
+                    len(reasons),
+                    latency_ms,
+                    reasons,
+                )
+            else:
+                logger.info(
+                    "cid=%s event=fraud_check_completed is_fraud=false reason_count=0 latency_ms=%.2f",
+                    correlation_id,
+                    latency_ms,
+                )
+
+            return fraud_detection.FraudDetectionResponse(
+                is_fraud=is_fraud,
+                reasons=reasons,
+            )
+        except Exception:
+            latency_ms = (time.perf_counter() - started) * 1000
+            logger.exception(
+                "cid=%s event=fraud_check_exception latency_ms=%.2f",
+                correlation_id,
+                latency_ms,
+            )
+            context.set_code(grpc.StatusCode.INTERNAL)
+            context.set_details("Internal error during fraud detection")
+            return fraud_detection.FraudDetectionResponse(
+                is_fraud=False,
+                reasons=["Internal fraud detection error"],
+            )
 
 
 def serve():
     # Create a gRPC server
     server = grpc.server(futures.ThreadPoolExecutor())
-    # Add HelloService
-    fraud_detection_grpc.add_HelloServiceServicer_to_server(HelloService(), server)
     fraud_detection_grpc.add_FraudDetectionServiceServicer_to_server(FraudDetectionService(), server)
     # Listen on port 50051
     port = "50051"
     server.add_insecure_port("[::]:" + port)
     # Start the server
     server.start()
-    print("Server started. Listening on port 50051.")
+    logger.info("Server started. Listening on port %s.", port)
     # Keep thread alive
     server.wait_for_termination()
 
