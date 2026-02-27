@@ -1,5 +1,5 @@
 # Use an official Python runtime as the base image
-FROM python:3.11
+FROM python:3.11-slim
 
 # Set the working directory in the container
 # Both the utils and src folders will be mounted as volumes, please see docker-compose.yaml
