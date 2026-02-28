@@ -50,12 +50,26 @@ def checkout():
     """
     Responds with a JSON object containing the order ID, status, and suggested books.
     """
-    # Get request object data to json
-    request_data = json.loads(request.data)
-    # Print request object data
-    print("Request Data:", request_data.get('items'))
+    # Read the JSON body from the POST request
+    request_data = request.get_json(silent=True)
 
-    # Dummy response following the provided YAML specification for the bookstore
+    # If the request body is missing or invalid JSON, return a 400 error
+    if request_data is None:
+        return {
+            "error": {
+                "code": "BAD_REQUEST",
+                "message": "Request body must be valid JSON."
+            }
+        }, 400
+
+    # Print the full request and a few important parts
+    print("FULL REQUEST DATA:", request_data)
+    print("USER:", request_data.get("user"))
+    print("ITEMS:", request_data.get("items"))
+    print("SHIPPING METHOD:", request_data.get("shippingMethod"))
+    print("TERMS ACCEPTED:", request_data.get("termsAndConditionsAccepted"))
+
+    # Still a dummy response for now
     order_status_response = {
         'orderId': '12345',
         'status': 'Order Approved',
@@ -65,7 +79,7 @@ def checkout():
         ]
     }
 
-    return order_status_response
+    return order_status_response, 200
 
 
 if __name__ == '__main__':
