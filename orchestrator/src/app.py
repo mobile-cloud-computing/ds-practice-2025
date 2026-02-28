@@ -50,10 +50,8 @@ def checkout():
     """
     Responds with a JSON object containing the order ID, status, and suggested books.
     """
-    # Read the JSON body from the POST request
     request_data = request.get_json(silent=True)
 
-    # If the request body is missing or invalid JSON, return a 400 error
     if request_data is None:
         return {
             "error": {
@@ -62,24 +60,78 @@ def checkout():
             }
         }, 400
 
-    # Print the full request and a few important parts
+    user = request_data.get("user", {})
+    items = request_data.get("items", [])
+    shipping_method = request_data.get("shippingMethod")
+    terms_accepted = request_data.get("termsAndConditionsAccepted", False)
+
+    user_name = user.get("name")
+    user_contact = user.get("contact")
+    user_comment = user.get("userComment", "")
+
+    credit_card = user.get("creditCard", {})
+    card_number = credit_card.get("number")
+    expiration_date = credit_card.get("expirationDate")
+    cvv = credit_card.get("cvv")
+
     print("FULL REQUEST DATA:", request_data)
-    print("USER:", request_data.get("user"))
-    print("ITEMS:", request_data.get("items"))
-    print("SHIPPING METHOD:", request_data.get("shippingMethod"))
-    print("TERMS ACCEPTED:", request_data.get("termsAndConditionsAccepted"))
+    print("USER NAME:", user_name)
+    print("USER CONTACT:", user_contact)
+    print("USER COMMENT:", user_comment)
+    print("ITEMS:", items)
+    print("SHIPPING METHOD:", shipping_method)
+    print("TERMS ACCEPTED:", terms_accepted)
+    print("CARD NUMBER:", card_number)
+    print("EXPIRATION DATE:", expiration_date)
+    print("CVV:", cvv)
 
-    # Still a dummy response for now
-    order_status_response = {
-        'orderId': '12345',
-        'status': 'Order Approved',
-        'suggestedBooks': [
-            {'bookId': '123', 'title': 'The Best Book', 'author': 'Author 1'},
-            {'bookId': '456', 'title': 'The Second Best Book', 'author': 'Author 2'}
+    # Basic validation
+    if not user_name:
+        return {
+            "error": {
+                "code": "BAD_REQUEST",
+                "message": "User name is required."
+            }
+        }, 400
+
+    if not user_contact:
+        return {
+            "error": {
+                "code": "BAD_REQUEST",
+                "message": "User contact is required."
+            }
+        }, 400
+
+    if not items:
+        return {
+            "orderId": "12345",
+            "status": "Order Rejected",
+            "suggestedBooks": []
+        }, 200
+
+    if not terms_accepted:
+        return {
+            "orderId": "12345",
+            "status": "Order Rejected",
+            "suggestedBooks": []
+        }, 200
+
+    if not card_number or not expiration_date or not cvv:
+        return {
+            "orderId": "12345",
+            "status": "Order Rejected",
+            "suggestedBooks": []
+        }, 200
+
+    # Dummy success response for now
+    return {
+        "orderId": "12345",
+        "status": "Order Approved",
+        "suggestedBooks": [
+            {"bookId": "123", "title": "The Best Book", "author": "Author 1"},
+            {"bookId": "456", "title": "The Second Best Book", "author": "Author 2"}
         ]
-    }
-
-    return order_status_response, 200
+    }, 200
 
 
 if __name__ == '__main__':
