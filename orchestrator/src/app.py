@@ -5,12 +5,27 @@ import os
 # The path of the stubs is relative to the current file, or absolute inside the container.
 # Change these lines only if strictly needed.
 FILE = __file__ if '__file__' in globals() else os.getenv("PYTHONFILE", "")
-fraud_detection_grpc_path = os.path.abspath(os.path.join(FILE, '../../../utils/pb/fraud_detection'))
+
+fraud_detection_grpc_path = os.path.abspath(
+    os.path.join(FILE, '../../../utils/pb/fraud_detection')
+)
 sys.path.insert(0, fraud_detection_grpc_path)
 import fraud_detection_pb2 as fraud_detection
 import fraud_detection_pb2_grpc as fraud_detection_grpc
 
+transaction_verification_grpc_path = os.path.abspath(
+    os.path.join(FILE, '../../../utils/pb/transaction_verification')
+)
+sys.path.insert(0, transaction_verification_grpc_path)
+import transaction_verification_pb2 as transaction_verification
+import transaction_verification_pb2_grpc as transaction_verification_grpc
+
 import grpc
+
+# Import Flask.
+from flask import Flask, request
+from flask_cors import CORS
+
 
 def greet(name='you'):
     # Establish a connection with the fraud-detection gRPC service.
@@ -21,18 +36,32 @@ def greet(name='you'):
         response = stub.SayHello(fraud_detection.HelloRequest(name=name))
     return response.greeting
 
-# Import Flask.
-# Flask is a web framework for Python.
-# It allows you to build a web application quickly.
-# For more information, see https://flask.palletsprojects.com/en/latest/
-from flask import Flask, request
-from flask_cors import CORS
-import json
+
+def verify_transaction(user_name, user_contact, card_number, expiration_date, cvv, item_count, terms_accepted):
+    # Establish a connection with the transaction_verification gRPC service.
+    with grpc.insecure_channel('transaction_verification:50052') as channel:
+        # Create a stub object.
+        stub = transaction_verification_grpc.TransactionVerificationServiceStub(channel)
+        # Call the service through the stub object.
+        response = stub.VerifyTransaction(
+            transaction_verification.TransactionVerificationRequest(
+                user_name=user_name or "",
+                user_contact=user_contact or "",
+                card_number=card_number or "",
+                expiration_date=expiration_date or "",
+                cvv=cvv or "",
+                item_count=item_count,
+                terms_accepted=terms_accepted
+            )
+        )
+    return response
+
 
 # Create a simple Flask app.
 app = Flask(__name__)
 # Enable CORS for the app.
 CORS(app, resources={r'/*': {'origins': '*'}})
+
 
 # Define a GET endpoint.
 @app.route('/', methods=['GET'])
@@ -44,6 +73,7 @@ def index():
     response = greet(name='orchestrator')
     # Return the response.
     return response
+
 
 @app.route('/checkout', methods=['POST'])
 def checkout():
@@ -85,7 +115,7 @@ def checkout():
     print("EXPIRATION DATE:", expiration_date)
     print("CVV:", cvv)
 
-    # Basic validation
+    # Keep these simple bad-request checks locally
     if not user_name:
         return {
             "error": {
@@ -102,21 +132,25 @@ def checkout():
             }
         }, 400
 
-    if not items:
-        return {
-            "orderId": "12345",
-            "status": "Order Rejected",
-            "suggestedBooks": []
-        }, 200
+    item_count = len(items)
 
-    if not terms_accepted:
-        return {
-            "orderId": "12345",
-            "status": "Order Rejected",
-            "suggestedBooks": []
-        }, 200
+    print("Calling transaction_verification service...")
+    verification_response = verify_transaction(
+        user_name=user_name,
+        user_contact=user_contact,
+        card_number=card_number,
+        expiration_date=expiration_date,
+        cvv=cvv,
+        item_count=item_count,
+        terms_accepted=terms_accepted
+    )
+    print(
+        "transaction_verification result:",
+        verification_response.is_valid,
+        verification_response.message
+    )
 
-    if not card_number or not expiration_date or not cvv:
+    if not verification_response.is_valid:
         return {
             "orderId": "12345",
             "status": "Order Rejected",
