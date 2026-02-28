@@ -1,5 +1,6 @@
 import sys
 import os
+import threading
 
 # This set of lines are needed to import the gRPC stubs.
 # The path of the stubs is relative to the current file, or absolute inside the container.
@@ -29,27 +30,20 @@ import suggestions_pb2_grpc as suggestions_grpc
 
 import grpc
 
-# Import Flask.
 from flask import Flask, request
 from flask_cors import CORS
 
 
 def greet(name='you'):
-    # Establish a connection with the fraud-detection gRPC service.
     with grpc.insecure_channel('fraud_detection:50051') as channel:
-        # Create a stub object.
         stub = fraud_detection_grpc.HelloServiceStub(channel)
-        # Call the service through the stub object.
         response = stub.SayHello(fraud_detection.HelloRequest(name=name))
     return response.greeting
 
 
 def detect_fraud(user_name, card_number, item_count):
-    # Establish a connection with the fraud-detection gRPC service.
     with grpc.insecure_channel('fraud_detection:50051') as channel:
-        # Create a stub object.
         stub = fraud_detection_grpc.HelloServiceStub(channel)
-        # Call the service through the stub object.
         response = stub.CheckFraud(
             fraud_detection.FraudCheckRequest(
                 user_name=user_name or "",
@@ -61,11 +55,8 @@ def detect_fraud(user_name, card_number, item_count):
 
 
 def verify_transaction(user_name, user_contact, card_number, expiration_date, cvv, item_count, terms_accepted):
-    # Establish a connection with the transaction_verification gRPC service.
     with grpc.insecure_channel('transaction_verification:50052') as channel:
-        # Create a stub object.
         stub = transaction_verification_grpc.TransactionVerificationServiceStub(channel)
-        # Call the service through the stub object.
         response = stub.VerifyTransaction(
             transaction_verification.TransactionVerificationRequest(
                 user_name=user_name or "",
@@ -81,11 +72,8 @@ def verify_transaction(user_name, user_contact, card_number, expiration_date, cv
 
 
 def get_suggestions(user_name, item_count):
-    # Establish a connection with the suggestions gRPC service.
     with grpc.insecure_channel('suggestions:50053') as channel:
-        # Create a stub object.
         stub = suggestions_grpc.SuggestionsServiceStub(channel)
-        # Call the service through the stub object.
         response = stub.GetSuggestions(
             suggestions.SuggestionsRequest(
                 user_name=user_name or "",
@@ -95,29 +83,18 @@ def get_suggestions(user_name, item_count):
     return response
 
 
-# Create a simple Flask app.
 app = Flask(__name__)
-# Enable CORS for the app.
 CORS(app, resources={r'/*': {'origins': '*'}})
 
 
-# Define a GET endpoint.
 @app.route('/', methods=['GET'])
 def index():
-    """
-    Responds with 'Hello, [name]' when a GET request is made to '/' endpoint.
-    """
-    # Test the fraud-detection gRPC service.
     response = greet(name='orchestrator')
-    # Return the response.
     return response
 
 
 @app.route('/checkout', methods=['POST'])
 def checkout():
-    """
-    Responds with a JSON object containing the order ID, status, and suggested books.
-    """
     request_data = request.get_json(silent=True)
 
     if request_data is None:
@@ -172,58 +149,114 @@ def checkout():
 
     item_count = len(items)
 
-    print("Calling fraud_detection service...")
-    fraud_response = detect_fraud(
-        user_name=user_name,
-        card_number=card_number,
-        item_count=item_count
-    )
-    print("fraud_detection result:", fraud_response.is_fraud, fraud_response.message)
+    results = {
+        "fraud": None,
+        "verification": None,
+        "suggestions": None,
+        "errors": []
+    }
 
-    if fraud_response.is_fraud:
+    def fraud_worker():
+        try:
+            print("Calling fraud_detection service...")
+            results["fraud"] = detect_fraud(
+                user_name=user_name,
+                card_number=card_number,
+                item_count=item_count
+            )
+            print(
+                "fraud_detection result:",
+                results["fraud"].is_fraud,
+                results["fraud"].message
+            )
+        except Exception as e:
+            error_msg = f"fraud_detection failed: {e}"
+            print(error_msg)
+            results["errors"].append(error_msg)
+
+    def verification_worker():
+        try:
+            print("Calling transaction_verification service...")
+            results["verification"] = verify_transaction(
+                user_name=user_name,
+                user_contact=user_contact,
+                card_number=card_number,
+                expiration_date=expiration_date,
+                cvv=cvv,
+                item_count=item_count,
+                terms_accepted=terms_accepted
+            )
+            print(
+                "transaction_verification result:",
+                results["verification"].is_valid,
+                results["verification"].message
+            )
+        except Exception as e:
+            error_msg = f"transaction_verification failed: {e}"
+            print(error_msg)
+            results["errors"].append(error_msg)
+
+    def suggestions_worker():
+        try:
+            print("Calling suggestions service...")
+            results["suggestions"] = get_suggestions(
+                user_name=user_name,
+                item_count=item_count
+            )
+            print(
+                "suggestions returned:",
+                len(results["suggestions"].books),
+                "books"
+            )
+        except Exception as e:
+            error_msg = f"suggestions failed: {e}"
+            print(error_msg)
+            results["errors"].append(error_msg)
+
+    fraud_thread = threading.Thread(target=fraud_worker)
+    verification_thread = threading.Thread(target=verification_worker)
+    suggestions_thread = threading.Thread(target=suggestions_worker)
+
+    print("Starting worker threads...")
+    fraud_thread.start()
+    verification_thread.start()
+    suggestions_thread.start()
+
+    fraud_thread.join()
+    verification_thread.join()
+    suggestions_thread.join()
+    print("All worker threads finished.")
+
+    if results["errors"]:
+        return {
+            "error": {
+                "code": "INTERNAL_ERROR",
+                "message": "; ".join(results["errors"])
+            }
+        }, 500
+
+    if results["fraud"] and results["fraud"].is_fraud:
         return {
             "orderId": "12345",
             "status": "Order Rejected",
             "suggestedBooks": []
         }, 200
 
-    print("Calling transaction_verification service...")
-    verification_response = verify_transaction(
-        user_name=user_name,
-        user_contact=user_contact,
-        card_number=card_number,
-        expiration_date=expiration_date,
-        cvv=cvv,
-        item_count=item_count,
-        terms_accepted=terms_accepted
-    )
-    print(
-        "transaction_verification result:",
-        verification_response.is_valid,
-        verification_response.message
-    )
-
-    if not verification_response.is_valid:
+    if results["verification"] and not results["verification"].is_valid:
         return {
             "orderId": "12345",
             "status": "Order Rejected",
             "suggestedBooks": []
         }, 200
-
-    print("Calling suggestions service...")
-    suggestions_response = get_suggestions(
-        user_name=user_name,
-        item_count=item_count
-    )
-    print("suggestions returned:", len(suggestions_response.books), "books")
 
     suggested_books = []
-    for book in suggestions_response.books:
-        suggested_books.append({
-            "bookId": book.bookId,
-            "title": book.title,
-            "author": book.author
-        })
+    if results["suggestions"]:
+        for book in results["suggestions"].books:
+            suggested_books.append({
+                "bookId": book.bookId,
+                "title": book.title,
+                "author": book.author
+            })
 
     return {
         "orderId": "12345",
@@ -233,7 +266,4 @@ def checkout():
 
 
 if __name__ == '__main__':
-    # Run the app in debug mode to enable hot reloading.
-    # This is useful for development.
-    # The default port is 5000.
     app.run(host='0.0.0.0')
