@@ -7,6 +7,13 @@ import os
 FILE = __file__ if '__file__' in globals() else os.getenv("PYTHONFILE", "")
 transaction_verification_grpc_path = os.path.abspath(os.path.join(FILE, '../../../utils/pb/transaction_verification'))
 sys.path.insert(0, transaction_verification_grpc_path)
+suggestions_grpc_path = os.path.abspath(
+    os.path.join(FILE, '../../../utils/pb/suggestions')
+)
+sys.path.insert(0, suggestions_grpc_path)
+
+import suggestions_pb2 as suggestions
+import suggestions_pb2_grpc as suggestions_grpc
 import transaction_verification_pb2 as transaction_verification
 import transaction_verification_pb2_grpc as transaction_verification_grpc
 
@@ -49,6 +56,13 @@ FRAUD_DETECTION_ADDR = os.getenv("FRAUD_DETECTION_ADDR", "fraud_detection:50051"
 transaction_verification_channel = grpc.insecure_channel(TRANSACTION_VERIFICATION_ADDR)
 transaction_verification_stub = transaction_verification_grpc.TransactionVerificationServiceStub(
     transaction_verification_channel
+)
+
+SUGGESTIONS_ADDR = os.getenv("SUGGESTIONS_ADDR", "suggestions:50053")
+
+suggestions_channel = grpc.insecure_channel(SUGGESTIONS_ADDR)
+suggestions_stub = suggestions_grpc.SuggestionsServiceStub(
+    suggestions_channel
 )
 
 fraud_detection_channel = grpc.insecure_channel(FRAUD_DETECTION_ADDR)
@@ -167,8 +181,40 @@ def detect_fraud(checkout_data, correlation_id):
             error.details(),
         )
         return False, None, "Fraud detection service unavailable", latency_ms
-    
 
+def get_suggestions(checkout_data, correlation_id):
+    items = checkout_data.get("items", [])
+
+    purchased_books = [item.get("name", "") for item in items]
+
+    request_message = suggestions.SuggestionsRequest(
+        transaction_id=checkout_data.get("orderId", ""),
+        purchased_books=purchased_books,
+    )
+
+    rpc_start = time.perf_counter()
+    try:
+        response = suggestions_stub.GetSuggestions(
+            request_message,
+            timeout=RPC_TIMEOUT_SECONDS,
+        )
+        books = list(response.suggested_books)
+        latency_ms = (time.perf_counter() - rpc_start) * 1000
+        logger.info(
+            "cid=%s event=rpc_completed service=suggestions rpc=GetSuggestions ok=true latency_ms=%.2f count=%s",
+            correlation_id,
+            latency_ms,
+            len(books),
+        )
+        return books
+    except grpc.RpcError as error:
+        logger.error(
+            "cid=%s service=suggestions rpc=GetSuggestions failed code=%s details=%s",
+            correlation_id,
+            error.code(),
+            error.details(),
+        )
+        return []
 @app.route('/checkout', methods=['POST'])
 def checkout():
     """
@@ -265,13 +311,12 @@ def checkout():
             "suggestedBooks": [],
         }
 
+    suggested_books = get_suggestions(request_data, correlation_id)
+
     # Dummy
     order_status_response = {
         "status": "Order Approved",
-        "suggestedBooks": [
-            {"bookId": "123", "title": "The Best Book", "author": "Author 1"},
-            {"bookId": "456", "title": "The Second Best Book", "author": "Author 2"}
-        ]
+        "suggestedBooks": suggested_books
     }
 
     total_latency_ms = (time.perf_counter() - total_start) * 1000

@@ -147,11 +147,20 @@
                         responseDiv.className =
                             "mt-6 p-6 border rounded-lg bg-green-50 text-green-800";
 
+                        const suggestedBooksHtml = (result.suggestedBooks || [])
+                            .map(book => `<li>${escapeHtml(book)}</li>`)
+                            .join('');
+
                         responseDiv.innerHTML = `
-                            <h2 class="text-xl font-semibold mb-2">✅ Order Approved</h2>
-                            <p>Your order has been successfully processed.</p>
-                        `;
-                    } else if (result.status === "Order Rejected") {
+                        <h2 class="text-xl font-semibold mb-2">✅ Order Approved</h2>
+                        <p class="mb-3">Your order has been successfully processed.</p>
+
+                        <h3 class="font-semibold mt-4 mb-2">📚 Suggested Books</h3>
+                        <ul class="list-disc pl-6 space-y-1">
+                            ${suggestedBooksHtml}
+                        </ul>
+                    `;
+                    }else if (result.status === "Order Rejected") {
                         const reasons = Array.isArray(result.reasons) ? result.reasons : [];
 
                         const reasonsHtml = reasons
