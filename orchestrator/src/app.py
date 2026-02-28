@@ -20,6 +20,13 @@ sys.path.insert(0, transaction_verification_grpc_path)
 import transaction_verification_pb2 as transaction_verification
 import transaction_verification_pb2_grpc as transaction_verification_grpc
 
+suggestions_grpc_path = os.path.abspath(
+    os.path.join(FILE, '../../../utils/pb/suggestions')
+)
+sys.path.insert(0, suggestions_grpc_path)
+import suggestions_pb2 as suggestions
+import suggestions_pb2_grpc as suggestions_grpc
+
 import grpc
 
 # Import Flask.
@@ -52,6 +59,21 @@ def verify_transaction(user_name, user_contact, card_number, expiration_date, cv
                 cvv=cvv or "",
                 item_count=item_count,
                 terms_accepted=terms_accepted
+            )
+        )
+    return response
+
+
+def get_suggestions(user_name, item_count):
+    # Establish a connection with the suggestions gRPC service.
+    with grpc.insecure_channel('suggestions:50053') as channel:
+        # Create a stub object.
+        stub = suggestions_grpc.SuggestionsServiceStub(channel)
+        # Call the service through the stub object.
+        response = stub.GetSuggestions(
+            suggestions.SuggestionsRequest(
+                user_name=user_name or "",
+                item_count=item_count
             )
         )
     return response
@@ -157,14 +179,25 @@ def checkout():
             "suggestedBooks": []
         }, 200
 
-    # Dummy success response for now
+    print("Calling suggestions service...")
+    suggestions_response = get_suggestions(
+        user_name=user_name,
+        item_count=item_count
+    )
+    print("suggestions returned:", len(suggestions_response.books), "books")
+
+    suggested_books = []
+    for book in suggestions_response.books:
+        suggested_books.append({
+            "bookId": book.bookId,
+            "title": book.title,
+            "author": book.author
+        })
+
     return {
         "orderId": "12345",
         "status": "Order Approved",
-        "suggestedBooks": [
-            {"bookId": "123", "title": "The Best Book", "author": "Author 1"},
-            {"bookId": "456", "title": "The Second Best Book", "author": "Author 2"}
-        ]
+        "suggestedBooks": suggested_books
     }, 200
 
 
