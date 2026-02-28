@@ -44,6 +44,22 @@ def greet(name='you'):
     return response.greeting
 
 
+def detect_fraud(user_name, card_number, item_count):
+    # Establish a connection with the fraud-detection gRPC service.
+    with grpc.insecure_channel('fraud_detection:50051') as channel:
+        # Create a stub object.
+        stub = fraud_detection_grpc.HelloServiceStub(channel)
+        # Call the service through the stub object.
+        response = stub.CheckFraud(
+            fraud_detection.FraudCheckRequest(
+                user_name=user_name or "",
+                card_number=card_number or "",
+                item_count=item_count
+            )
+        )
+    return response
+
+
 def verify_transaction(user_name, user_contact, card_number, expiration_date, cvv, item_count, terms_accepted):
     # Establish a connection with the transaction_verification gRPC service.
     with grpc.insecure_channel('transaction_verification:50052') as channel:
@@ -155,6 +171,21 @@ def checkout():
         }, 400
 
     item_count = len(items)
+
+    print("Calling fraud_detection service...")
+    fraud_response = detect_fraud(
+        user_name=user_name,
+        card_number=card_number,
+        item_count=item_count
+    )
+    print("fraud_detection result:", fraud_response.is_fraud, fraud_response.message)
+
+    if fraud_response.is_fraud:
+        return {
+            "orderId": "12345",
+            "status": "Order Rejected",
+            "suggestedBooks": []
+        }, 200
 
     print("Calling transaction_verification service...")
     verification_response = verify_transaction(

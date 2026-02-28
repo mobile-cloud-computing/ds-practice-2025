@@ -1,0 +1,20 @@
+{
+  "user": {
+    "name": "Test User",
+    "contact": "test@example.com",
+    "creditCard": {
+      "number": "4111111111110000",
+      "expirationDate": "12/30",
+      "cvv": "123"
+    },
+    "userComment": "Please handle with care."
+  },
+  "items": [
+    {
+      "name": "Book A",
+      "quantity": 1
+    }
+  ],
+  "shippingMethod": "Standard",
+  "termsAndConditionsAccepted": true
+}

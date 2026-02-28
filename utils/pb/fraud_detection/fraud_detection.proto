@@ -3,13 +3,25 @@ syntax = "proto3";
 package hello;
 
 service HelloService {
-    rpc SayHello (HelloRequest) returns (HelloResponse);
+  rpc SayHello (HelloRequest) returns (HelloResponse);
+  rpc CheckFraud (FraudCheckRequest) returns (FraudCheckResponse);
 }
 
 message HelloRequest {
-    string name = 1;
+  string name = 1;
 }
 
 message HelloResponse {
-    string greeting = 1;
+  string greeting = 1;
+}
+
+message FraudCheckRequest {
+  string user_name = 1;
+  string card_number = 2;
+  int32 item_count = 3;
+}
+
+message FraudCheckResponse {
+  bool is_fraud = 1;
+  string message = 2;
 }

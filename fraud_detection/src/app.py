@@ -1,45 +1,64 @@
 import sys
 import os
+from concurrent import futures
 
 # This set of lines are needed to import the gRPC stubs.
-# The path of the stubs is relative to the current file, or absolute inside the container.
-# Change these lines only if strictly needed.
 FILE = __file__ if '__file__' in globals() else os.getenv("PYTHONFILE", "")
-fraud_detection_grpc_path = os.path.abspath(os.path.join(FILE, '../../../utils/pb/fraud_detection'))
+fraud_detection_grpc_path = os.path.abspath(
+    os.path.join(FILE, '../../../utils/pb/fraud_detection')
+)
 sys.path.insert(0, fraud_detection_grpc_path)
+
+import grpc
 import fraud_detection_pb2 as fraud_detection
 import fraud_detection_pb2_grpc as fraud_detection_grpc
 
-import grpc
-from concurrent import futures
 
-# Create a class to define the server functions, derived from
-# fraud_detection_pb2_grpc.HelloServiceServicer
 class HelloService(fraud_detection_grpc.HelloServiceServicer):
-    # Create an RPC function to say hello
     def SayHello(self, request, context):
-        # Create a HelloResponse object
         response = fraud_detection.HelloResponse()
-        # Set the greeting field of the response object
         response.greeting = "Hello, " + request.name
-        # Print the greeting message
         print(response.greeting)
-        # Return the response object
         return response
 
+    def CheckFraud(self, request, context):
+        print("Received fraud check request")
+        print("user_name:", request.user_name)
+        print("card_number:", request.card_number)
+        print("item_count:", request.item_count)
+
+        is_fraud = False
+        message = "No fraud detected."
+
+        # Very simple dummy rules for now
+        if request.item_count > 10:
+            is_fraud = True
+            message = "Too many items in order."
+        elif request.card_number.endswith("0000"):
+            is_fraud = True
+            message = "Suspicious card number pattern."
+        elif "fraud" in request.user_name.lower():
+            is_fraud = True
+            message = "Suspicious user name."
+
+        response = fraud_detection.FraudCheckResponse()
+        response.is_fraud = is_fraud
+        response.message = message
+
+        print("Returning fraud result:", response.is_fraud, response.message)
+        return response
+
+
 def serve():
-    # Create a gRPC server
     server = grpc.server(futures.ThreadPoolExecutor())
-    # Add HelloService
     fraud_detection_grpc.add_HelloServiceServicer_to_server(HelloService(), server)
-    # Listen on port 50051
+
     port = "50051"
     server.add_insecure_port("[::]:" + port)
-    # Start the server
     server.start()
-    print("Server started. Listening on port 50051.")
-    # Keep thread alive
+    print("Fraud detection server started. Listening on port 50051.")
     server.wait_for_termination()
+
 
 if __name__ == '__main__':
     serve()
