@@ -255,10 +255,11 @@ def checkout():
     )
 
     results = {}
-    with ThreadPoolExecutor(max_workers=2) as executor:
+    with ThreadPoolExecutor(max_workers=3) as executor:
         future_to_service = {
             executor.submit(verify_transaction, request_data, correlation_id): "transaction_verification",
             executor.submit(detect_fraud, request_data, correlation_id): "fraud_detection",
+            executor.submit(get_suggestions, request_data, correlation_id): "suggestions",
         }
 
         for future in as_completed(future_to_service):
@@ -269,6 +270,8 @@ def checkout():
                 logger.exception("cid=%s service=%s unexpected_error=true", correlation_id, service_name)
                 if service_name == "transaction_verification":
                     results[service_name] = (False, None, "Transaction verification service unavailable", None)
+                elif service_name == 'suggestions':
+                    results[service_name] = (False, None, "Book suggestions service unavailable", None)
                 else:
                     results[service_name] = (False, None, "Fraud detection service unavailable", None)
 
@@ -280,6 +283,7 @@ def checkout():
         "fraud_detection",
         (False, None, "Fraud detection service unavailable", None),
     )
+    suggested_books = results.get("suggestions", [])
 
     reject_reasons = []
 
@@ -311,8 +315,7 @@ def checkout():
             "suggestedBooks": [],
         }
 
-    suggested_books = get_suggestions(request_data, correlation_id)
-
+    suggested_books = suggested_books
     # Dummy
     order_status_response = {
         "status": "Order Approved",
