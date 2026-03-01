@@ -154,6 +154,7 @@ def checkout():
             suggested_titles = suggestions_future.result()
         logging.info(f"Fraud detection completed: is_fraud={is_fraud}")
         logging.info(f"Transaction verification completed: is_verified={is_verified}")
+        logging.info(f"Suggestions retrieval completed: suggested_titles={suggested_titles}")
         # Prepare the order status based on fraud detection and transaction verification results
         if is_fraud:
             status = 'Order Declined due to suspected fraud'
