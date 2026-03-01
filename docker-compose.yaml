@@ -68,7 +68,7 @@ services:
     ports:
       - 50053:50053
     env_file:
-      - ./suggestions/.env
+      - ./.env
     environment:
       - PYTHONUNBUFFERED=TRUE
       - PYTHONFILE=/app/suggestions/src/app.py
