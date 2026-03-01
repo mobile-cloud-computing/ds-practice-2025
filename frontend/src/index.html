@@ -124,7 +124,9 @@
                 const responseDiv = document.getElementById('response');
 
                 if (response.ok) {
-                    const suggestedBooks = result.suggestedBooks.map(book => `<li>${book.title} by ${book.author}</li>`).join('');
+                    const suggestedBooks = result.suggestedBooks.map(book =>
+                        `<li><strong>${book.title}</strong> by ${book.author}<br><span class="text-sm text-gray-600">${book.description || "No description available."}</span></li>`
+                    ).join('');
                     responseDiv.innerHTML = `
                         <strong>Order status: ${result.status}</strong><br>
                         Order ID: ${result.orderId}<br>

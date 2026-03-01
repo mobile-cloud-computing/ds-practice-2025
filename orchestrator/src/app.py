@@ -13,6 +13,7 @@ import os
 
 from fraud_detection import check_fraud
 from transaction_verification import verify_transaction
+from recommendation import get_recommendations
 
 FILE = __file__ if '__file__' in globals() else os.getenv("PYTHONFILE", "")
 utils_path = os.path.abspath(os.path.join(FILE, '../../../utils/'))
@@ -56,17 +57,13 @@ async def checkout():
     logger.info(f"Request Data: {request_data.get('items')}")
 
     order_id = '12345'
+    suggested_books = []
 
     parallel_results = await asyncio.gather(
         check_fraud(request_data),
         verify_transaction(request_data),
     )
     results = transform_results(parallel_results)
-
-    suggested_books = [
-        {'bookId': '123', 'title': 'The Best Book', 'author': 'Author 1'},
-        {'bookId': '456', 'title': 'The Second Best Book', 'author': 'Author 2'}
-    ]
 
     order_response = {
         'orderId': order_id,
@@ -81,6 +78,8 @@ async def checkout():
         order_response["errorMessage"] = results['transaction_verification']['error_message']
     else:
         order_response["status"] = "Order Approved"
+        recommendation_result = await get_recommendations(request_data)
+        order_response["suggestedBooks"] = recommendation_result["data"]["suggested_books"]
     
     return order_response
 
