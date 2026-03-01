@@ -30,12 +30,34 @@ services:
       # The PYTHONFILE environment variable specifies the absolute entry point of the application
       # Check app.py in the orchestrator directory to see how this is used
       - PYTHONFILE=/app/orchestrator/src/app.py
+<<<<<<< HEAD
+=======
+      - RECOMMENDATION_GRPC_TARGET=recomendation_sys:50053
+>>>>>>> a61f11b (Final version of AI recommendation system)
     volumes:
       # Mount the utils directory in the current directory to the /app/utils directory in the container
       - ./utils:/app/utils
       # Mount the orchestrator/src directory in the current directory to the /app/orchestrator/src directory in the container
       - ./orchestrator/src:/app/orchestrator/src
       - ./logs:/app/logs
+<<<<<<< HEAD
+=======
+  recomendation_sys:
+    build:
+      context: ./
+      dockerfile: ./recomendation_sys/Dockerfile
+    ports:
+      - 50053:50053
+    environment:
+      - PYTHONUNBUFFERED=TRUE
+      - PYTHONFILE=/app/recomendation_sys/src/app.py
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - OPENAI_MODEL=${OPENAI_MODEL:-gpt-5.2}
+    volumes:
+      - ./utils:/app/utils
+      - ./recomendation_sys/src:/app/recomendation_sys/src
+      - ./logs:/app/logs
+>>>>>>> a61f11b (Final version of AI recommendation system)
   fraud_detection:
     build:
       # Use the current directory as the build context
