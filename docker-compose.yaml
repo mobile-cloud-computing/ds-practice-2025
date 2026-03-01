@@ -1,4 +1,3 @@
-version: '3'
 services:
   frontend:
     build:
@@ -57,3 +56,17 @@ services:
       - ./utils:/app/utils
       # Mount the fraud_detection/src directory in the current directory to the /app/fraud_detection/src directory in the container
       - ./fraud_detection/src:/app/fraud_detection/src
+
+  suggestions:
+    build:
+      context: ./
+      dockerfile: ./suggestions/Dockerfile
+    ports:
+      - 50053:50053
+    env_file:
+      - suggestions/.env
+    volumes:
+      # Mount the utils directory in the current directory to the /app/utils directory in the container
+      - ./utils:/app/utils
+      # Mount the fraud_detection/src directory in the current directory to the /app/fraud_detection/src directory in the container
+      - ./suggestions/src:/app/suggestions/src
