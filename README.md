@@ -1,46 +1,116 @@
-# Distributed Systems @ University of Tartu
+# Distributed Bookstore System
 
-This repository contains the initial code for the practice sessions of the Distributed Systems course at the University of Tartu.
+Distributed Systems course project @ University of Tartu — an online bookstore checkout system built with a microservices architecture.
 
-## Getting started
+The frontend sends checkout requests to an orchestrator, which coordinates transaction verification, fraud detection, and book suggestions via gRPC.
 
-### Overview
+## Architecture
 
-The code consists of multiple services. Each service is located in a separate folder. The `frontend` service folder contains a Dockerfile and the code for an example bookstore application. Each backend service folder (e.g. `orchestrator` or `fraud_detection`) contains a Dockerfile, a requirements.txt file and the source code of the service. During the practice sessions, you will implement the missing functionality in these backend services, or extend the backend with new services.
-
-There is also a `utils` folder that contains some helper code or specifications that are used by multiple services. Check the `utils` folder for more information.
-
-### Running the code with Docker Compose [recommended]
-
-To run the code, you need to clone this repository, make sure you have Docker and Docker Compose installed, and run the following command in the root folder of the repository:
-
-```bash
-docker compose up
+```mermaid
+graph TD
+    A[User] --> B[Frontend<br/>Port: 8080<br/>Nginx / HTTP]
+    B --> C[Orchestrator<br/>Port: 8081<br/>Flask REST API]
+    C -->|1. gRPC| D[Transaction Verification<br/>Port: 50052]
+    C -->|2. gRPC| E[Fraud Detection<br/>Port: 50051]
+    C -->|3. gRPC| F[Suggestions<br/>Port: 50053]
 ```
 
-This will start the system with the multiple services. Each service will be restarted automatically when you make changes to the code, so you don't have to restart the system manually while developing. If you want to know how the services are started and configured, check the `docker-compose.yaml` file.
+All backend services run in Docker containers. The orchestrator calls the three gRPC services **sequentially**: verification must pass before fraud detection runs, and suggestions are fetched last.
 
-The checkpoint evaluations will be done using the code that is started with Docker Compose, so make sure that your code works with Docker Compose.
+## Services
 
-If, for some reason, changes to the code are not reflected, try to force rebuilding the Docker images with the following command:
+| Service | Port | Protocol | Description |
+|---------|------|----------|-------------|
+| **Frontend** | 8080 | HTTP (Nginx) | Static HTML/JS checkout form served by Nginx |
+| **Orchestrator** | 8081 | REST (Flask) | Receives checkout requests, coordinates gRPC calls |
+| **Transaction Verification** | 50052 | gRPC | Validates email, card number, CVV, expiration date, and billing address |
+| **Fraud Detection** | 50051 | gRPC | Flags orders with amount > 1000 or card prefix "999" |
+| **Suggestions** | 50053 | gRPC | Returns a static list of recommended books |
+
+## Checkout Flow
+
+```mermaid
+sequenceDiagram
+    participant U as User
+    participant F as Frontend
+    participant O as Orchestrator
+    participant TV as Transaction Verification
+    participant FD as Fraud Detection
+    participant S as Suggestions
+
+    U->>F: Submit order form
+    F->>O: POST /checkout (JSON)
+    O->>TV: gRPC VerifyTransaction
+    TV-->>O: is_valid + message
+    alt Transaction invalid
+        O-->>F: Order Denied (reason from TV)
+        F-->>U: Yellow/amber error with specific message
+    end
+    O->>FD: gRPC CheckFraud
+    FD-->>O: is_fraud
+    alt Fraud detected
+        O-->>F: Order Denied (fraud)
+        F-->>U: Red error
+    end
+    O->>S: gRPC GetSuggestions
+    S-->>O: list of books
+    O-->>F: Order Approved + suggestions
+    F-->>U: Green success with suggested books
+```
+
+## Validation Rules (Transaction Verification)
+
+| Field | Rule |
+|-------|------|
+| Email | Must match `[^@]+@[^@]+\.[^@]+` |
+| Card number | Exactly 16 digits |
+| CVV | 3 or 4 digits |
+| Expiration date | Format `MM/YY`, must not be expired (year/month comparison) |
+| Billing street | At least 5 characters |
+| Billing city | At least 2 characters |
+| Billing state | Alphabetic characters only |
+| Billing ZIP | Exactly 5 digits |
+| Billing country | At least 2 characters |
+
+## Fraud Detection Rules
+
+| Rule | Trigger |
+|------|---------|
+| High amount | `order_amount > 1000` (based on total item quantity) |
+| Suspicious card | Card number starts with `"999"` |
+
+## How to Run
 
 ```bash
 docker compose up --build
 ```
 
-### Run the code locally
+The frontend will be available at [http://localhost:8080](http://localhost:8080).
 
-Even though you can run the code locally, it is recommended to use Docker and Docker Compose to run the code. This way you don't have to install any dependencies locally and you can easily run the code on any platform.
+Services are configured in `docker-compose.yaml`. Code changes are hot-reloaded automatically — no restart needed during development.
 
-If you want to run the code locally, you need to install the following dependencies:
+### Running locally (alternative)
 
-backend services:
-- Python 3.8 or newer
-- pip
-- [grpcio-tools](https://grpc.io/docs/languages/python/quickstart/)
-- requirements.txt dependencies from each service
+- Python 3.8+, pip, [grpcio-tools](https://grpc.io/docs/languages/python/quickstart/)
+- Install each service's `requirements.txt`
+- Frontend: open `frontend/src/index.html` in a browser
 
-frontend service:
-- It's a simple static HTML page, you can open `frontend/src/index.html` in your browser.
+## Project Structure
 
-And then run each service individually.
+```
+frontend/          Static HTML/JS checkout page (served by Nginx)
+orchestrator/      Flask REST API — coordinates the checkout pipeline
+fraud_detection/   gRPC service — fraud rule checks
+transaction_verification/  gRPC service — field validation
+suggestions/       gRPC service — book recommendations
+utils/             Shared protobuf definitions and helper scripts
+docs/              Documentation and project plans
+```
+
+## Known Limitations
+
+- Suggestions are static and do not depend on the items in the cart
+- Order amount for fraud detection is based on item quantity sum, not actual prices
+- Item list is hardcoded in the frontend (Book A, Book B)
+- Only US ZIP codes (5 digits) are supported for billing address
+- The orchestrator assigns a static order ID ("12345")
