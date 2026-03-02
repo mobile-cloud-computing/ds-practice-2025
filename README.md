@@ -27,7 +27,7 @@ All backend services run in Docker containers. The orchestrator calls the three 
 | **Fraud Detection** | 50051 | gRPC | Flags orders with amount > 1000 or card prefix "999" |
 | **Suggestions** | 50053 | gRPC | Returns a static list of recommended books |
 
-## Checkout Flow
+## System diagram
 
 ```mermaid
 sequenceDiagram
