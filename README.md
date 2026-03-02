@@ -38,8 +38,10 @@ sequenceDiagram
     participant FD as Fraud Detection
     participant S as Suggestions
 
+    rect rgb(240, 240, 240)
+    note right of U: Checkout flow
     U->>F: Submit order form
-    F->>O: POST /checkout (JSON)
+    F->>O: POST /checkout
     O->>TV: gRPC VerifyTransaction
     TV-->>O: is_valid + message
     alt Transaction invalid
@@ -51,11 +53,21 @@ sequenceDiagram
     alt Fraud detected
         O-->>F: Order Denied (fraud)
         F-->>U: Red error
+    else Order approved
+        O-->>F: Order Approved
+        F-->>U: Green success
     end
+    end
+
+    rect rgb(235, 245, 235)
+    note right of U: Suggestions flow
+    U->>F: Click "Test Suggestions"
+    F->>O: POST /suggestions
     O->>S: gRPC GetSuggestions
     S-->>O: list of books
-    O-->>F: Order Approved + suggestions
-    F-->>U: Green success with suggested books
+    O-->>F: suggestedBooks
+    F-->>U: Display book list
+    end
 ```
 
 ## Validation Rules (Transaction Verification)
