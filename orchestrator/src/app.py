@@ -49,10 +49,10 @@ def detect_fraud(user_name, card_number, item_count):
                 user_name=user_name or "",
                 card_number=card_number or "",
                 item_count=item_count
-            )
+            ),
+            timeout=5.0  # seconds
         )
     return response
-
 
 def verify_transaction(user_name, user_contact, card_number, expiration_date, cvv, item_count, terms_accepted):
     with grpc.insecure_channel('transaction_verification:50052') as channel:
@@ -110,15 +110,16 @@ def checkout():
     shipping_method = request_data.get("shippingMethod")
     terms_accepted = request_data.get("termsAndConditionsAccepted", False)
 
-    user_name = user.get("name")
-    user_contact = user.get("contact")
+    # Normalize user fields and enforce that user_name is not empty or just spaces
+    user_name = (user.get("name") or "").strip()
+    user_contact = (user.get("contact") or "").strip()
     user_comment = user.get("userComment", "")
 
     credit_card = user.get("creditCard", {})
-    card_number = credit_card.get("number")
+    card_number = credit_card.get("number").strip()
     masked_card_number = mask_fixed(card_number)
-    expiration_date = credit_card.get("expirationDate")
-    cvv = credit_card.get("cvv")
+    expiration_date = credit_card.get("expirationDate").strip()
+    cvv = credit_card.get("cvv").strip()
     print(
         "Received a request for checkout of user : {} for card number : {}".format(
             user_name, masked_card_number
@@ -127,19 +128,20 @@ def checkout():
 
 
     # Keep these simple bad-request checks locally
-    if not user_name:
+    # user_name must not be empty or contain spaces
+    if not user_name or "" == user_name:
         return {
             "error": {
                 "code": "BAD_REQUEST",
-                "message": "User name is required."
+                "message": "User name is required and must not contain spaces."
             }
         }, 400
 
-    if not user_contact:
+    if not user_contact or "" == user_contact:
         return {
             "error": {
                 "code": "BAD_REQUEST",
-                "message": "User contact is required."
+                "message": "User contact is required and must not contain spaces."
             }
         }, 400
 
@@ -166,10 +168,8 @@ def checkout():
                 results["fraud"].message
             )
         except Exception as e:
-            error_msg = f"fraud_detection failed: {e}"
-            print(error_msg)
-            results["errors"].append(error_msg)
-
+            print(f"fraud_detection failed: {e}")  # Full detail for server logs
+            results["errors"].append("fraud_detection service unavailable")  # Sanitized for client
     def verification_worker():
         try:
             print("Calling transaction_verification service...")

@@ -16,11 +16,11 @@ The following diagrams give a high-level view of the system and how the services
 
 **System overview**
 
-![System diagram](../system_diagram.png)
+![System diagram](./system_diagram.png)
 
 **Service architecture**
 
-![Service architecture diagram](../architecture_diagram.png)
+![Service architecture diagram](./architecture_diagram.png)
 
 ### Running the code with Docker Compose [recommended]
 

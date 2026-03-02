@@ -44,14 +44,13 @@ class HelloService(fraud_detection_grpc.HelloServiceServicer):
             is_fraud = True
             message = "Invalid card number."
 
-        elif request.card_number.startswith("0000"):
+        elif card_digits.startswith("0000"):
             is_fraud = True
             message = "Suspicious card number pattern."
 
-        elif request.card_number.endswith("0000"):
+        elif card_digits.endswith("0000"):
             is_fraud = True
             message = "Suspicious card number pattern."
-
         elif "fraud" in request.user_name.lower():
             is_fraud = True
             message = "Suspicious user name."
