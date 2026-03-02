@@ -14,7 +14,7 @@ _sym_db = _symbol_database.Default()
 
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x15\x66raud_detection.proto\x12\x05hello\"\x1c\n\x0cHelloRequest\x12\x0c\n\x04name\x18\x01 \x01(\t\"!\n\rHelloResponse\x12\x10\n\x08greeting\x18\x01 \x01(\t2E\n\x0cHelloService\x12\x35\n\x08SayHello\x12\x13.hello.HelloRequest\x1a\x14.hello.HelloResponseb\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x15\x66raud_detection.proto\x12\x05hello\"\x1c\n\x0cHelloRequest\x12\x0c\n\x04name\x18\x01 \x01(\t\"!\n\rHelloResponse\x12\x10\n\x08greeting\x18\x01 \x01(\t\"O\n\x11\x46raudCheckRequest\x12\x11\n\tuser_name\x18\x01 \x01(\t\x12\x13\n\x0b\x63\x61rd_number\x18\x02 \x01(\t\x12\x12\n\nitem_count\x18\x03 \x01(\x05\"7\n\x12\x46raudCheckResponse\x12\x10\n\x08is_fraud\x18\x01 \x01(\x08\x12\x0f\n\x07message\x18\x02 \x01(\t2\x88\x01\n\x0cHelloService\x12\x35\n\x08SayHello\x12\x13.hello.HelloRequest\x1a\x14.hello.HelloResponse\x12\x41\n\nCheckFraud\x12\x18.hello.FraudCheckRequest\x1a\x19.hello.FraudCheckResponseb\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
@@ -25,6 +25,10 @@ if _descriptor._USE_C_DESCRIPTORS == False:
   _globals['_HELLOREQUEST']._serialized_end=60
   _globals['_HELLORESPONSE']._serialized_start=62
   _globals['_HELLORESPONSE']._serialized_end=95
-  _globals['_HELLOSERVICE']._serialized_start=97
-  _globals['_HELLOSERVICE']._serialized_end=166
+  _globals['_FRAUDCHECKREQUEST']._serialized_start=97
+  _globals['_FRAUDCHECKREQUEST']._serialized_end=176
+  _globals['_FRAUDCHECKRESPONSE']._serialized_start=178
+  _globals['_FRAUDCHECKRESPONSE']._serialized_end=233
+  _globals['_HELLOSERVICE']._serialized_start=236
+  _globals['_HELLOSERVICE']._serialized_end=372
 # @@protoc_insertion_point(module_scope)
