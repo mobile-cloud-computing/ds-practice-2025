@@ -56,7 +56,6 @@ sequenceDiagram
         O-->>F: Order Approved
         F-->>U: Green success
     end
-    end
 
     note right of U: Suggestions flow
     U->>F: Click "Test Suggestions"
@@ -65,7 +64,6 @@ sequenceDiagram
     S-->>O: list of books
     O-->>F: suggestedBooks
     F-->>U: Display book list
-    end
 ```
 
 ## Validation Rules (Transaction Verification)
