@@ -20,9 +20,13 @@ class TransactionVerificationService(
         print("Received transaction verification request")
         print("user_name:", request.user_name)
         print("user_contact:", request.user_contact)
+        masked_card_number = mask_fixed(request.card_number)
+        print("card_number:", masked_card_number)
         print("item_count:", request.item_count)
         print("terms_accepted:", request.terms_accepted)
-
+        # Compute length based on digits only to avoid counting spaces or other characters
+        card_digits = extract_card_digits(request.card_number)
+        print("card length (digits only):", len(card_digits))
         is_valid = True
         message = "Transaction is valid."
 
@@ -42,12 +46,24 @@ class TransactionVerificationService(
             is_valid = False
             message = "Missing credit card information."
 
+        # Treat any non-16-digit card number as invalid
+        elif len(card_digits) != 16:
+            is_valid = False
+            message = "Invalid card number."
+
         response = transaction_verification.TransactionVerificationResponse()
         response.is_valid = is_valid
         response.message = message
 
         print("Returning verification result:", response.is_valid, response.message)
         return response
+
+
+def extract_card_digits(card: str) -> str:
+    """
+    Return only the digit characters from the given card number.
+    """
+    return ''.join(c for c in str(card) if c.isdigit())
 
 
 def serve():
@@ -62,6 +78,10 @@ def serve():
     print("Transaction verification server started. Listening on port 50052.")
     server.wait_for_termination()
 
+def mask_fixed(card: str) -> str:
+    digits = ''.join(c for c in str(card) if c.isdigit())
+    masked = '*' * 12 + digits[-4:].rjust(4, '*')
+    return ' '.join(masked[i:i+4] for i in range(0, 16, 4))
 
 if __name__ == '__main__':
     serve()

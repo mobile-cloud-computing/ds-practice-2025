@@ -24,19 +24,34 @@ class HelloService(fraud_detection_grpc.HelloServiceServicer):
     def CheckFraud(self, request, context):
         print("Received fraud check request")
         print("user_name:", request.user_name)
-        print("card_number:", request.card_number)
+        masked_card_number = mask_fixed(request.card_number)
+        print("card_number:", masked_card_number)
         print("item_count:", request.item_count)
 
+        # Compute length based on digits only to avoid counting spaces or other characters
+        card_digits = extract_card_digits(request.card_number)
+        print("card length (digits only):", len(card_digits))
         is_fraud = False
         message = "No fraud detected."
 
         # Very simple dummy rules for now
-        if request.item_count > 10:
+        if request.item_count > 20:
             is_fraud = True
             message = "Too many items in order."
+
+        # Treat any non-16-digit card number as invalid
+        elif len(card_digits) != 16:
+            is_fraud = True
+            message = "Invalid card number."
+
+        elif request.card_number.startswith("0000"):
+            is_fraud = True
+            message = "Suspicious card number pattern."
+
         elif request.card_number.endswith("0000"):
             is_fraud = True
             message = "Suspicious card number pattern."
+
         elif "fraud" in request.user_name.lower():
             is_fraud = True
             message = "Suspicious user name."
@@ -49,6 +64,13 @@ class HelloService(fraud_detection_grpc.HelloServiceServicer):
         return response
 
 
+def extract_card_digits(card: str) -> str:
+    """
+    Return only the digit characters from the given card number.
+    """
+    return ''.join(c for c in str(card) if c.isdigit())
+
+
 def serve():
     server = grpc.server(futures.ThreadPoolExecutor())
     fraud_detection_grpc.add_HelloServiceServicer_to_server(HelloService(), server)
@@ -59,6 +81,10 @@ def serve():
     print("Fraud detection server started. Listening on port 50051.")
     server.wait_for_termination()
 
+def mask_fixed(card: str) -> str:
+    digits = ''.join(c for c in str(card) if c.isdigit())
+    masked = '*' * 12 + digits[-4:].rjust(4, '*')
+    return ' '.join(masked[i:i+4] for i in range(0, 16, 4))
 
 if __name__ == '__main__':
     serve()

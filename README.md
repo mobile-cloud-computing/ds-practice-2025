@@ -10,6 +10,18 @@ The code consists of multiple services. Each service is located in a separate fo
 
 There is also a `utils` folder that contains some helper code or specifications that are used by multiple services. Check the `utils` folder for more information.
 
+### Architecture
+
+The following diagrams give a high-level view of the system and how the services interact.
+
+**System overview**
+
+![System diagram](../system_diagram.png)
+
+**Service architecture**
+
+![Service architecture diagram](../architecture_diagram.png)
+
 ### Running the code with Docker Compose [recommended]
 
 To run the code, you need to clone this repository, make sure you have Docker and Docker Compose installed, and run the following command in the root folder of the repository:

@@ -116,19 +116,15 @@ def checkout():
 
     credit_card = user.get("creditCard", {})
     card_number = credit_card.get("number")
+    masked_card_number = mask_fixed(card_number)
     expiration_date = credit_card.get("expirationDate")
     cvv = credit_card.get("cvv")
+    print(
+        "Received a request for checkout of user : {} for card number : {}".format(
+            user_name, masked_card_number
+        )
+    )
 
-    print("FULL REQUEST DATA:", request_data)
-    print("USER NAME:", user_name)
-    print("USER CONTACT:", user_contact)
-    print("USER COMMENT:", user_comment)
-    print("ITEMS:", items)
-    print("SHIPPING METHOD:", shipping_method)
-    print("TERMS ACCEPTED:", terms_accepted)
-    print("CARD NUMBER:", card_number)
-    print("EXPIRATION DATE:", expiration_date)
-    print("CVV:", cvv)
 
     # Keep these simple bad-request checks locally
     if not user_name:
@@ -264,6 +260,10 @@ def checkout():
         "suggestedBooks": suggested_books
     }, 200
 
+def mask_fixed(card: str) -> str:
+    digits = ''.join(c for c in str(card) if c.isdigit())
+    masked = '*' * 12 + digits[-4:].rjust(4, '*')
+    return ' '.join(masked[i:i+4] for i in range(0, 16, 4))
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0')
