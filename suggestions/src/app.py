@@ -32,7 +32,7 @@ def serve():
     server = grpc.server(futures.ThreadPoolExecutor())
     # Add SuggestionsService
     suggestions_grpc.add_SuggestionsServiceServicer_to_server(SuggestionsService(), server)
-    # Listen on port 50052
+    # Listen on port 50053
     port = "50053"
     server.add_insecure_port("[::]:" + port)
     # Start the server
