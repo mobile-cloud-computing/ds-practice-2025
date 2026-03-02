@@ -1,38 +1,29 @@
 import sys
 import os
-import threading
 
-# This set of lines are needed to import the gRPC stubs.
-# The path of the stubs is relative to the current file, or absolute inside the container.
-# Change these lines only if strictly needed.
 FILE = __file__ if '__file__' in globals() else os.getenv("PYTHONFILE", "")
 
-fraud_detection_grpc_path = os.path.abspath(
-    os.path.join(FILE, '../../../utils/pb/fraud_detection')
-)
+# Import fraud detection stubs
+fraud_detection_grpc_path = os.path.abspath(os.path.join(FILE, '../../../utils/pb/fraud_detection'))
 sys.path.insert(0, fraud_detection_grpc_path)
 import fraud_detection_pb2 as fraud_detection
 import fraud_detection_pb2_grpc as fraud_detection_grpc
 
-transaction_verification_grpc_path = os.path.abspath(
-    os.path.join(FILE, '../../../utils/pb/transaction_verification')
-)
+# Import transaction verification stubs
+transaction_verification_grpc_path = os.path.abspath(os.path.join(FILE, '../../../utils/pb/transaction_verification'))
 sys.path.insert(0, transaction_verification_grpc_path)
 import transaction_verification_pb2 as transaction_verification
 import transaction_verification_pb2_grpc as transaction_verification_grpc
 
-suggestions_grpc_path = os.path.abspath(
-    os.path.join(FILE, '../../../utils/pb/suggestions')
-)
+# Import suggestions stubs
+suggestions_grpc_path = os.path.abspath(os.path.join(FILE, '../../../utils/pb/suggestions'))
 sys.path.insert(0, suggestions_grpc_path)
 import suggestions_pb2 as suggestions
 import suggestions_pb2_grpc as suggestions_grpc
 
 import grpc
-
 from flask import Flask, request
 from flask_cors import CORS
-
 
 def greet(name='you'):
     with grpc.insecure_channel('fraud_detection:50051') as channel:
@@ -40,230 +31,129 @@ def greet(name='you'):
         response = stub.SayHello(fraud_detection.HelloRequest(name=name))
     return response.greeting
 
-
-def detect_fraud(user_name, card_number, item_count):
-    with grpc.insecure_channel('fraud_detection:50051') as channel:
-        stub = fraud_detection_grpc.HelloServiceStub(channel)
-        response = stub.CheckFraud(
-            fraud_detection.FraudCheckRequest(
-                user_name=user_name or "",
-                card_number=card_number or "",
-                item_count=item_count
+def call_fraud_detection(card_number, order_amount):
+    try:
+        with grpc.insecure_channel('fraud_detection:50051') as channel:
+            stub = fraud_detection_grpc.FraudDetectionServiceStub(channel)
+            request_obj = fraud_detection.FraudRequest(
+                card_number=card_number,
+                order_amount=order_amount
             )
-        )
-    return response
+            response = stub.CheckFraud(request_obj)
+        return response.is_fraud
+    except Exception as e:
+        print(f"Fraud detection gRPC call failed: {e}")
+        return True
 
+def call_transaction_verification(request_data):
+    try:
+        with grpc.insecure_channel('transaction_verification:50052') as channel:
+            stub = transaction_verification_grpc.TransactionVerificationServiceStub(channel)
 
-def verify_transaction(user_name, user_contact, card_number, expiration_date, cvv, item_count, terms_accepted):
-    with grpc.insecure_channel('transaction_verification:50052') as channel:
-        stub = transaction_verification_grpc.TransactionVerificationServiceStub(channel)
-        response = stub.VerifyTransaction(
-            transaction_verification.TransactionVerificationRequest(
-                user_name=user_name or "",
-                user_contact=user_contact or "",
-                card_number=card_number or "",
-                expiration_date=expiration_date or "",
-                cvv=cvv or "",
-                item_count=item_count,
-                terms_accepted=terms_accepted
+            card_info = request_data.get("creditCard", {})
+            user_info = request_data.get("user", {})
+            items = request_data.get("items", [])
+
+            grpc_items = [
+                transaction_verification.Item(
+                    name=item.get("name", ""),
+                    quantity=item.get("quantity", 0)
+                ) for item in items
+            ]
+
+            request_obj = transaction_verification.TransactionRequest(
+                card_number=card_info.get("number", ""),
+                card_expiration=card_info.get("expirationDate", ""),
+                card_cvv=card_info.get("cvv", ""),
+                items=grpc_items,
+                user_name=user_info.get("name", ""),
+                user_contact=user_info.get("contact", "")
             )
-        )
-    return response
+            response = stub.VerifyTransaction(request_obj)
+        return response.is_valid
+    except Exception as e:
+        print(f"Transaction verification gRPC call failed: {e}")
+        return False
 
+def call_suggestions(request_data):
+    try:
+        with grpc.insecure_channel('suggestions:50053') as channel:
+            stub = suggestions_grpc.SuggestionsServiceStub(channel)
 
-def get_suggestions(user_name, item_count):
-    with grpc.insecure_channel('suggestions:50053') as channel:
-        stub = suggestions_grpc.SuggestionsServiceStub(channel)
-        response = stub.GetSuggestions(
-            suggestions.SuggestionsRequest(
-                user_name=user_name or "",
-                item_count=item_count
+            user_info = request_data.get("user", {})
+            items = request_data.get("items", [])
+
+            grpc_items = [
+                suggestions.Item(
+                    name=item.get("name", ""),
+                    quantity=item.get("quantity", 0)
+                ) for item in items
+            ]
+
+            request_obj = suggestions.SuggestionsRequest(
+                items=grpc_items,
+                user_name=user_info.get("name", "")
             )
-        )
-    return response
+            response = stub.GetSuggestions(request_obj)
 
+        return [
+            {"bookId": book.book_id, "title": book.title, "author": book.author}
+            for book in response.books
+        ]
+    except Exception as e:
+        print(f"Suggestions gRPC call failed: {e}")
+        return []
 
 app = Flask(__name__)
 CORS(app, resources={r'/*': {'origins': '*'}})
-
 
 @app.route('/', methods=['GET'])
 def index():
     response = greet(name='orchestrator')
     return response
 
-
 @app.route('/checkout', methods=['POST'])
 def checkout():
-    request_data = request.get_json(silent=True)
+    from concurrent.futures import ThreadPoolExecutor
+    try:
+        request_data = request.get_json(force=True, silent=True) or {}
+        print("Request Data:", request_data.get('items'))
 
-    if request_data is None:
-        return {
-            "error": {
-                "code": "BAD_REQUEST",
-                "message": "Request body must be valid JSON."
+        card_info = request_data.get("creditCard", {})
+        card_number = card_info.get("number", "")
+        order_amount = request_data.get("totalAmount", 0.0)
+
+        # Run all 3 services in parallel
+        with ThreadPoolExecutor(max_workers=3) as executor:
+            fraud_future = executor.submit(call_fraud_detection, card_number, order_amount)
+            verify_future = executor.submit(call_transaction_verification, request_data)
+            suggestions_future = executor.submit(call_suggestions, request_data)
+
+            is_fraud = fraud_future.result()
+            is_valid = verify_future.result()
+            suggested_books = suggestions_future.result()
+
+        print(f"Fraud: {is_fraud}, Valid: {is_valid}, Books: {len(suggested_books)}")
+
+        # Consolidate results
+        if is_fraud or not is_valid:
+            order_status_response = {
+                'orderId': '12345',
+                'status': 'Order Rejected',
+                'suggestedBooks': []
             }
-        }, 400
-
-    user = request_data.get("user", {})
-    items = request_data.get("items", [])
-    shipping_method = request_data.get("shippingMethod")
-    terms_accepted = request_data.get("termsAndConditionsAccepted", False)
-
-    user_name = user.get("name")
-    user_contact = user.get("contact")
-    user_comment = user.get("userComment", "")
-
-    credit_card = user.get("creditCard", {})
-    card_number = credit_card.get("number")
-    expiration_date = credit_card.get("expirationDate")
-    cvv = credit_card.get("cvv")
-
-    print("FULL REQUEST DATA:", request_data)
-    print("USER NAME:", user_name)
-    print("USER CONTACT:", user_contact)
-    print("USER COMMENT:", user_comment)
-    print("ITEMS:", items)
-    print("SHIPPING METHOD:", shipping_method)
-    print("TERMS ACCEPTED:", terms_accepted)
-    print("CARD NUMBER:", card_number)
-    print("EXPIRATION DATE:", expiration_date)
-    print("CVV:", cvv)
-
-    # Keep these simple bad-request checks locally
-    if not user_name:
-        return {
-            "error": {
-                "code": "BAD_REQUEST",
-                "message": "User name is required."
+        else:
+            order_status_response = {
+                'orderId': '12345',
+                'status': 'Order Approved',
+                'suggestedBooks': suggested_books
             }
-        }, 400
 
-    if not user_contact:
-        return {
-            "error": {
-                "code": "BAD_REQUEST",
-                "message": "User contact is required."
-            }
-        }, 400
+        return order_status_response
 
-    item_count = len(items)
-
-    results = {
-        "fraud": None,
-        "verification": None,
-        "suggestions": None,
-        "errors": []
-    }
-
-    def fraud_worker():
-        try:
-            print("Calling fraud_detection service...")
-            results["fraud"] = detect_fraud(
-                user_name=user_name,
-                card_number=card_number,
-                item_count=item_count
-            )
-            print(
-                "fraud_detection result:",
-                results["fraud"].is_fraud,
-                results["fraud"].message
-            )
-        except Exception as e:
-            error_msg = f"fraud_detection failed: {e}"
-            print(error_msg)
-            results["errors"].append(error_msg)
-
-    def verification_worker():
-        try:
-            print("Calling transaction_verification service...")
-            results["verification"] = verify_transaction(
-                user_name=user_name,
-                user_contact=user_contact,
-                card_number=card_number,
-                expiration_date=expiration_date,
-                cvv=cvv,
-                item_count=item_count,
-                terms_accepted=terms_accepted
-            )
-            print(
-                "transaction_verification result:",
-                results["verification"].is_valid,
-                results["verification"].message
-            )
-        except Exception as e:
-            error_msg = f"transaction_verification failed: {e}"
-            print(error_msg)
-            results["errors"].append(error_msg)
-
-    def suggestions_worker():
-        try:
-            print("Calling suggestions service...")
-            results["suggestions"] = get_suggestions(
-                user_name=user_name,
-                item_count=item_count
-            )
-            print(
-                "suggestions returned:",
-                len(results["suggestions"].books),
-                "books"
-            )
-        except Exception as e:
-            error_msg = f"suggestions failed: {e}"
-            print(error_msg)
-            results["errors"].append(error_msg)
-
-    fraud_thread = threading.Thread(target=fraud_worker)
-    verification_thread = threading.Thread(target=verification_worker)
-    suggestions_thread = threading.Thread(target=suggestions_worker)
-
-    print("Starting worker threads...")
-    fraud_thread.start()
-    verification_thread.start()
-    suggestions_thread.start()
-
-    fraud_thread.join()
-    verification_thread.join()
-    suggestions_thread.join()
-    print("All worker threads finished.")
-
-    if results["errors"]:
-        return {
-            "error": {
-                "code": "INTERNAL_ERROR",
-                "message": "; ".join(results["errors"])
-            }
-        }, 500
-
-    if results["fraud"] and results["fraud"].is_fraud:
-        return {
-            "orderId": "12345",
-            "status": "Order Rejected",
-            "suggestedBooks": []
-        }, 200
-
-    if results["verification"] and not results["verification"].is_valid:
-        return {
-            "orderId": "12345",
-            "status": "Order Rejected",
-            "suggestedBooks": []
-        }, 200
-
-    suggested_books = []
-    if results["suggestions"]:
-        for book in results["suggestions"].books:
-            suggested_books.append({
-                "bookId": book.bookId,
-                "title": book.title,
-                "author": book.author
-            })
-
-    return {
-        "orderId": "12345",
-        "status": "Order Approved",
-        "suggestedBooks": suggested_books
-    }, 200
-
+    except Exception as e:
+        print(f"Checkout failed: {e}")
+        return {"error": {"message": str(e)}}, 500
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0')
