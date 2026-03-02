@@ -20,6 +20,14 @@ import suggestions_pb2 as suggestions
 import suggestions_pb2_grpc as suggestions_grpc
 
 import grpc
+import logging
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] [%(name)s] %(message)s"
+)
+
+logger = logging.getLogger(__name__)
 
 def detect_fraud(card_nr, order_ammount):
     # Establish a connection with the fraud-detection gRPC service.
@@ -69,13 +77,20 @@ def checkout():
     # Get request object data to json
     request_data = json.loads(request.data)
     # Print request object data
-    print("Request Data:", request_data)
 
     is_fraud = detect_fraud(request_data["creditCard"]["number"], sum([item["quantity"] for item in request_data["items"]]))
-    # suggested_books = get_suggested_books([i["name"] for i in request_data["items"]])
-    suggested_books = get_suggested_books(["Book A"])
-    print([i["name"] for i in request_data["items"]])
-    # print(suggested_books)
+    suggested_books = get_suggested_books([i["name"] for i in request_data["items"]])
+    logger.info(f"Got suggested books.")
+
+    # Convert the gRPC response to a dictionary
+    suggested_books_dicts = []
+    for book in suggested_books:
+        suggested_books_dicts.append({
+            'bookId': book.bookId,
+            'title': book.title,
+            'author': book.author
+        })
+
 
 
 
@@ -83,11 +98,7 @@ def checkout():
     order_status_response = {
         'orderId': '12345',
         'status': ('odred declined' if is_fraud else 'Order Approved'),
-        # 'suggestedBooks': suggested_books,
-        'suggestedBooks': [
-            {'bookId': '123', 'title': 'The Best Book', 'author': 'Author 1'},
-            {'bookId': '456', 'title': 'The Second Best Book', 'author': 'Author 2'}
-        ]
+        'suggestedBooks': suggested_books_dicts,
     }
 
     return order_status_response

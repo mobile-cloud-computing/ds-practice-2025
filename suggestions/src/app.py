@@ -1,6 +1,7 @@
 import sys
 import os
 
+
 # This set of lines are needed to import the gRPC stubs.
 # The path of the stubs is relative to the current file, or absolute inside the container.
 # Change these lines only if strictly needed.
@@ -12,23 +13,42 @@ import suggestions_pb2_grpc as suggestions_grpc
 
 import grpc
 from concurrent import futures
+import logging
+from BigBookAPI import book_script
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] [%(name)s] %(message)s"
+)
+
+logger = logging.getLogger(__name__)
 
 # Create a class to define the server functions, derived from
 # fraud_detection_pb2_grpc.HelloServiceServicer
-class SuggestionsService(suggestions_grpc.SuggestionsService):
+class SuggestionsService(suggestions_grpc.SuggestionsServiceServicer):
     # Create an RPC function to say hello
-    def getSuggestions(self, request, context):
-        print(f"USER: ordered {request}")
+    def suggest(self, request, context):
 
         # Create a HelloResponse object
         response = suggestions.SuggestResponse()
 
-        response.suggested_books = ["book3", "book4", "book5"]
+        books_data = []
+        for book in request.ordered_books:
+            logger.info("Fetching suggestions for: %s", book)
+            books_data = books_data + book_script.get_book_suggestions(book)
 
-        # response.suggested_books = [
+        # in case API service doesn't work
+        # books_data = [
         #     {'bookId': '123', 'title': 'The Best Book', 'author': 'Author 1'},
         #     {'bookId': '456', 'title': 'The Second Best Book', 'author': 'Author 2'}
         # ]
+
+        if len(books_data) > 0:
+            for b in books_data:
+                book = response.suggested_books.add()  # Use .add() to create a new Book
+                book.bookId = str(b['bookId'])
+                book.title = b['title']
+                book.author = b['author']
 
         return response
 
@@ -45,7 +65,8 @@ def serve():
 
     # Start the server
     server.start()
-    print(f"Server started. Listening on port {port}.")
+    # print(f"Server started. Listening on port {port}.")
+    logger.info(f"Server started. Listening on port {port}.")
 
     # Keep thread alive
     server.wait_for_termination()
