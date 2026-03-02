@@ -15,8 +15,17 @@ sys.path.insert(0, suggestions_grpc_path)
 import suggestions_pb2 as suggestions
 import suggestions_pb2_grpc as suggestions_grpc
 
+transaction_verification_grpc_path = os.path.abspath(os.path.join(FILE, '../../../utils/pb/transaction_verification'))
+sys.path.insert(0, transaction_verification_grpc_path)
+import transaction_verification_pb2 as transaction_verification
+import transaction_verification_pb2_grpc as transaction_verification_grpc
+
+from flask import Flask, request
+from flask_cors import CORS
+import json
 import grpc
 import logging
+logging.basicConfig(level=logging.INFO)
 
 def detect(card_number, order_amount):
     try:
@@ -43,15 +52,62 @@ def get_suggestions(items):
         logging.error(f"gRPC Call Failed: {e}")
         return []
 
-# Import Flask.
-# Flask is a web framework for Python.
-# It allows you to build a web application quickly.
-# For more information, see https://flask.palletsprojects.com/en/latest/
-from flask import Flask, request
-from flask_cors import CORS
-import json
+def verify_transaction(payload: dict):
+    """
+    Call Transaction Verification service.
+    Returns (is_valid: bool, message: str)
+    Default to invalid if error.
+    """
+    try:
+        logging.info("Starting transaction verification")
 
-# Create a simple Flask app.
+        user = payload.get("user", {}) or {}
+        name = user.get("name", "")
+        email = user.get("contact", "")
+
+        cc = payload.get("creditCard", {}) or {}
+        card_number = cc.get("number", "")
+        expiration_date = cc.get("expirationDate", "") or cc.get("expiry", "")
+        cvv = cc.get("cvv", "")
+        billing = payload.get("billingAddress", {}) or {}
+
+        logging.info(
+            f"Verification payload extracted: "
+            f"name='{name}', email='{email}', "
+            f"card_number_ending='{card_number[-4:] if card_number else ''}'"
+        )
+
+        with grpc.insecure_channel("transaction_verification:50052") as channel:
+            stub = transaction_verification_grpc.TransactionVerificationServiceStub(channel)
+            req = transaction_verification.VerificationRequest(
+                name=name,
+                email=email,
+                card_number=card_number,
+                expiration_date=expiration_date,
+                cvv=cvv,
+                billing_address=transaction_verification.BillingAddress(
+                    street=billing.get("street", ""),
+                    city=billing.get("city", ""),
+                    state=billing.get("state", ""),
+                    zip=billing.get("zip", ""),
+                    country=billing.get("country", ""),
+                )
+            )
+
+            logging.info("Calling TransactionVerification gRPC service")
+            res = stub.VerifyTransaction(req)
+
+        logging.info(
+            f"TransactionVerification response: "
+            f"is_valid={res.is_valid}, message='{res.message}'"
+        )
+
+        return bool(res.is_valid), getattr(res, "message", "")
+
+    except Exception as e:
+        logging.error(f"Transaction Verification gRPC Call Failed: {e}")
+        return False, "Transaction verification service error"
+
 app = Flask(__name__)
 # Enable CORS for the app.
 CORS(app, resources={r'/*': {'origins': '*'}})
@@ -86,6 +142,21 @@ def checkout():
     request_data = json.loads(request.data)
     # Print request object data
     print("Request Data:", request_data.get('items'))
+
+    is_valid, message = verify_transaction(request_data)
+    if not is_valid:
+        return {
+            "orderId": "12345",
+            "status": "Order Denied",
+            "reason":  "Invalid transaction data",
+            "suggestedBooks": [
+                {"bookId": "123", "title": "The Best Book", "author": "Author 1"},
+                {"bookId": "456", "title": "The Second Best Book", "author": "Author 2"},
+            ],
+        }, 200
+
+
+
 
     # Extract values needed for fraud check
     card_number = request_data.get('creditCard', {}).get('number', '')
