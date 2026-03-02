@@ -15,6 +15,12 @@ sys.path.insert(0, transaction_verification_grpc_path)
 import transaction_verification_pb2 as transaction_verification
 import transaction_verification_pb2_grpc as transaction_verification_grpc
 
+# Import suggestions stubs
+suggestions_grpc_path = os.path.abspath(os.path.join(FILE, '../../../utils/pb/suggestions'))
+sys.path.insert(0, suggestions_grpc_path)
+import suggestions_pb2 as suggestions
+import suggestions_pb2_grpc as suggestions_grpc
+
 import grpc
 from flask import Flask, request
 from flask_cors import CORS
@@ -69,6 +75,35 @@ def call_transaction_verification(request_data):
         print(f"Transaction verification gRPC call failed: {e}")
         return False
 
+def call_suggestions(request_data):
+    try:
+        with grpc.insecure_channel('suggestions:50053') as channel:
+            stub = suggestions_grpc.SuggestionsServiceStub(channel)
+
+            user_info = request_data.get("user", {})
+            items = request_data.get("items", [])
+
+            grpc_items = [
+                suggestions.Item(
+                    name=item.get("name", ""),
+                    quantity=item.get("quantity", 0)
+                ) for item in items
+            ]
+
+            request_obj = suggestions.SuggestionsRequest(
+                items=grpc_items,
+                user_name=user_info.get("name", "")
+            )
+            response = stub.GetSuggestions(request_obj)
+
+        return [
+            {"bookId": book.book_id, "title": book.title, "author": book.author}
+            for book in response.books
+        ]
+    except Exception as e:
+        print(f"Suggestions gRPC call failed: {e}")
+        return []
+
 app = Flask(__name__)
 CORS(app, resources={r'/*': {'origins': '*'}})
 
@@ -88,15 +123,17 @@ def checkout():
         card_number = card_info.get("number", "")
         order_amount = request_data.get("totalAmount", 0.0)
 
-        # Run fraud detection and transaction verification in parallel
+        # Run all 3 services in parallel
         with ThreadPoolExecutor(max_workers=3) as executor:
             fraud_future = executor.submit(call_fraud_detection, card_number, order_amount)
             verify_future = executor.submit(call_transaction_verification, request_data)
+            suggestions_future = executor.submit(call_suggestions, request_data)
 
             is_fraud = fraud_future.result()
             is_valid = verify_future.result()
+            suggested_books = suggestions_future.result()
 
-        print(f"Fraud: {is_fraud}, Valid: {is_valid}")
+        print(f"Fraud: {is_fraud}, Valid: {is_valid}, Books: {len(suggested_books)}")
 
         # Consolidate results
         if is_fraud or not is_valid:
@@ -109,10 +146,7 @@ def checkout():
             order_status_response = {
                 'orderId': '12345',
                 'status': 'Order Approved',
-                'suggestedBooks': [
-                    {'bookId': '123', 'title': 'The Best Book', 'author': 'Author 1'},
-                    {'bookId': '456', 'title': 'The Second Best Book', 'author': 'Author 2'}
-                ]
+                'suggestedBooks': suggested_books
             }
 
         return order_status_response

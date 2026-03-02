@@ -80,3 +80,24 @@ services:
       - ./utils:/app/utils
       # Mount the transaction_verification/src directory in the current directory to the /app/transaction_verification/src directory in the container
       - ./transaction_verification/src:/app/transaction_verification/src
+
+  suggestions:
+    build:
+      # Use the current directory as the build context
+      # This allows us to access the files in the current directory inside the Dockerfile
+      context: ./
+      # Use the Dockerfile in the suggestions directory
+      dockerfile: ./suggestions/Dockerfile
+    ports:
+    # Expose port 50053 on the host, and map port 50053 of the container to port 50053 on the host
+    - 50053:50053
+    environment:
+    # Pass the environment variables to the container
+    # The PYTHONUNBUFFERED environment variable ensures that the output from the application is logged to the console
+    - PYTHONUNBUFFERED=TRUE
+    - PYTHONFILE=/app/suggestions/src/app.py
+    volumes:
+    # Mount the utils directory in the current directory to the /app/utils directory in the container
+    - ./utils:/app/utils
+    # Mount the suggestions/src directory in the current directory to the /app/suggestions/src directory in the container
+    - ./suggestions/src:/app/suggestions/src
