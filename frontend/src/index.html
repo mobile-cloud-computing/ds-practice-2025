@@ -36,7 +36,7 @@
             </div>
             <div class="mb-4">
                 <label for="expirationDate" class="block text-sm font-medium text-gray-700">Expiration Date:</label>
-                <input type="text" id="expirationDate" name="expirationDate" value="12/25" required class="w-full border border-gray-300 rounded-lg p-2 mt-1">
+                <input type="text" id="expirationDate" name="expirationDate" value="12/28" required class="w-full border border-gray-300 rounded-lg p-2 mt-1">
             </div>
             <div class="mb-4">
                 <label for="cvv" class="block text-sm font-medium text-gray-700">CVV:</label>
@@ -129,17 +129,20 @@
 
                 if (response.ok) {
                     const suggestedBooks = result.suggestedBooks.map(book => `<li>${book.title} by ${book.author}</li>`).join('');
-                    responseDiv.innerHTML = `
-                        <strong>Order status: ${result.status}</strong><br>
-                        Order ID: ${result.orderId}<br>
-                        ${result.status === "Order Approved" ?
-                            `Suggested Books:
-                            <ul class="list-disc pl-5 mt-2 space-y-1">${suggestedBooks}</ul>`
-                        : ``
-                        }
-                    `;
-                    color = result.status === 'Order Approved' ? 'green' : 'red';
-                    responseDiv.className = `mt-6 p-4 border rounded-lg bg-${color}-100 text-${color}-700`;
+                    let statusHtml = `<strong>Order status: ${result.status}</strong><br>Order ID: ${result.orderId}<br>`;
+
+                    if (result.status === 'Order Approved') {
+                        statusHtml += `Suggested Books:<ul class="list-disc pl-5 mt-2 space-y-1">${suggestedBooks}</ul>`;
+                        responseDiv.className = 'mt-6 p-4 border rounded-lg bg-green-100 text-green-700';
+                    } else if (result.reason === 'Fraud detected') {
+                        statusHtml += `<br><span class="font-semibold">Reason: ${result.reason}</span>`;
+                        responseDiv.className = 'mt-6 p-4 border rounded-lg bg-red-100 text-red-700';
+                    } else {
+                        statusHtml += `<br><span class="font-semibold">Reason: ${result.reason}</span>`;
+                        responseDiv.className = 'mt-6 p-4 border rounded-lg bg-yellow-100 text-yellow-800';
+                    }
+
+                    responseDiv.innerHTML = statusHtml;
                 } else {
                     responseDiv.textContent = `Error: ${result.error.message}`;
                     responseDiv.className = "mt-6 p-4 border rounded-lg bg-red-100 text-red-700";

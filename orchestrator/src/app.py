@@ -135,24 +135,18 @@ def suggestions_endpoint():
 
 @app.route('/checkout', methods=['POST'])
 def checkout():
-    """
-    Responds with a JSON object containing the order ID, status, and suggested books.
-    """
+    """Process a checkout request through the sequential pipeline: transaction verification → fraud detection → suggestions."""
     # Get request object data to json
     request_data = json.loads(request.data)
-    # Print request object data
-    print("Request Data:", request_data.get('items'))
+    logging.info(f"Checkout request received with {len(request_data.get('items', []))} items")
 
     is_valid, message = verify_transaction(request_data)
     if not is_valid:
         return {
             "orderId": "12345",
             "status": "Order Denied",
-            "reason":  "Invalid transaction data",
-            "suggestedBooks": [
-                {"bookId": "123", "title": "The Best Book", "author": "Author 1"},
-                {"bookId": "456", "title": "The Second Best Book", "author": "Author 2"},
-            ],
+            "reason": message or "Invalid transaction data",
+            "suggestedBooks": [],
         }, 200
 
 
@@ -169,10 +163,10 @@ def checkout():
     items = request_data.get('items', [])
     suggested_books = get_suggestions(items)
 
-    # Build response following the provided YAML specification for the bookstore
     order_status_response = {
         'orderId': '12345',
         'status': 'Order Denied' if is_fraud else 'Order Approved',
+        'reason': 'Fraud detected' if is_fraud else '',
         'suggestedBooks': suggested_books
     }
 

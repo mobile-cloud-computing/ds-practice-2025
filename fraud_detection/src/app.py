@@ -10,8 +10,11 @@ sys.path.insert(0, fraud_detection_grpc_path)
 import fraud_detection_pb2 as fraud_detection
 import fraud_detection_pb2_grpc as fraud_detection_grpc
 
+import logging
 import grpc
 from concurrent import futures
+
+logging.basicConfig(level=logging.INFO)
 
 # Create a class to define the server functions, derived from
 # fraud_detection_pb2_grpc.HelloServiceServicer
@@ -30,16 +33,17 @@ from concurrent import futures
 class FraudDetectionService(fraud_detection_grpc.FraudDetectionServiceServicer):
 
     def CheckFraud(self, request, context):
+        """Check for fraud based on two rules: order amount exceeding 1000 and card number prefix '999'."""
         card_number = request.card_number
         order_amount = request.order_amount
 
-        print(f"Checking fraud for card: {card_number} and amount: {order_amount}")
+        logging.info(f"Checking fraud for card ending in {card_number[-4:]} with amount {order_amount}")
 
-        # Dummy logic
         is_fraud = False
         if float(order_amount) > 1000 or card_number.startswith("999"):
             is_fraud = True
 
+        logging.info(f"Fraud check result: is_fraud={is_fraud}")
         return fraud_detection.FraudResponse(is_fraud=is_fraud)
 
 
@@ -53,7 +57,7 @@ def serve():
     server.add_insecure_port("[::]:" + port)
     # Start the server
     server.start()
-    print("Server started. Listening on port 50051.")
+    logging.info("Fraud Detection service started on port 50051")
     # Keep thread alive
     server.wait_for_termination()
 

@@ -10,13 +10,17 @@ sys.path.insert(0, suggestions_grpc_path)
 import suggestions_pb2 as suggestions
 import suggestions_pb2_grpc as suggestions_grpc
 
+import logging
 import grpc
 from concurrent import futures
+
+logging.basicConfig(level=logging.INFO)
 
 class SuggestionsService(suggestions_grpc.SuggestionsServiceServicer):
 
     def GetSuggestions(self, request, context):
-        print(f"Getting suggestions for {len(request.items)} items")
+        """Return a static list of book suggestions (not yet context-aware)."""
+        logging.info(f"Getting suggestions for {len(request.items)} items")
 
         # Static list of suggested books
         suggested_books = [
@@ -24,6 +28,7 @@ class SuggestionsService(suggestions_grpc.SuggestionsServiceServicer):
             suggestions.SuggestedBook(bookId='456', title='The Second Best Book', author='Author 2'),
         ]
 
+        logging.info(f"Returning {len(suggested_books)} suggestions")
         return suggestions.SuggestionsResponse(books=suggested_books)
 
 
@@ -37,7 +42,7 @@ def serve():
     server.add_insecure_port("[::]:" + port)
     # Start the server
     server.start()
-    print("Server started. Listening on port 50053.")
+    logging.info("Suggestions service started on port 50053")
     # Keep thread alive
     server.wait_for_termination()
 
