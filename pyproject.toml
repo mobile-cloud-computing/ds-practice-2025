@@ -1,0 +1,10 @@
+[tool.black]
+extend-exclude = '''
+/(
+  \.git
+  | __pycache__
+  | build
+  | dist
+  | utils/pb
+)/
+'''

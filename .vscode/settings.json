@@ -1,0 +1,7 @@
+{
+    "python.analysis.extraPaths": [
+        "./utils/pb/fraud_detection",
+        "./utils/pb/transaction_verification",
+        "./utils/pb/suggestions",
+    ],
+}

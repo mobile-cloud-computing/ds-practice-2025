@@ -10,12 +10,12 @@ The frontend sends checkout requests to an orchestrator, which coordinates trans
 graph TD
     A[User] --> B[Frontend<br/>Port: 8080<br/>Nginx / HTTP]
     B --> C[Orchestrator<br/>Port: 8081<br/>Flask REST API]
-    C -->|1. gRPC| D[Transaction Verification<br/>Port: 50052]
-    C -->|2. gRPC| E[Fraud Detection<br/>Port: 50051]
-    C -->|3. gRPC| F[Suggestions<br/>Port: 50053]
+    C -->|gRPC| E[Fraud Detection<br/>Port: 50051]
+    C -->|gRPC| D[Transaction Verification<br/>Port: 50052]
+    C -->|gRPC| F[Suggestions<br/>Port: 50053]
 ```
 
-All backend services run in Docker containers. The orchestrator calls the three gRPC services **sequentially**: verification must pass before fraud detection runs, and suggestions are fetched last.
+All backend services run in Docker containers. The orchestrator calls the three gRPC services **concurrently** using threading. Transaction verification is checked first; if invalid, the order is denied without fraud check results. Suggestions are fetched concurrently but only included in the response if the transaction is valid.
 
 ## Services
 
@@ -23,9 +23,9 @@ All backend services run in Docker containers. The orchestrator calls the three 
 |---------|------|----------|-------------|
 | **Frontend** | 8080 | HTTP (Nginx) | Static HTML/JS checkout form served by Nginx |
 | **Orchestrator** | 8081 | REST (Flask) | Receives checkout requests, coordinates gRPC calls |
+| **Fraud Detection** | 50051 | gRPC | AI-powered fraud analysis using Google Gen AI (Gemma 3 27B) |
 | **Transaction Verification** | 50052 | gRPC | Validates email, card number, CVV, expiration date, and billing address |
-| **Fraud Detection** | 50051 | gRPC | Flags orders with amount > 1000 or card prefix "999" |
-| **Suggestions** | 50053 | gRPC | Returns a static list of recommended books |
+| **Suggestions** | 50053 | gRPC | AI-generated book recommendations based on purchased items |
 
 ## System diagram
 
@@ -38,32 +38,28 @@ sequenceDiagram
     participant FD as Fraud Detection
     participant S as Suggestions
 
-    note right of U: Checkout flow
     U->>F: Submit order form
     F->>O: POST /checkout
-    O->>TV: gRPC VerifyTransaction
-    TV-->>O: is_valid + message
+    par Concurrent gRPC calls
+        O->>TV: gRPC VerifyTransaction
+        O->>FD: gRPC CheckFraud
+        O->>S: gRPC GetSuggestions
+    end
+    TV-->>O: is valid + message
+    FD-->>O: is fraud
+    S-->>O: list of books
     alt Transaction invalid
         O-->>F: Order Denied (reason from TV)
         F-->>U: Yellow/amber error with specific message
+    else Transaction valid
+        alt Fraud detected
+            O-->>F: Order Denied (fraud)
+            F-->>U: Red error with fraud message
+        else Order approved
+            O-->>F: Order Approved and list of suggested books
+            F-->>U: Green success + suggested books
+        end
     end
-    O->>FD: gRPC CheckFraud
-    FD-->>O: is_fraud
-    alt Fraud detected
-        O-->>F: Order Denied (fraud)
-        F-->>U: Red error
-    else Order approved
-        O-->>F: Order Approved
-        F-->>U: Green success
-    end
-
-    note right of U: Suggestions flow
-    U->>F: Click "Test Suggestions"
-    F->>O: POST /suggestions
-    O->>S: gRPC GetSuggestions
-    S-->>O: list of books
-    O-->>F: suggestedBooks
-    F-->>U: Display book list
 ```
 
 ## Validation Rules (Transaction Verification)
@@ -82,12 +78,39 @@ sequenceDiagram
 
 ## Fraud Detection Rules
 
-| Rule | Trigger |
-|------|---------|
-| High amount | `order_amount > 1000` (based on total item quantity) |
-| Suspicious card | Card number starts with `"999"` |
+Fraud detection is now powered by AI using Google Gen AI (Gemma 3 27B model). The AI analyzes the card number and order amount to determine if a transaction is fraudulent. Previous rule-based checks (amount > 1000 or card prefix "999") have been replaced with intelligent analysis.
 
 ## How to Run
+
+### Setting up Google AI API Key
+
+The `fraud_detection` and `suggestions` services use Google's Gen AI API with the Gemma 3 27B model. You need a Google AI API key:
+
+1. Visit [Google AI Studio](https://aistudio.google.com/apikey) to generate an API key.
+2. Set the `GOOGLE_API_KEY` environment variable before running the services.
+
+**Option 1: Export in terminal (recommended for development)**
+```bash
+export GOOGLE_API_KEY=your_actual_api_key_here
+docker compose up --build
+```
+
+**Option 2: Add to docker-compose.yaml**
+Add the following to the `environment` section of `fraud_detection` and `suggestions` services:
+```yaml
+- GOOGLE_API_KEY=your_actual_api_key_here
+```
+
+**Option 3: Use a .env file**
+Create a `.env` file in the project root:
+```
+GOOGLE_API_KEY=your_actual_api_key_here
+```
+Then update `docker-compose.yaml` to include `env_file: - .env` for both services.
+
+**Note:** Never commit API keys to version control. Use `.gitignore` for `.env` files.
+
+### Running the Application
 
 ```bash
 docker compose up --build
@@ -117,7 +140,7 @@ docs/              Documentation and project plans
 
 ## Known Limitations
 
-- Suggestions are static and do not depend on the items in the cart
+- Suggestions are now AI-generated but may not always be contextually accurate
 - Order amount for fraud detection is based on item quantity sum, not actual prices
 - Item list is hardcoded in the frontend (Book A, Book B)
 - Only US ZIP codes (5 digits) are supported for billing address
