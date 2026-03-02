@@ -5,7 +5,7 @@ import grpc
 import fraud_detection_pb2 as fraud__detection__pb2
 
 
-class FraudDetectionServiceStub(object):
+class HelloServiceStub(object):
     """Missing associated documentation comment in .proto file."""
 
     def __init__(self, channel):
@@ -14,10 +14,10 @@ class FraudDetectionServiceStub(object):
         Args:
             channel: A grpc.Channel.
         """
-        self.CheckFraud = channel.unary_unary(
-                '/fraud_detection.FraudDetectionService/CheckFraud',
-                request_serializer=fraud__detection__pb2.FraudRequest.SerializeToString,
-                response_deserializer=fraud__detection__pb2.FraudResponse.FromString,
+        self.SayHello = channel.unary_unary(
+                '/hello.HelloService/SayHello',
+                request_serializer=fraud__detection__pb2.HelloRequest.SerializeToString,
+                response_deserializer=fraud__detection__pb2.HelloResponse.FromString,
                 )
         self.CheckFraud = channel.unary_unary(
                 '/hello.HelloService/CheckFraud',
@@ -26,10 +26,10 @@ class FraudDetectionServiceStub(object):
                 )
 
 
-class FraudDetectionServiceServicer(object):
+class HelloServiceServicer(object):
     """Missing associated documentation comment in .proto file."""
 
-    def CheckFraud(self, request, context):
+    def SayHello(self, request, context):
         """Missing associated documentation comment in .proto file."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
@@ -42,12 +42,12 @@ class FraudDetectionServiceServicer(object):
         raise NotImplementedError('Method not implemented!')
 
 
-def add_FraudDetectionServiceServicer_to_server(servicer, server):
+def add_HelloServiceServicer_to_server(servicer, server):
     rpc_method_handlers = {
-            'CheckFraud': grpc.unary_unary_rpc_method_handler(
-                    servicer.CheckFraud,
-                    request_deserializer=fraud__detection__pb2.FraudRequest.FromString,
-                    response_serializer=fraud__detection__pb2.FraudResponse.SerializeToString,
+            'SayHello': grpc.unary_unary_rpc_method_handler(
+                    servicer.SayHello,
+                    request_deserializer=fraud__detection__pb2.HelloRequest.FromString,
+                    response_serializer=fraud__detection__pb2.HelloResponse.SerializeToString,
             ),
             'CheckFraud': grpc.unary_unary_rpc_method_handler(
                     servicer.CheckFraud,
@@ -56,16 +56,16 @@ def add_FraudDetectionServiceServicer_to_server(servicer, server):
             ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
-            'fraud_detection.FraudDetectionService', rpc_method_handlers)
+            'hello.HelloService', rpc_method_handlers)
     server.add_generic_rpc_handlers((generic_handler,))
 
 
  # This class is part of an EXPERIMENTAL API.
-class FraudDetectionService(object):
+class HelloService(object):
     """Missing associated documentation comment in .proto file."""
 
     @staticmethod
-    def CheckFraud(request,
+    def SayHello(request,
             target,
             options=(),
             channel_credentials=None,
@@ -75,9 +75,9 @@ class FraudDetectionService(object):
             wait_for_ready=None,
             timeout=None,
             metadata=None):
-        return grpc.experimental.unary_unary(request, target, '/fraud_detection.FraudDetectionService/CheckFraud',
-            fraud__detection__pb2.FraudRequest.SerializeToString,
-            fraud__detection__pb2.FraudResponse.FromString,
+        return grpc.experimental.unary_unary(request, target, '/hello.HelloService/SayHello',
+            fraud__detection__pb2.HelloRequest.SerializeToString,
+            fraud__detection__pb2.HelloResponse.FromString,
             options, channel_credentials,
             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
 

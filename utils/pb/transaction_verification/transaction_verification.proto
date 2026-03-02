@@ -3,24 +3,20 @@ syntax = "proto3";
 package transaction_verification;
 
 service TransactionVerificationService {
-    rpc VerifyTransaction (TransactionRequest) returns (TransactionResponse);
+  rpc VerifyTransaction (TransactionVerificationRequest) returns (TransactionVerificationResponse);
 }
 
-message TransactionRequest {
-    string card_number = 1;
-    string card_expiration = 2;
-    string card_cvv = 3;
-    repeated Item items = 4;
-    string user_name = 5;
-    string user_contact = 6;
+message TransactionVerificationRequest {
+  string user_name = 1;
+  string user_contact = 2;
+  string card_number = 3;
+  string expiration_date = 4;
+  string cvv = 5;
+  int32 item_count = 6;
+  bool terms_accepted = 7;
 }
 
-message Item {
-    string name = 1;
-    int32 quantity = 2;
-}
-
-message TransactionResponse {
-    bool is_valid = 1;
-    string reason = 2;
+message TransactionVerificationResponse {
+  bool is_valid = 1;
+  string message = 2;
 }
