@@ -38,7 +38,6 @@ sequenceDiagram
     participant FD as Fraud Detection
     participant S as Suggestions
 
-    rect rgb(240, 240, 240)
     note right of U: Checkout flow
     U->>F: Submit order form
     F->>O: POST /checkout
@@ -59,7 +58,6 @@ sequenceDiagram
     end
     end
 
-    rect rgb(235, 245, 235)
     note right of U: Suggestions flow
     U->>F: Click "Test Suggestions"
     F->>O: POST /suggestions
