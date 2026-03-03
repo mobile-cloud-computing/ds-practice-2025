@@ -6,4 +6,4 @@ COPY ./suggestions/requirements.txt .
 
 RUN pip install --no-cache-dir -r requirements.txt
 
-CMD ["python", "suggestions/src/app.py"]
+CMD python utils/other/hotreload.py "suggestions/src/app.py"

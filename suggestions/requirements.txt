@@ -1,3 +1,5 @@
 grpcio==1.60.0
 grpcio-tools==1.60.0
 protobuf==4.25.3
+groq>=0.11.0
+watchdog==6.0.0
