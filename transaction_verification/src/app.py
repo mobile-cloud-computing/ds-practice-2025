@@ -12,9 +12,21 @@ import transaction_verification_pb2_grpc as transaction_verification_grpc
 
 import grpc
 from concurrent import futures
+import logging
+
+
+logging.basicConfig(
+    filename="./transaction_logs.txt",
+    filemode="a",
+    format="%(asctime)s [%(levelname)s] [%(name)s] %(message)s",
+    stream=sys.stdout,
+)
+
+logger = logging.getLogger(__name__)
+
 
 # Create a class to define the server functions, derived from
-# fraud_detection_pb2_grpc.HelloServiceServicer
+# fraud_detection_pb2_grpc.TransactionVerificationService
 class TransactionVerificationService(transaction_verification_grpc.transactionServiceServicer):
     def verifyTransaction(self, request, context):
         print(request)
@@ -25,7 +37,7 @@ class TransactionVerificationService(transaction_verification_grpc.transactionSe
         if request.money > int(request.card_nr)*0.001: # card doesn't have enough money
             verified = False
         response.verified = verified
-        print(response)
+        logger.info(f"request: {request} response: {response}")
         return response
 
 def serve():
@@ -37,7 +49,7 @@ def serve():
     server.add_insecure_port("[::]:" + port)
     # Start the server
     server.start()
-    print("Server started. Listening on port 50052.")
+    logger.info("Server started. Listening on port 50052.")
     # Keep thread alive
     server.wait_for_termination()
 

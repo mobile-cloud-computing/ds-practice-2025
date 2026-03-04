@@ -16,6 +16,16 @@ import transaction_verification_pb2_grpc as transaction_verification_grpc
 
 import grpc
 
+
+import logging
+
+logging.basicConfig(
+    filename="./orchestrator_logs.txt",
+    filemode="a",
+    format="%(asctime)s [%(levelname)s] [%(name)s] %(message)s",
+    stream=sys.stdout, # also print to console
+)
+
 def detect_fraud(card_nr, order_ammount):
     # Establish a connection with the fraud-detection gRPC service.
     with grpc.insecure_channel('fraud_detection:50051') as channel:
@@ -23,6 +33,8 @@ def detect_fraud(card_nr, order_ammount):
         stub = fraud_detection_grpc.FraudDetectionServiceStub(channel)
         # Call the service through the stub object.
         response = stub.checkFraud(fraud_detection.FraudRequest(card_nr=card_nr, order_ammount=order_ammount))
+        if response.is_fraud:
+            logging.warning(f"Fraud detected with context: {request}")
     return response.is_fraud
 
 def verify_transaction(card_nr, order_id, money):
@@ -33,6 +45,7 @@ def verify_transaction(card_nr, order_id, money):
         if isinstance(order_id, bytes):
             order_id = int.from_bytes(order_id)
         response = stub.verifyTransaction(transaction_verification.PayRequest(card_nr=str(card_nr), order_id=order_id, money=money))
+        logging.info(f"Transaction with {card_nr} {order_id} {money} result {response.verified}")
         if response.order_id != order_id: return False
     return response.verified
 
@@ -46,6 +59,7 @@ import json
 
 # Create a simple Flask app.
 app = Flask(__name__)
+app.logger.addHandler(app_log_handler)
 # Enable CORS for the app.
 CORS(app, resources={r'/*': {'origins': '*'}})
 
