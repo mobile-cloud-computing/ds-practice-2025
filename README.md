@@ -1,46 +1,61 @@
-# Distributed Systems @ University of Tartu
+# Distributed Systems Project — Bookstore
 
-This repository contains the initial code for the practice sessions of the Distributed Systems course at the University of Tartu.
+**Team:** Yevhen Pankevych, Yehor Bachynsky, Merili Pihlak
 
-## Getting started
+This repository contains the code for the practice sessions of the Distributed Systems course at the University of Tartu.
 
-### Overview
+## Overview
 
-The code consists of multiple services. Each service is located in a separate folder. The `frontend` service folder contains a Dockerfile and the code for an example bookstore application. Each backend service folder (e.g. `orchestrator` or `fraud_detection`) contains a Dockerfile, a requirements.txt file and the source code of the service. During the practice sessions, you will implement the missing functionality in these backend services, or extend the backend with new services.
+An online bookstore system composed of multiple microservices that communicate via **gRPC**, and have a general orchestrator with the REST API provided. When a user places an order through the frontend, the orchestrator concurrently invokes all backend services and returns a combined response.
 
-There is also a `utils` folder that contains some helper code or specifications that are used by multiple services. Check the `utils` folder for more information.
+### Architecture
 
-### Running the code with Docker Compose [recommended]
+![Architecture Diagram](img/architectural_diagram_checkpoint1.png)
 
-To run the code, you need to clone this repository, make sure you have Docker and Docker Compose installed, and run the following command in the root folder of the repository:
+### Services
+
+| Service | Description | Port |
+| --- | --- | --- |
+| **Frontend** | Static HTML page, running in a Docker container, with the exposed port | REST `8080` |
+| **Orchestrator** | Flask REST API to do checkout; orchestrates calls to all services via async gRPC | REST `8081` |
+| **Fraud Detection** | Uses OpenAI to detect fraud orders (prompt injection, suspicious fields, etc.) | gRPC `50051` |
+| **Transaction Verification** | Validates credit card number (Luhn's algorithm), card vendor (Visa/Mastercard), expiry date, billing address (validates address is real using GeoPy), and item list (items are not empty and do not exceed reasonable quantities) | gRPC `50052` |
+| **Recommendation System** | Uses OpenAI to suggest books from the catalog based on the user's order | gRPC `50053` |
+
+### gRPC Interfaces
+
+Each service returns a response with the direct answer (is_fraud, is_valid, recommendations) and an optional error message if something went wrong. The orchestrator combines the responses and returns a single JSON object to the frontend.
+
+Methods:
+- `FraudDetectionService.CheckFraud(FraudRequest(user, credit_card, user_comment, List(item), billing_address, shipping_method, gift_wrapping, terms_accepted))` -> `FraudResponse(is_fraud, error_message)`
+- `TransactionVerificationService.VerifyTransaction(TransactionVerificationRequest(credit_card, List(item), billing_address))` -> `TransactionVerficationResponse(is_valid, error_message)`
+- `RecommendationService.GetRecommendations(RecommendationRequest(user_comment, List(item)), top_k))` -> `RecommendationResponse(suggested_books, error_message)`
+
+## Prerequisites
+
+- Docker & Docker Compose
+- An OpenAI API key
+
+## Running
+
+### Generate gRPC Stubs
 
 ```bash
-docker compose up
+python recompile_proto.py
 ```
 
-This will start the system with the multiple services. Each service will be restarted automatically when you make changes to the code, so you don't have to restart the system manually while developing. If you want to know how the services are started and configured, check the `docker-compose.yaml` file.
-
-The checkpoint evaluations will be done using the code that is started with Docker Compose, so make sure that your code works with Docker Compose.
-
-If, for some reason, changes to the code are not reflected, try to force rebuilding the Docker images with the following command:
+### Run the system
 
 ```bash
+export OPENAI_API_KEY=<api-key>
+export OPENAI_MODEL=<model-name>
 docker compose up --build
 ```
 
-### Run the code locally
+### Visit UI
 
-Even though you can run the code locally, it is recommended to use Docker and Docker Compose to run the code. This way you don't have to install any dependencies locally and you can easily run the code on any platform.
+Navigate to [http://localhost:8080](http://localhost:8080) in the browser.
 
-If you want to run the code locally, you need to install the following dependencies:
+## Logs
 
-backend services:
-- Python 3.8 or newer
-- pip
-- [grpcio-tools](https://grpc.io/docs/languages/python/quickstart/)
-- requirements.txt dependencies from each service
-
-frontend service:
-- It's a simple static HTML page, you can open `frontend/src/index.html` in your browser.
-
-And then run each service individually.
+Each service uses python `logging` library to write structured logs to the `logs/` directory (volume-mounted into every container) and into the console. Each service creates own log file with the name `<ServiceName>.log` in the `logs/` directory.
