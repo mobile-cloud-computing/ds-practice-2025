@@ -168,7 +168,7 @@ def checkout():
     order_amount = str(sum(item.get("quantity", 0) for item in items))
 
     from concurrent.futures import ThreadPoolExecutor
-    with ThreadPoolExecutor(max_workers=1) as executor:
+    with ThreadPoolExecutor(max_workers=3) as executor:
         future_fraud = executor.submit(detect_fraud, card_number, order_amount)
         future_verification = executor.submit(verify_transaction, request_data)
         future_suggestions = executor.submit(get_suggestions, items)

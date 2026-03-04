@@ -143,5 +143,5 @@ docs/              Documentation and project plans
 - Suggestions are now AI-generated but may not always be contextually accurate
 - Order amount for fraud detection is based on item quantity sum, not actual prices
 - Item list is hardcoded in the frontend (Book A, Book B)
-- Only US ZIP codes (5 digits) are supported for billing address
+- Only 5 digits zip codes are supported for billing address
 - The orchestrator assigns a static order ID ("12345")
