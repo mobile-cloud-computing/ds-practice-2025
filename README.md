@@ -31,6 +31,8 @@ Methods:
 - `TransactionVerificationService.VerifyTransaction(TransactionVerificationRequest(credit_card, List(item), billing_address))` -> `TransactionVerficationResponse(is_valid, error_message)`
 - `RecommendationService.GetRecommendations(RecommendationRequest(user_comment, List(item)), top_k))` -> `RecommendationResponse(suggested_books, error_message)`
 
+![System Diagram](img/system_diagram_checkpoint1.png)
+
 ## Prerequisites
 
 - Docker & Docker Compose
