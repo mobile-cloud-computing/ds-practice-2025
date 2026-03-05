@@ -16,10 +16,10 @@ import logging
 
 
 logging.basicConfig(
-    filename="./transaction_logs.txt",
+    filename="/logs/transaction_logs.txt",
     filemode="a",
     format="%(asctime)s [%(levelname)s] [%(name)s] %(message)s",
-    stream=sys.stdout,
+    level=logging.INFO,
 )
 
 logger = logging.getLogger(__name__)

@@ -34,6 +34,7 @@ services:
       - ./utils:/app/utils
       # Mount the orchestrator/src directory in the current directory to the /app/orchestrator/src directory in the container
       - ./orchestrator/src:/app/orchestrator/src
+      - ./logs:/logs
   fraud_detection:
     build:
       # Use the current directory as the build context
@@ -56,6 +57,7 @@ services:
       - ./utils:/app/utils
       # Mount the fraud_detection/src directory in the current directory to the /app/fraud_detection/src directory in the container
       - ./fraud_detection/src:/app/fraud_detection/src
+      - ./logs:/logs
   transaction_verification:
     build:
       # Use the current directory as the build context
@@ -75,6 +77,7 @@ services:
     volumes:
       - ./utils:/app/utils
       - ./transaction_verification/src:/app/transaction_verification/src
+      - ./logs:/logs
 
   suggestions:
     build:
@@ -89,3 +92,4 @@ services:
       - ./utils:/app/utils
       # Mount the fraud_detection/src directory in the current directory to the /app/fraud_detection/src directory in the container
       - ./suggestions/src:/app/suggestions/src
+      - ./logs:/logs

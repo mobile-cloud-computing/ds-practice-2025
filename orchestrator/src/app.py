@@ -25,10 +25,10 @@ import grpc
 import logging
 
 logging.basicConfig(
-    filename="./orchestrator_logs.txt",
+    filename="/logs/orchestrator_logs.txt",
     filemode="a",
     format="%(asctime)s [%(levelname)s] [%(name)s] %(message)s",
-    stream=sys.stdout, # also print to console
+    level=logging.INFO,
 )
 
 logger = logging.getLogger(__name__)
