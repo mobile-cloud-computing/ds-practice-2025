@@ -17,8 +17,10 @@ import logging
 from BigBookAPI import book_script
 
 logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s [%(levelname)s] [%(name)s] %(message)s"
+    filename="./suggestions_logs.txt",
+    filemode="a",
+    format="%(asctime)s [%(levelname)s] [%(name)s] %(message)s",
+    stream=sys.stdout,
 )
 
 logger = logging.getLogger(__name__)
