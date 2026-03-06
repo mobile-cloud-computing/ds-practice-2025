@@ -1,5 +1,6 @@
 import sys
 import os
+import random
 
 # This set of lines are needed to import the gRPC stubs.
 # The path of the stubs is relative to the current file, or absolute inside the container.
@@ -41,7 +42,7 @@ def detect_fraud(card_nr, order_ammount):
         # Call the service through the stub object.
         response = stub.checkFraud(fraud_detection.FraudRequest(card_nr=card_nr, order_ammount=order_ammount))
         if response.is_fraud:
-            logger.warning(f"Fraud detected with context: {request}")
+            logger.warning(f"Fraud detected for card {card_nr} with amount {order_ammount}")
     return response.is_fraud
 
 def verify_transaction(card_nr, order_id, money):
@@ -49,8 +50,6 @@ def verify_transaction(card_nr, order_id, money):
         # Create a stub object.
         stub = transaction_verification_grpc.transactionServiceStub(channel)
         # Call the service through the stub object.
-        if isinstance(order_id, bytes):
-            order_id = int.from_bytes(order_id)
         response = stub.verifyTransaction(transaction_verification.PayRequest(card_nr=str(card_nr), order_id=order_id, money=money))
         logger.info(f"Transaction with {card_nr} {order_id} {money} result {response.verified}")
         if response.order_id != order_id: return False
@@ -67,7 +66,7 @@ def get_suggested_books(ordered_books):
 # Flask is a web framework for Python.
 # It allows you to build a web application quickly.
 # For more information, see https://flask.palletsprojects.com/en/latest/
-from flask import Flask, request
+from flask import Flask, request, jsonify
 from flask_cors import CORS
 import json
 
@@ -109,19 +108,21 @@ def checkout():
             'author': book.author
         })
 
-    if not verify_transaction(request_data["creditCard"]["number"], os.urandom(4), quantity):
+    # Generate order_id
+    order_id = random.randint(0, 2**63 - 1)
+
+    verified = verify_transaction(request_data["creditCard"]["number"], order_id, quantity)
+    if not verified:
         is_fraud = True
-
-
 
     # Dummy response following the provided YAML specification for the bookstore
     order_status_response = {
-        'orderId': '12345',
-        'status': ('odred declined' if is_fraud else 'Order Approved'),
-        'suggestedBooks': suggested_books_dicts,
+        'orderId': str(order_id),
+        'status': ('Order Rejected' if is_fraud else 'Order Approved'),
+        'suggestedBooks': suggested_books_dicts if not is_fraud else [],
     }
 
-    return order_status_response
+    return jsonify(order_status_response)
 
 
 if __name__ == '__main__':
