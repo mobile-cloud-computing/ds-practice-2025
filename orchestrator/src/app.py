@@ -25,6 +25,7 @@ import grpc
 
 import logging
 
+# Configure logging to file and console
 logging.basicConfig(
     filename="/logs/orchestrator_logs.txt",
     filemode="a",
