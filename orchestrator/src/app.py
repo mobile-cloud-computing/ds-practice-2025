@@ -19,6 +19,12 @@ sys.path.insert(0, transaction_verification_grpc_path)
 import transaction_verification_pb2 as transaction_verification
 import transaction_verification_pb2_grpc as transaction_verification_grpc
 
+FILE = __file__ if '__file__' in globals() else os.getenv("PYTHONFILE", "")
+suggestions_grpc_path = os.path.abspath(os.path.join(FILE, '../../../utils/pb/suggestions'))
+sys.path.insert(0, suggestions_grpc_path)
+import suggestions_pb2 as suggestions
+import suggestions_pb2_grpc as suggestions_grpc
+
 import grpc
 '''
 def greet(name='you'):
@@ -72,6 +78,27 @@ def call_transaction_verification(request_data):
     except Exception as e:
         logging.error(f"gRPC Call Failed: {e}")
         return False # Default to invalid if errors
+
+def call_suggestions(items):
+    try:
+        with grpc.insecure_channel('suggestions:50053') as channel:
+            stub = suggestions_grpc.SuggestionsServiceStub(channel)
+            request_obj = suggestions.SuggestRequest()
+            
+            for item in items:
+                book = request_obj.bought_books.add()
+                # Mapping 'name' from frontend to 'title' in proto
+                book.title = item.get('name', 'Unknown')
+                # Note: If frontend doesn't send author, you can default it
+                book.author = item.get('author', 'Unknown')
+
+            response = stub.SuggestBooks(request_obj)
+            
+            # Convert back to list of dicts for the Flask JSON response
+            return [{"title": b.title, "author": b.author} for b in response.suggested_books]
+    except Exception as e:
+        logging.error(f"Suggestions failed: {e}")
+        return []
 
 # Import Flask.
 # Flask is a web framework for Python.
@@ -169,25 +196,40 @@ def checkout():
 
 
         with ThreadPoolExecutor(max_workers=3) as executor:
-            logging.info("Starting thread for FraudDetection")
             future_fraud = executor.submit(call_fraud_detection, card_number, order_amount)
-
-            logging.info("Starting thread for TransactionVerification")
+            logging.info("Starting thread for FraudDetection | OrderID: test1")
+            
             future_verification = executor.submit(call_transaction_verification, request_data)
+            logging.info("Starting thread for TransactionVerification | OrderID: test1")
+
+            future_suggestions = executor.submit(call_suggestions, items)
+            logging.info("Starting thread for Suggestions | OrderID: test1")
 
             is_fraud = future_fraud.result()
-            logging.info(f"Thread returned fraud status: {is_fraud}")
+            logging.info(f"OrderID: test1 | FraudDetection Thread returned fraud status: {is_fraud}")
+
+            is_valid = future_verification.result()
+            logging.info(f"OrderID: test1 | TransferVerification Thread returned valid status: {is_valid}")
+
+            suggested_books = future_suggestions.result()
+            logging.info(f"OrderID: test1 | Suggestions Thread returned suggested books: {suggested_books}")
 
         order_status_response = {
             'orderId': '12345',
-            'status': 'Order Denied' if is_fraud else 'Order Approved',
+            'status': 'Order Denied' if (is_fraud or not is_valid) else 'Order Approved',
+            'suggestedBooks': suggested_books
+        }
+        '''
+        order_status_response = {
+            'orderId': '12345',
+            'status': 'Order Denied' if (is_fraud or not is_valid) else 'Order Approved',
             'suggestedBooks': [
                 {'bookId': '123', 'title': 'The Best Book', 'author': 'Author 1'},
                 {'bookId': '456', 'title': 'The Second Best Book', 'author': 'Author 2'}
             ]
         }
-
-        logging.info("Checkout completed", extra={"order_status_response": order_status_response})
+        '''
+        logging.info(f"Checkout completed: {order_status_response}")
         return order_status_response
 
     except Exception as e:
