@@ -131,8 +131,8 @@ def checkout():
     };
     '''
 
-    # Print request object data
-    print("Request Data:", request_data.get('items'))
+    # Log request object data
+    logging.info(f"Received request Data: {request_data.get('items')}")
 
     ##### THREADING #####
     from concurrent.futures import ThreadPoolExecutor
