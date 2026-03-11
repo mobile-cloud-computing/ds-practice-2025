@@ -1,6 +1,8 @@
 import sys
 import os
 import logging
+import json
+import threading
 
 
 # Import the gRPC stubs for transaction verification
@@ -12,10 +14,53 @@ import transaction_verification_pb2_grpc as transaction_verification_grpc
 
 import grpc
 from concurrent import futures
+
+SERVICE_NAME = 'transaction_verification'
+ORDER_CACHE = {}
+ORDER_CACHE_LOCK = threading.Lock()
+
+
+def _cache_initialized_order(order_id, order_payload_json, incoming_clock):
+    order_data = json.loads(order_payload_json or '{}')
+    vector_clock = dict(incoming_clock)
+    vector_clock[SERVICE_NAME] = vector_clock.get(SERVICE_NAME, 0) + 1
+
+    with ORDER_CACHE_LOCK:
+        ORDER_CACHE[order_id] = {
+            'order_data': order_data,
+            'vector_clock': vector_clock,
+        }
+
+    return vector_clock
+
+
+def _touch_order(order_id):
+    with ORDER_CACHE_LOCK:
+        cached_order = ORDER_CACHE.get(order_id)
+        if not cached_order:
+            return None
+
+        cached_order['vector_clock'][SERVICE_NAME] = cached_order['vector_clock'].get(SERVICE_NAME, 0) + 1
+        return {
+            'order_data': cached_order['order_data'],
+            'vector_clock': dict(cached_order['vector_clock']),
+        }
     
 class TransactionVerificationService(transaction_verification_grpc.TransactionVerificationServiceServicer):
+    def InitOrder(self, request, context):
+        try:
+            vector_clock = _cache_initialized_order(request.order_id, request.order_payload_json, request.vector_clock)
+        except json.JSONDecodeError:
+            context.set_code(grpc.StatusCode.INVALID_ARGUMENT)
+            context.set_details('Invalid order payload JSON.')
+            return transaction_verification.InitOrderResponse(acknowledged=False)
+
+        print(f"Initialized order {request.order_id} with vector clock {vector_clock}")
+        return transaction_verification.InitOrderResponse(acknowledged=True)
+
     # Create an RPC function to verify transaction
     def VerifyTransaction(self, request, context):
+        cached_order = _touch_order(request.order_id) if request.order_id else None
         # Extract transaction details from the request object
         user = request.user
         items = request.items
@@ -44,7 +89,11 @@ class TransactionVerificationService(transaction_verification_grpc.TransactionVe
 
         response = transaction_verification.TransactionVerificationResponse()
         response.is_verified = is_valid
-        print(f"Received transaction: user={user.name},  is_verified={response.is_verified}, reasons={reasons}")
+        print(
+            f"Received transaction: order_id={request.order_id or '[none]'}, user={user.name}, "
+            f"is_verified={response.is_verified}, reasons={reasons}, "
+            f"vector_clock={cached_order['vector_clock'] if cached_order else {SERVICE_NAME: 1}}"
+        )
         return response
 
 

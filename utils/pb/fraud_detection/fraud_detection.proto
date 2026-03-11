@@ -3,12 +3,24 @@ syntax = "proto3";
 package fraud;
 
 service FraudDetectionService {
+    rpc InitOrder (InitOrderRequest) returns (InitOrderResponse);
     rpc DetectFraud (FraudDetectionRequest) returns (FraudDetectionResponse);
+}
+
+message InitOrderRequest {
+    string order_id = 1;
+    string order_payload_json = 2;
+    map<string, int32> vector_clock = 3;
+}
+
+message InitOrderResponse {
+    bool acknowledged = 1;
 }
 
 message FraudDetectionRequest {
     string card_number = 1;
     float order_amount = 2;
+    string order_id = 3;
 }
 
 message FraudDetectionResponse {

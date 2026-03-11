@@ -3,7 +3,18 @@ syntax = "proto3";
 package transaction;
 
 service TransactionVerificationService {
+    rpc InitOrder (InitOrderRequest) returns (InitOrderResponse);
     rpc VerifyTransaction (TransactionVerificationRequest) returns (TransactionVerificationResponse);
+}
+
+message InitOrderRequest {
+    string order_id = 1;
+    string order_payload_json = 2;
+    map<string, int32> vector_clock = 3;
+}
+
+message InitOrderResponse {
+    bool acknowledged = 1;
 }
 
 
@@ -25,6 +36,7 @@ message TransactionVerificationRequest {
     string card_expiry = 4;
     string card_cvv = 5;
     float order_amount = 6;
+    string order_id = 7;
 }
 
 message TransactionVerificationResponse {
