@@ -22,19 +22,26 @@ _runtime_version.ValidateProtobufRuntimeVersion(
 _sym_db = _symbol_database.Default()
 
 
+from google.protobuf import empty_pb2 as google_dot_protobuf_dot_empty__pb2
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x1etransaction_verification.proto\x12\x18transaction_verification\"\xc9\x01\n\rVerifyRequest\x12\x11\n\tuser_name\x18\x01 \x01(\t\x12\x0f\n\x07\x63ontact\x18\x02 \x01(\t\x12\x13\n\x0b\x63\x61rd_number\x18\x03 \x01(\t\x12\x0e\n\x06street\x18\x04 \x01(\t\x12\x0c\n\x04\x63ity\x18\x05 \x01(\t\x12\r\n\x05state\x18\x06 \x01(\t\x12\x10\n\x08zip_code\x18\x07 \x01(\t\x12\x0f\n\x07\x63ountry\x18\x08 \x01(\t\x12\x17\n\x0fshipping_method\x18\t \x01(\t\x12\x16\n\x0eterms_accepted\x18\n \x01(\x08\"\"\n\x0eVerifyResponse\x12\x10\n\x08is_valid\x18\x01 \x01(\x08\x32\x88\x01\n\x1eTransactionVerificationService\x12\x66\n\x11VerifyTransaction\x12\'.transaction_verification.VerifyRequest\x1a(.transaction_verification.VerifyResponseb\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x1etransaction_verification.proto\x12\x18transaction_verification\x1a\x1bgoogle/protobuf/empty.proto\"\x1d\n\x0bVectorClock\x12\x0e\n\x06values\x18\x01 \x03(\x05\"2\n\x0bInitRequest\x12\x10\n\x08order_id\x18\x01 \x01(\t\x12\x11\n\titem_json\x18\x02 \x01(\t\"\\\n\x12\x43lockUpdateRequest\x12\x10\n\x08order_id\x18\x01 \x01(\t\x12\x34\n\x05\x63lock\x18\x02 \x01(\x0b\x32%.transaction_verification.VectorClock\"\xdb\x01\n\rVerifyRequest\x12\x10\n\x08order_id\x18\x01 \x01(\t\x12\x11\n\tuser_name\x18\x02 \x01(\t\x12\x0f\n\x07\x63ontact\x18\x03 \x01(\t\x12\x13\n\x0b\x63\x61rd_number\x18\x04 \x01(\t\x12\x0e\n\x06street\x18\x05 \x01(\t\x12\x0c\n\x04\x63ity\x18\x06 \x01(\t\x12\r\n\x05state\x18\x07 \x01(\t\x12\x10\n\x08zip_code\x18\x08 \x01(\t\x12\x0f\n\x07\x63ountry\x18\t \x01(\t\x12\x17\n\x0fshipping_method\x18\n \x01(\t\x12\x16\n\x0eterms_accepted\x18\x0b \x01(\x08\"\"\n\x0eVerifyResponse\x12\x10\n\x08is_valid\x18\x01 \x01(\x08\x32\xa9\x02\n\x1eTransactionVerificationService\x12J\n\tInitOrder\x12%.transaction_verification.InitRequest\x1a\x16.google.protobuf.Empty\x12S\n\x0bUpdateClock\x12,.transaction_verification.ClockUpdateRequest\x1a\x16.google.protobuf.Empty\x12\x66\n\x11VerifyTransaction\x12\'.transaction_verification.VerifyRequest\x1a(.transaction_verification.VerifyResponseb\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
 _builder.BuildTopDescriptorsAndMessages(DESCRIPTOR, 'transaction_verification_pb2', _globals)
 if not _descriptor._USE_C_DESCRIPTORS:
   DESCRIPTOR._loaded_options = None
-  _globals['_VERIFYREQUEST']._serialized_start=61
-  _globals['_VERIFYREQUEST']._serialized_end=262
-  _globals['_VERIFYRESPONSE']._serialized_start=264
-  _globals['_VERIFYRESPONSE']._serialized_end=298
-  _globals['_TRANSACTIONVERIFICATIONSERVICE']._serialized_start=301
-  _globals['_TRANSACTIONVERIFICATIONSERVICE']._serialized_end=437
+  _globals['_VECTORCLOCK']._serialized_start=89
+  _globals['_VECTORCLOCK']._serialized_end=118
+  _globals['_INITREQUEST']._serialized_start=120
+  _globals['_INITREQUEST']._serialized_end=170
+  _globals['_CLOCKUPDATEREQUEST']._serialized_start=172
+  _globals['_CLOCKUPDATEREQUEST']._serialized_end=264
+  _globals['_VERIFYREQUEST']._serialized_start=267
+  _globals['_VERIFYREQUEST']._serialized_end=486
+  _globals['_VERIFYRESPONSE']._serialized_start=488
+  _globals['_VERIFYRESPONSE']._serialized_end=522
+  _globals['_TRANSACTIONVERIFICATIONSERVICE']._serialized_start=525
+  _globals['_TRANSACTIONVERIFICATIONSERVICE']._serialized_end=822
 # @@protoc_insertion_point(module_scope)

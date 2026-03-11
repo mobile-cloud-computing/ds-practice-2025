@@ -1,0 +1,21 @@
+syntax = "proto3";
+
+import "google/protobuf/empty.proto";
+
+package orchestrator;
+
+service OrderFinalizer {
+    // This is called by the last microservice in the chain
+    rpc ReportResult (FinalOrderResult) returns (google.protobuf.Empty);
+}
+
+message FinalOrderResult {
+    string order_id = 1;
+    string status = 2; // "Order Approved" or "Order Denied"
+    repeated Book suggested_books = 3;
+}
+
+message Book {
+    string title = 1;
+    string author = 2;
+}

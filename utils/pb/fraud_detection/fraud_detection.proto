@@ -2,13 +2,32 @@ syntax = "proto3";
 
 package fraud_detection;
 
+import "google/protobuf/empty.proto";
+
 service FraudDetectionService {
+    rpc InitOrder (InitRequest) returns (google.protobuf.Empty);
+    rpc UpdateClock (ClockUpdateRequest) returns (google.protobuf.Empty);
     rpc CheckFraud (FraudRequest) returns (FraudResponse);
 }
 
+message VectorClock {
+    repeated int32 values = 1; // [Fraud, Verification, Suggestions]
+}
+
+message InitRequest {
+    string order_id = 1;
+    string item_json = 2; // The raw request data
+}
+
+message ClockUpdateRequest {
+    string order_id = 1;
+    VectorClock clock = 2;
+}
+
 message FraudRequest {
-    string credit_card = 1;
-    float order_amount = 2;
+    string order_id = 1;
+    string credit_card = 2;
+    float order_amount = 3;
 }
 
 message FraudResponse {

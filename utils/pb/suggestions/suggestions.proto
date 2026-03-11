@@ -1,18 +1,36 @@
 syntax = "proto3";
 
+import "google/protobuf/empty.proto";
+
 package suggestions;
 
 service SuggestionsService {
+    rpc InitOrder (InitRequest) returns (google.protobuf.Empty);
+    rpc UpdateClock (ClockUpdateRequest) returns (google.protobuf.Empty);
     rpc SuggestBooks (SuggestRequest) returns (SuggestResponse);
+}
+
+message VectorClock {
+    repeated int32 values = 1; // [Fraud, Verification, Suggestions]
+}
+
+message InitRequest {
+    string order_id = 1;
+    string item_json = 2; // The raw request data
+}
+
+message ClockUpdateRequest {
+    string order_id = 1;
+    VectorClock clock = 2;
+}
+
+message SuggestRequest {
+    string order_id = 1;
 }
 
 message Book {
     string title = 1;
     string author = 2;
-}
-
-message SuggestRequest {
-    repeated Book bought_books = 1;
 }
 
 message SuggestResponse {
