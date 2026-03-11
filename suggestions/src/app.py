@@ -39,6 +39,64 @@ def merge_and_increment(local_vc, incoming_vc, my_idx):
     return merged
 
 
+def _generate_ai_recommendations(order_data):
+    try:
+        import google.genai as genai
+
+        api_key = os.environ.get("GEMINI_API_KEY")
+        if not api_key:
+            return None
+
+        user_id = order_data.get("userId", "anonymous")
+        selected_books = [str(item.get("name", "")).strip() for item in order_data.get("items", []) if str(item.get("name", "")).strip()]
+        if not selected_books:
+            selected_books = [
+                "Harry Potter and the Philosopher's Stone by J.K. Rowling",
+                "The Hobbit by J.R.R. Tolkien",
+            ]
+
+        selected_titles = [book.split(" by ", 1)[0].strip().lower() for book in selected_books]
+        input_prompt = (
+            "You are a bookstore recommendation assistant. "
+            f"User id: {user_id}. "
+            f"Selected books: {selected_books}. "
+            "Suggest exactly 3 additional books related to selected books. "
+            "Rules: suggestions must be different from selected books. "
+            "Output strictly 3 lines, each line in exact format: Title by Author. "
+            "No numbering, no bullets, no extra text."
+        )
+
+        client = genai.Client(api_key=api_key)
+        response_ai = client.models.generate_content(
+            model="gemini-2.5-flash-lite", contents=input_prompt
+        )
+
+        parsed = []
+        for line in (response_ai.text or "").split("\n"):
+            entry = line.strip()
+            if not entry:
+                continue
+            if " by " in entry:
+                title, author = entry.split(" by ", 1)
+                title = title.strip()
+                author = author.strip()
+            else:
+                title = entry.strip()
+                author = "Unknown"
+
+            if not title or title.lower() in selected_titles:
+                continue
+            candidate = {"title": title, "author": author}
+            if candidate not in parsed:
+                parsed.append(candidate)
+            if len(parsed) >= 3:
+                break
+
+        return parsed if parsed else None
+    except Exception:
+        return None
+
+
 class OrderState:
     def __init__(self, order_data):
         self.order_data = order_data
@@ -50,6 +108,18 @@ class OrderState:
 
 
 class SuggestionsService(suggestions_grpc.SuggestionsServiceServicer):
+    def _get_state_or_abort(self, order_id, context):
+        with ORDER_CACHE_LOCK:
+            state = ORDER_CACHE.get(order_id)
+        if state is None:
+            context.set_code(grpc.StatusCode.NOT_FOUND)
+            context.set_details(f"Order {order_id} not initialized")
+        return state
+
+    def _remove_order(self, order_id):
+        with ORDER_CACHE_LOCK:
+            ORDER_CACHE.pop(order_id, None)
+
     def InitOrder(self, request, context):
         try:
             order_data = json.loads(request.order_payload_json or "{}")
@@ -67,7 +137,9 @@ class SuggestionsService(suggestions_grpc.SuggestionsServiceServicer):
             return suggestions.InitOrderResponse(acknowledged=False)
 
     def NotifyECompleted(self, request, context):
-        state = ORDER_CACHE[request.order_id]
+        state = self._get_state_or_abort(request.order_id, context)
+        if state is None:
+            return suggestions.Ack(ok=False)
         with state.cond:
             state.local_vc = merge_and_increment(state.local_vc, list(request.vector_clock), MY_IDX)
             state.event_vc["e"] = list(request.vector_clock)
@@ -82,8 +154,11 @@ class SuggestionsService(suggestions_grpc.SuggestionsServiceServicer):
         return suggestions.Ack(ok=True)
 
     def _run_event_f(self, order_id):
-        state = ORDER_CACHE[order_id]
-        #TODO AI siia
+        with ORDER_CACHE_LOCK:
+            state = ORDER_CACHE.get(order_id)
+        if state is None:
+            return
+
         with state.cond:
             state.cond.wait_for(lambda: "e" in state.event_vc)
 
@@ -92,7 +167,7 @@ class SuggestionsService(suggestions_grpc.SuggestionsServiceServicer):
 
             state.local_vc = merge_and_increment(state.local_vc, required, MY_IDX)
 
-            recommendations = [
+            recommendations = _generate_ai_recommendations(state.order_data) or [
                 {"title": "Dune", "author": "Frank Herbert"},
                 {"title": "Foundation", "author": "Isaac Asimov"},
                 {"title": "1984", "author": "George Orwell"},
@@ -124,6 +199,8 @@ class SuggestionsService(suggestions_grpc.SuggestionsServiceServicer):
                 )
         except Exception as e:
             print(f"[SG] failed to send success: {e}")
+        finally:
+            self._remove_order(order_id)
 
 
 def serve():

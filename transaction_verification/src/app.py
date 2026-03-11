@@ -23,6 +23,7 @@ MY_IDX = 0
 ORDER_CACHE = {}
 ORDER_CACHE_LOCK = threading.Lock()
 TOTAL_SERVICES = 3
+FINALIZE_TIMEOUT_SECONDS = 20
 
 
 def zero_vc():
@@ -54,6 +55,18 @@ class OrderState:
 
 
 class TransactionVerificationService(transaction_verification_grpc.TransactionVerificationServiceServicer):
+    def _get_state_or_abort(self, order_id, context):
+        with ORDER_CACHE_LOCK:
+            state = ORDER_CACHE.get(order_id)
+        if state is None:
+            context.set_code(grpc.StatusCode.NOT_FOUND)
+            context.set_details(f"Order {order_id} not initialized")
+        return state
+
+    def _remove_order(self, order_id):
+        with ORDER_CACHE_LOCK:
+            ORDER_CACHE.pop(order_id, None)
+
     def InitOrder(self, request, context):
         try:
             order_data = json.loads(request.order_payload_json or "{}")
@@ -73,7 +86,14 @@ class TransactionVerificationService(transaction_verification_grpc.TransactionVe
 
     def StartCheckoutFlow(self, request, context):
         order_id = request.order_id
-        state = ORDER_CACHE[order_id]
+        state = self._get_state_or_abort(order_id, context)
+        if state is None:
+            return transaction_verification.StartCheckoutFlowResponse(
+                success=False,
+                message="Order not initialized",
+                vector_clock=zero_vc(),
+                suggestions=[]
+            )
 
         t_a = threading.Thread(target=self._run_event_a, args=(order_id,))
         t_b = threading.Thread(target=self._run_event_b, args=(order_id,))
@@ -81,9 +101,15 @@ class TransactionVerificationService(transaction_verification_grpc.TransactionVe
         t_b.start()
 
         with state.cond:
-            state.cond.wait_for(lambda: state.finished)
+            finished = state.cond.wait_for(lambda: state.finished, timeout=FINALIZE_TIMEOUT_SECONDS)
 
-            return transaction_verification.StartCheckoutFlowResponse(
+            if not finished:
+                state.finished = True
+                state.success = False
+                state.message = "Order Declined: checkout flow timeout"
+                print(f"[TV] TIMEOUT order={order_id} vc={state.local_vc}")
+
+            response = transaction_verification.StartCheckoutFlowResponse(
                 success=state.success,
                 message=state.message,
                 vector_clock=state.local_vc,
@@ -95,9 +121,13 @@ class TransactionVerificationService(transaction_verification_grpc.TransactionVe
                     for item in state.recommendations
                 ]
             )
+        self._remove_order(order_id)
+        return response
 
     def FinalizeOrder(self, request, context):
-        state = ORDER_CACHE[request.order_id]
+        state = self._get_state_or_abort(request.order_id, context)
+        if state is None:
+            return transaction_verification.Ack(ok=False)
         with state.cond:
             state.local_vc = merge_and_increment(state.local_vc, list(request.vector_clock), MY_IDX)
             state.finished = True
@@ -113,7 +143,10 @@ class TransactionVerificationService(transaction_verification_grpc.TransactionVe
         return transaction_verification.Ack(ok=True)
 
     def _fail(self, order_id, message):
-        state = ORDER_CACHE[order_id]
+        with ORDER_CACHE_LOCK:
+            state = ORDER_CACHE.get(order_id)
+        if state is None:
+            return
         with state.cond:
             if state.finished:
                 return
@@ -124,7 +157,10 @@ class TransactionVerificationService(transaction_verification_grpc.TransactionVe
             state.cond.notify_all()
 
     def _run_event_a(self, order_id):
-        state = ORDER_CACHE[order_id]
+        with ORDER_CACHE_LOCK:
+            state = ORDER_CACHE.get(order_id)
+        if state is None:
+            return
 
         with state.cond:
             state.local_vc = merge_and_increment(state.local_vc, state.local_vc, MY_IDX)
@@ -140,7 +176,10 @@ class TransactionVerificationService(transaction_verification_grpc.TransactionVe
         self._run_event_c(order_id, state.event_vc["a"])
 
     def _run_event_b(self, order_id):
-        state = ORDER_CACHE[order_id]
+        with ORDER_CACHE_LOCK:
+            state = ORDER_CACHE.get(order_id)
+        if state is None:
+            return
 
         with state.cond:
             state.local_vc = merge_and_increment(state.local_vc, state.local_vc, MY_IDX)
@@ -167,7 +206,10 @@ class TransactionVerificationService(transaction_verification_grpc.TransactionVe
             self._fail(order_id, f"Could not notify fraud service after b: {e}")
 
     def _run_event_c(self, order_id, incoming_vc):
-        state = ORDER_CACHE[order_id]
+        with ORDER_CACHE_LOCK:
+            state = ORDER_CACHE.get(order_id)
+        if state is None:
+            return
 
         with state.cond:
             state.local_vc = merge_and_increment(state.local_vc, incoming_vc, MY_IDX)
