@@ -5,7 +5,7 @@ import warnings
 
 import transaction_verification_pb2 as transaction__verification__pb2
 
-GRPC_GENERATED_VERSION = '1.78.0'
+GRPC_GENERATED_VERSION = '1.70.0'
 GRPC_VERSION = grpc.__version__
 _version_not_supported = False
 
@@ -18,7 +18,7 @@ except ImportError:
 if _version_not_supported:
     raise RuntimeError(
         f'The grpc package installed is at version {GRPC_VERSION},'
-        + ' but the generated code in transaction_verification_pb2_grpc.py depends on'
+        + f' but the generated code in transaction_verification_pb2_grpc.py depends on'
         + f' grpcio>={GRPC_GENERATED_VERSION}.'
         + f' Please upgrade your grpc module to grpcio>={GRPC_GENERATED_VERSION}'
         + f' or downgrade your generated code using grpcio-tools<={GRPC_VERSION}.'
@@ -39,10 +39,15 @@ class TransactionVerificationServiceStub(object):
                 request_serializer=transaction__verification__pb2.InitOrderRequest.SerializeToString,
                 response_deserializer=transaction__verification__pb2.InitOrderResponse.FromString,
                 _registered_method=True)
-        self.VerifyTransaction = channel.unary_unary(
-                '/transaction.TransactionVerificationService/VerifyTransaction',
-                request_serializer=transaction__verification__pb2.TransactionVerificationRequest.SerializeToString,
-                response_deserializer=transaction__verification__pb2.TransactionVerificationResponse.FromString,
+        self.StartCheckoutFlow = channel.unary_unary(
+                '/transaction.TransactionVerificationService/StartCheckoutFlow',
+                request_serializer=transaction__verification__pb2.StartCheckoutFlowRequest.SerializeToString,
+                response_deserializer=transaction__verification__pb2.StartCheckoutFlowResponse.FromString,
+                _registered_method=True)
+        self.FinalizeOrder = channel.unary_unary(
+                '/transaction.TransactionVerificationService/FinalizeOrder',
+                request_serializer=transaction__verification__pb2.FinalizeOrderRequest.SerializeToString,
+                response_deserializer=transaction__verification__pb2.Ack.FromString,
                 _registered_method=True)
 
 
@@ -55,8 +60,16 @@ class TransactionVerificationServiceServicer(object):
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
-    def VerifyTransaction(self, request, context):
-        """Missing associated documentation comment in .proto file."""
+    def StartCheckoutFlow(self, request, context):
+        """Orchestrator starts the whole workflow here
+        """
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def FinalizeOrder(self, request, context):
+        """Final result is reported back here
+        """
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
@@ -69,10 +82,15 @@ def add_TransactionVerificationServiceServicer_to_server(servicer, server):
                     request_deserializer=transaction__verification__pb2.InitOrderRequest.FromString,
                     response_serializer=transaction__verification__pb2.InitOrderResponse.SerializeToString,
             ),
-            'VerifyTransaction': grpc.unary_unary_rpc_method_handler(
-                    servicer.VerifyTransaction,
-                    request_deserializer=transaction__verification__pb2.TransactionVerificationRequest.FromString,
-                    response_serializer=transaction__verification__pb2.TransactionVerificationResponse.SerializeToString,
+            'StartCheckoutFlow': grpc.unary_unary_rpc_method_handler(
+                    servicer.StartCheckoutFlow,
+                    request_deserializer=transaction__verification__pb2.StartCheckoutFlowRequest.FromString,
+                    response_serializer=transaction__verification__pb2.StartCheckoutFlowResponse.SerializeToString,
+            ),
+            'FinalizeOrder': grpc.unary_unary_rpc_method_handler(
+                    servicer.FinalizeOrder,
+                    request_deserializer=transaction__verification__pb2.FinalizeOrderRequest.FromString,
+                    response_serializer=transaction__verification__pb2.Ack.SerializeToString,
             ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
@@ -113,7 +131,7 @@ class TransactionVerificationService(object):
             _registered_method=True)
 
     @staticmethod
-    def VerifyTransaction(request,
+    def StartCheckoutFlow(request,
             target,
             options=(),
             channel_credentials=None,
@@ -126,9 +144,36 @@ class TransactionVerificationService(object):
         return grpc.experimental.unary_unary(
             request,
             target,
-            '/transaction.TransactionVerificationService/VerifyTransaction',
-            transaction__verification__pb2.TransactionVerificationRequest.SerializeToString,
-            transaction__verification__pb2.TransactionVerificationResponse.FromString,
+            '/transaction.TransactionVerificationService/StartCheckoutFlow',
+            transaction__verification__pb2.StartCheckoutFlowRequest.SerializeToString,
+            transaction__verification__pb2.StartCheckoutFlowResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def FinalizeOrder(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/transaction.TransactionVerificationService/FinalizeOrder',
+            transaction__verification__pb2.FinalizeOrderRequest.SerializeToString,
+            transaction__verification__pb2.Ack.FromString,
             options,
             channel_credentials,
             insecure,

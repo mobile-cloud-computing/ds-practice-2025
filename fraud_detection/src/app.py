@@ -1,101 +1,203 @@
 import sys
 import os
 import json
-import joblib
-import pandas as pd
-import numpy as np
 import threading
-from sklearn.ensemble import RandomForestClassifier
+import grpc
+from concurrent import futures
 
-# load
-fraud_ai = joblib.load("./fraud_detection/ai/fraud_model.joblib")
-
-# This set of lines are needed to import the gRPC stubs.
-# The path of the stubs is relative to the current file, or absolute inside the container.
-# Change these lines only if strictly needed.
 FILE = __file__ if '__file__' in globals() else os.getenv("PYTHONFILE", "")
+
 fraud_detection_grpc_path = os.path.abspath(os.path.join(FILE, '../../../utils/pb/fraud_detection'))
 sys.path.insert(0, fraud_detection_grpc_path)
 import fraud_detection_pb2 as fraud_detection
 import fraud_detection_pb2_grpc as fraud_detection_grpc
 
-import grpc
-from concurrent import futures
+suggestions_grpc_path = os.path.abspath(os.path.join(FILE, '../../../utils/pb/suggestions'))
+sys.path.insert(0, suggestions_grpc_path)
+import suggestions_pb2 as suggestions
+import suggestions_pb2_grpc as suggestions_grpc
 
-SERVICE_NAME = 'fraud_detection'
+transaction_verification_grpc_path = os.path.abspath(os.path.join(FILE, '../../../utils/pb/transaction_verification'))
+sys.path.insert(0, transaction_verification_grpc_path)
+import transaction_verification_pb2 as transaction_verification
+import transaction_verification_pb2_grpc as transaction_verification_grpc
+
+
+MY_IDX = 1
 ORDER_CACHE = {}
 ORDER_CACHE_LOCK = threading.Lock()
+TOTAL_SERVICES = 3
 
 
-def _cache_initialized_order(order_id, order_payload_json, incoming_clock):
-    order_data = json.loads(order_payload_json or '{}')
-    vector_clock = dict(incoming_clock)
-    vector_clock[SERVICE_NAME] = vector_clock.get(SERVICE_NAME, 0) + 1
+def zero_vc():
+    return [0] * TOTAL_SERVICES
 
-    with ORDER_CACHE_LOCK:
-        ORDER_CACHE[order_id] = {
-            'order_data': order_data,
-            'vector_clock': vector_clock,
-        }
+def vc_max(a, b):
+    return [max(x, y) for x, y in zip(a, b)]
 
-    return vector_clock
+def vc_leq(a, b):
+    return all(x <= y for x, y in zip(a, b))
+
+def merge_and_increment(local_vc, incoming_vc, my_idx):
+    merged = vc_max(local_vc, incoming_vc)
+    merged[my_idx] += 1
+    return merged
 
 
-def _touch_order(order_id):
-    with ORDER_CACHE_LOCK:
-        cached_order = ORDER_CACHE.get(order_id)
-        if not cached_order:
-            return None
+class OrderState:
+    def __init__(self, order_data):
+        self.order_data = order_data
+        self.local_vc = zero_vc()
+        self.event_vc = {}
+        self.d_started = False
+        self.e_started = False
+        self.lock = threading.Lock()
+        self.cond = threading.Condition(self.lock)
 
-        cached_order['vector_clock'][SERVICE_NAME] = cached_order['vector_clock'].get(SERVICE_NAME, 0) + 1
-        return {
-            'order_data': cached_order['order_data'],
-            'vector_clock': dict(cached_order['vector_clock']),
-        }
-    
+
 class FraudDetectionService(fraud_detection_grpc.FraudDetectionServiceServicer):
     def InitOrder(self, request, context):
         try:
-            vector_clock = _cache_initialized_order(request.order_id, request.order_payload_json, request.vector_clock)
-        except json.JSONDecodeError:
-            context.set_code(grpc.StatusCode.INVALID_ARGUMENT)
-            context.set_details('Invalid order payload JSON.')
+            order_data = json.loads(request.order_payload_json or "{}")
+            state = OrderState(order_data)
+            state.local_vc = merge_and_increment(zero_vc(), list(request.vector_clock), MY_IDX)
+
+            with ORDER_CACHE_LOCK:
+                ORDER_CACHE[request.order_id] = state
+
+            print(f"[FD] InitOrder {request.order_id} vc={state.local_vc}")
+            return fraud_detection.InitOrderResponse(acknowledged=True)
+        except Exception as e:
+            context.set_code(grpc.StatusCode.INTERNAL)
+            context.set_details(str(e))
             return fraud_detection.InitOrderResponse(acknowledged=False)
 
-        print(f"Initialized order {request.order_id} with vector clock {vector_clock}")
-        return fraud_detection.InitOrderResponse(acknowledged=True)
+    def NotifyBCompleted(self, request, context):
+        state = ORDER_CACHE[request.order_id]
+        with state.cond:
+            state.local_vc = merge_and_increment(state.local_vc, list(request.vector_clock), MY_IDX)
+            state.event_vc["b"] = list(request.vector_clock)
+            print(f"[FD] got b vc={request.vector_clock}, local={state.local_vc}")
 
-    # Create an RPC function to detect fraud
-    def DetectFraud(self, request, context):
-        cached_order = _touch_order(request.order_id) if request.order_id else None
-        card_number = request.card_number
-        order_amount = request.order_amount
-        # Create a FraudDetectionResponse object
-        response = fraud_detection.FraudDetectionResponse()
-        # Set the is_fraud field of the response object
-        response.is_fraud = True if fraud_ai.predict([[order_amount, card_number]])[0] else False
+            if not state.d_started:
+                state.d_started = True
+                threading.Thread(target=self._run_event_d, args=(request.order_id,)).start()
 
-        # Print the transaction details and the fraud detection result
-        print(
-            f"Received transaction: order_id={request.order_id or '[none]'}, amount: {order_amount}, "
-            f"is_fraud: {response.is_fraud}, vector_clock={cached_order['vector_clock'] if cached_order else {SERVICE_NAME: 1}}"
-        )
-        # Return the response object
-        return response
+            state.cond.notify_all()
+
+        return fraud_detection.Ack(ok=True)
+
+    def NotifyCCompleted(self, request, context):
+        state = ORDER_CACHE[request.order_id]
+        with state.cond:
+            state.local_vc = merge_and_increment(state.local_vc, list(request.vector_clock), MY_IDX)
+            state.event_vc["c"] = list(request.vector_clock)
+            print(f"[FD] got c vc={request.vector_clock}, local={state.local_vc}")
+
+            if not state.e_started:
+                state.e_started = True
+                threading.Thread(target=self._run_event_e, args=(request.order_id,)).start()
+
+            state.cond.notify_all()
+
+        return fraud_detection.Ack(ok=True)
+
+    def _required_for_e(self, state):
+        vc_c = state.event_vc.get("c")
+        vc_d = state.event_vc.get("d")
+        if vc_c is None or vc_d is None:
+            return None
+        return vc_max(vc_c, vc_d)
+
+    def _run_event_d(self, order_id):
+        state = ORDER_CACHE[order_id]
+
+        with state.cond:
+            state.cond.wait_for(lambda: "b" in state.event_vc)
+
+            required = state.event_vc["b"]
+            state.cond.wait_for(lambda: vc_leq(required, state.local_vc))
+
+            state.local_vc = merge_and_increment(state.local_vc, required, MY_IDX)
+
+            user = state.order_data.get("user", {})
+            suspicious = "fraud" in str(user.get("name", "")).lower()
+
+            state.event_vc["d"] = list(state.local_vc)
+            print(f"[FD] event d vc={state.local_vc}")
+            state.cond.notify_all()
+
+        if suspicious:
+            self._send_failure(order_id, "Order Declined: fraud detected in user data")
+
+    def _run_event_e(self, order_id):
+        state = ORDER_CACHE[order_id]
+        #TODO AI tagasi
+        with state.cond:
+            state.cond.wait_for(lambda: self._required_for_e(state) is not None)
+
+            required = self._required_for_e(state)
+
+            # This is the important wait:
+            state.cond.wait_for(lambda: vc_leq(required, state.local_vc))
+
+            state.local_vc = merge_and_increment(state.local_vc, required, MY_IDX)
+
+            card = state.order_data.get("creditCard", {})
+            number = str(card.get("number", ""))
+            amount = float(card.get("orderAmount", 0))
+
+            suspicious = number.startswith("999") or amount > 5000
+
+            state.event_vc["e"] = list(state.local_vc)
+            print(f"[FD] event e vc={state.local_vc}")
+            state.cond.notify_all()
+
+        if suspicious:
+            self._send_failure(order_id, "Order Declined: card fraud suspected")
+            return
+
+        try:
+            with grpc.insecure_channel("suggestions:50053") as channel:
+                stub = suggestions_grpc.SuggestionsServiceStub(channel)
+                stub.NotifyECompleted(
+                    suggestions.DependencyNotificationRequest(
+                        order_id=order_id,
+                        event_name="e",
+                        vector_clock=state.event_vc["e"]
+                    )
+                )
+        except Exception as e:
+            self._send_failure(order_id, f"Could not notify suggestions after e: {e}")
+
+    def _send_failure(self, order_id, message):
+        state = ORDER_CACHE[order_id]
+        try:
+            with grpc.insecure_channel("transaction_verification:50052") as channel:
+                stub = transaction_verification_grpc.TransactionVerificationServiceStub(channel)
+                stub.FinalizeOrder(
+                    transaction_verification.FinalizeOrderRequest(
+                        order_id=order_id,
+                        success=False,
+                        message=message,
+                        vector_clock=state.local_vc,
+                        suggestions=[]
+                    )
+                )
+        except Exception as e:
+            print(f"[FD] failed to send failure: {e}")
+
 
 def serve():
-    # Create a gRPC server
-    server = grpc.server(futures.ThreadPoolExecutor())
-    # Add FraudDetectionService
-    fraud_detection_grpc.add_FraudDetectionServiceServicer_to_server(FraudDetectionService(), server)
-    # Listen on port 50051
-    port = "50051"
-    server.add_insecure_port("[::]:" + port)
-    # Start the server
+    server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
+    fraud_detection_grpc.add_FraudDetectionServiceServicer_to_server(
+        FraudDetectionService(), server
+    )
+    server.add_insecure_port("[::]:50051")
     server.start()
-    print("Server started. Listening on port 50051.")
-    # Keep thread alive
+    print("Fraud service listening on 50051")
     server.wait_for_termination()
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     serve()

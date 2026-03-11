@@ -4,26 +4,30 @@ package fraud;
 
 service FraudDetectionService {
     rpc InitOrder (InitOrderRequest) returns (InitOrderResponse);
-    rpc DetectFraud (FraudDetectionRequest) returns (FraudDetectionResponse);
+
+    // transaction service notifies fraud service that b completed
+    rpc NotifyBCompleted (DependencyNotificationRequest) returns (Ack);
+
+    // transaction service notifies fraud service that c completed
+    rpc NotifyCCompleted (DependencyNotificationRequest) returns (Ack);
 }
 
 message InitOrderRequest {
     string order_id = 1;
     string order_payload_json = 2;
-    map<string, int32> vector_clock = 3;
+    repeated int32 vector_clock = 3;
 }
 
 message InitOrderResponse {
     bool acknowledged = 1;
 }
 
-message FraudDetectionRequest {
-    string card_number = 1;
-    float order_amount = 2;
-    string order_id = 3;
+message Ack {
+    bool ok = 1;
 }
 
-message FraudDetectionResponse {
-    bool is_fraud = 1;
+message DependencyNotificationRequest {
+    string order_id = 1;
+    string event_name = 2;
+    repeated int32 vector_clock = 3;
 }
-   

@@ -4,42 +4,48 @@ package transaction;
 
 service TransactionVerificationService {
     rpc InitOrder (InitOrderRequest) returns (InitOrderResponse);
-    rpc VerifyTransaction (TransactionVerificationRequest) returns (TransactionVerificationResponse);
+
+    // Orchestrator starts the whole workflow here
+    rpc StartCheckoutFlow (StartCheckoutFlowRequest) returns (StartCheckoutFlowResponse);
+
+    // Final result is reported back here
+    rpc FinalizeOrder (FinalizeOrderRequest) returns (Ack);
 }
 
 message InitOrderRequest {
     string order_id = 1;
     string order_payload_json = 2;
-    map<string, int32> vector_clock = 3;
+    repeated int32 vector_clock = 3;
 }
 
 message InitOrderResponse {
     bool acknowledged = 1;
 }
 
-
-message UserData {
-    string name = 1;
-    string email = 2;
-    string address = 3;
+message Ack {
+    bool ok = 1;
 }
 
-message Item {
-    string name = 1;
-    float quantity = 2;
+message StartCheckoutFlowRequest {
+    string order_id = 1;
 }
 
-message TransactionVerificationRequest {
-    UserData user = 1;
-    repeated Item items = 2;
-    string card_number = 3;
-    string card_expiry = 4;
-    string card_cvv = 5;
-    float order_amount = 6;
-    string order_id = 7;
+message BookSuggestion {
+    string title = 1;
+    string author = 2;
 }
 
-message TransactionVerificationResponse {
-    bool is_verified = 1;
+message StartCheckoutFlowResponse {
+    bool success = 1;
+    string message = 2;
+    repeated int32 vector_clock = 3;
+    repeated BookSuggestion suggestions = 4;
 }
-   
+
+message FinalizeOrderRequest {
+    string order_id = 1;
+    bool success = 2;
+    string message = 3;
+    repeated int32 vector_clock = 4;
+    repeated BookSuggestion suggestions = 5;
+}

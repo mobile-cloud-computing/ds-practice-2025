@@ -2,141 +2,140 @@ import sys
 import os
 import json
 import threading
-
-# This set of lines are needed to import the gRPC stubs.
-# The path of the stubs is relative to the current file, or absolute inside the container.
-# Change these lines only if strictly needed.
-FILE = __file__ if '__file__' in globals() else os.getenv("PYTHONFILE", "")
-fraud_detection_grpc_path = os.path.abspath(os.path.join(FILE, '../../../utils/pb/suggestions'))
-sys.path.insert(0, fraud_detection_grpc_path)
-import suggestions_pb2 as suggestions
-import suggestions_pb2_grpc as suggestions_grpc
-
 import grpc
 from concurrent import futures
 
-import google.genai as genai
+FILE = __file__ if '__file__' in globals() else os.getenv("PYTHONFILE", "")
 
-SERVICE_NAME = 'suggestions'
+suggestions_grpc_path = os.path.abspath(os.path.join(FILE, '../../../utils/pb/suggestions'))
+sys.path.insert(0, suggestions_grpc_path)
+import suggestions_pb2 as suggestions
+import suggestions_pb2_grpc as suggestions_grpc
+
+transaction_verification_grpc_path = os.path.abspath(os.path.join(FILE, '../../../utils/pb/transaction_verification'))
+sys.path.insert(0, transaction_verification_grpc_path)
+import transaction_verification_pb2 as transaction_verification
+import transaction_verification_pb2_grpc as transaction_verification_grpc
+
+
+MY_IDX = 2
 ORDER_CACHE = {}
 ORDER_CACHE_LOCK = threading.Lock()
+TOTAL_SERVICES = 3
 
 
-def _cache_initialized_order(order_id, order_payload_json, incoming_clock):
-    order_data = json.loads(order_payload_json or '{}')
-    vector_clock = dict(incoming_clock)
-    vector_clock[SERVICE_NAME] = vector_clock.get(SERVICE_NAME, 0) + 1
+def zero_vc():
+    return [0] * TOTAL_SERVICES
 
-    with ORDER_CACHE_LOCK:
-        ORDER_CACHE[order_id] = {
-            'order_data': order_data,
-            'vector_clock': vector_clock,
-        }
+def vc_max(a, b):
+    return [max(x, y) for x, y in zip(a, b)]
 
-    return vector_clock
+def vc_leq(a, b):
+    return all(x <= y for x, y in zip(a, b))
+
+def merge_and_increment(local_vc, incoming_vc, my_idx):
+    merged = vc_max(local_vc, incoming_vc)
+    merged[my_idx] += 1
+    return merged
 
 
-def _touch_order(order_id):
-    with ORDER_CACHE_LOCK:
-        cached_order = ORDER_CACHE.get(order_id)
-        if not cached_order:
-            return None
+class OrderState:
+    def __init__(self, order_data):
+        self.order_data = order_data
+        self.local_vc = zero_vc()
+        self.event_vc = {}
+        self.f_started = False
+        self.lock = threading.Lock()
+        self.cond = threading.Condition(self.lock)
 
-        cached_order['vector_clock'][SERVICE_NAME] = cached_order['vector_clock'].get(SERVICE_NAME, 0) + 1
-        return {
-            'order_data': cached_order['order_data'],
-            'vector_clock': dict(cached_order['vector_clock']),
-        }
 
 class SuggestionsService(suggestions_grpc.SuggestionsServiceServicer):
     def InitOrder(self, request, context):
         try:
-            vector_clock = _cache_initialized_order(request.order_id, request.order_payload_json, request.vector_clock)
-        except json.JSONDecodeError:
-            context.set_code(grpc.StatusCode.INVALID_ARGUMENT)
-            context.set_details('Invalid order payload JSON.')
+            order_data = json.loads(request.order_payload_json or "{}")
+            state = OrderState(order_data)
+            state.local_vc = merge_and_increment(zero_vc(), list(request.vector_clock), MY_IDX)
+
+            with ORDER_CACHE_LOCK:
+                ORDER_CACHE[request.order_id] = state
+
+            print(f"[SG] InitOrder {request.order_id} vc={state.local_vc}")
+            return suggestions.InitOrderResponse(acknowledged=True)
+        except Exception as e:
+            context.set_code(grpc.StatusCode.INTERNAL)
+            context.set_details(str(e))
             return suggestions.InitOrderResponse(acknowledged=False)
 
-        print(f"Initialized order {request.order_id} with vector clock {vector_clock}")
-        return suggestions.InitOrderResponse(acknowledged=True)
+    def NotifyECompleted(self, request, context):
+        state = ORDER_CACHE[request.order_id]
+        with state.cond:
+            state.local_vc = merge_and_increment(state.local_vc, list(request.vector_clock), MY_IDX)
+            state.event_vc["e"] = list(request.vector_clock)
+            print(f"[SG] got e vc={request.vector_clock}, local={state.local_vc}")
 
-    # Create an RPC function to get suggestions
-    def GetSuggestions(self, request, context):
-        cached_order = _touch_order(request.order_id) if request.order_id else None
-        user_id = request.user_id
-        selected_books = ["Harry Potter and the Philosopher's Stone by J.K. Rowling", "The Hobbit by J.R.R. Tolkien"]
-        selected_titles = [book.split(' by ')[0].strip() for book in selected_books]
+            if not state.f_started:
+                state.f_started = True
+                threading.Thread(target=self._run_event_f, args=(request.order_id,)).start()
 
-        # Create a SuggestionsResponse object
-        response = suggestions.SuggestionsResponse()
-        # Set the suggestions field of the response object
+            state.cond.notify_all()
 
-        client = genai.Client(api_key=os.environ["GEMINI_API_KEY"])
+        return suggestions.Ack(ok=True)
 
-        input_promt = (
-            "You are a bookstore recommendation assistant. "
-            f"User id: {user_id}. "
-            f"Selected books: {selected_books}. "
-            "Suggest exactly 3 additional books related to selected books. "
-            "Rules: suggestions must be different from selected books. "
-            "Output strictly 3 lines, each line in exact format: Title by Author. "
-            "No numbering, no bullets, no extra text."
-        )
-        print(f"Generating suggestions for user: {user_id} with prompt: {input_promt}")
-        # Generate suggestions using Gemini 2.5 Flash Lite model
-        response_ai = client.models.generate_content(
-            model="gemini-2.5-flash-lite", contents=input_promt
-        )
+    def _run_event_f(self, order_id):
+        state = ORDER_CACHE[order_id]
+        #TODO AI siia
+        with state.cond:
+            state.cond.wait_for(lambda: "e" in state.event_vc)
 
-        clean = []
-        selected_titles_lower = {title.lower() for title in selected_titles}
-        # Process the response to extract suggestions, ensuring they are in the correct format and not duplicates of selected books
-        for line in response_ai.text.split('\n'):
-            entry = line.strip()
-            if not entry or len(clean) >= 3:
-                continue
+            required = state.event_vc["e"]
+            state.cond.wait_for(lambda: vc_leq(required, state.local_vc))
 
-            if ' by ' in entry:
-                title = entry.split(' by ', 1)[0].strip()
-                if title.lower() not in selected_titles_lower and entry not in clean:
-                    clean.append(entry)
-            elif entry not in clean:
-                clean.append(entry)
-        # If the model does not return 3 valid suggestions, add fallback suggestions to ensure we always return 3 suggestions
-        fallback = [
-            "Dune by Frank Herbert",
-            "1984 by George Orwell",
-            "Foundation by Isaac Asimov"
-        ]
-        for item in fallback:
-            if len(clean) >= 3:
-                break
-            if item not in clean:
-                clean.append(item)
+            state.local_vc = merge_and_increment(state.local_vc, required, MY_IDX)
 
-        response.suggestions.extend(clean)
-        # Print the user id and the suggestions sent back
-        print(
-            f"Received suggestion request for order_id={request.order_id or '[none]'}, user: {user_id}, "
-            f"vector_clock={cached_order['vector_clock'] if cached_order else {SERVICE_NAME: 1}}, "
-            f"sending suggestions: {response.suggestions}"
-        )
-        # Return the response object
-        return response
+            recommendations = [
+                {"title": "Dune", "author": "Frank Herbert"},
+                {"title": "Foundation", "author": "Isaac Asimov"},
+                {"title": "1984", "author": "George Orwell"},
+            ]
+
+            state.event_vc["f"] = list(state.local_vc)
+            print(f"[SG] event f vc={state.local_vc}")
+
+        self._send_success(order_id, recommendations, state.event_vc["f"])
+
+    def _send_success(self, order_id, recommendations, final_vc):
+        try:
+            with grpc.insecure_channel("transaction_verification:50052") as channel:
+                stub = transaction_verification_grpc.TransactionVerificationServiceStub(channel)
+                stub.FinalizeOrder(
+                    transaction_verification.FinalizeOrderRequest(
+                        order_id=order_id,
+                        success=True,
+                        message="Order Approved",
+                        vector_clock=final_vc,
+                        suggestions=[
+                            transaction_verification.BookSuggestion(
+                                title=item["title"],
+                                author=item["author"]
+                            )
+                            for item in recommendations
+                        ]
+                    )
+                )
+        except Exception as e:
+            print(f"[SG] failed to send success: {e}")
+
 
 def serve():
-    # Create a gRPC server
-    server = grpc.server(futures.ThreadPoolExecutor())
-    # Add SuggestionsService
-    suggestions_grpc.add_SuggestionsServiceServicer_to_server(SuggestionsService(), server)
-    # Listen on port 50053
-    port = "50053"
-    server.add_insecure_port("[::]:" + port)
-    # Start the server
+    server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
+    suggestions_grpc.add_SuggestionsServiceServicer_to_server(
+        SuggestionsService(), server
+    )
+    server.add_insecure_port("[::]:50053")
     server.start()
-    print("Server started. Listening on port 50053.")
-    # Keep thread alive
+    print("Suggestions service listening on 50053")
     server.wait_for_termination()
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     serve()

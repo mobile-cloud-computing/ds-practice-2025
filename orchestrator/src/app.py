@@ -8,9 +8,6 @@ from flask_cors import CORS
 from concurrent.futures import ThreadPoolExecutor
 import uuid
 
-# This set of lines are needed to import the gRPC stubs.
-# The path of the stubs is relative to the current file, or absolute inside the container.
-# Change these lines only if strictly needed.
 FILE = __file__ if '__file__' in globals() else os.getenv("PYTHONFILE", "")
 
 fraud_detection_grpc_path = os.path.abspath(os.path.join(FILE, '../../../utils/pb/fraud_detection'))
@@ -28,213 +25,89 @@ sys.path.insert(0, suggestions_grpc_path)
 import suggestions_pb2 as suggestions
 import suggestions_pb2_grpc as suggestions_grpc
 
-def verify_transaction(user, items, card_number, card_expiry, card_cvv, order_amount, order_id):
-    try:
-        with grpc.insecure_channel('transaction_verification:50052') as channel:
-            # Create a stub object.
-            stub = transaction_verification_grpc.TransactionVerificationServiceStub(channel)
-            user_data = transaction_verification.UserData(
-                name=user.get('name', ''),
-                email=user.get('email', ''),
-                address=user.get('address', '')
-            )
-            # Convert items to protobuf format
-            item_msgs = [
-                transaction_verification.Item(
-                    name=str(item.get('name', '')),
-                    quantity=float(item.get('quantity', 0))
-                ) for item in items
-            ]
-            print(f"Verifying transaction for user: {user_data.name}, items: {[item.name for item in item_msgs]}, card_number: {card_number}, order_amount: {order_amount}")
-            # Build request
-            req = transaction_verification.TransactionVerificationRequest(
-                user=user_data,
-                items=item_msgs,
-                card_number=card_number,
-                card_expiry=card_expiry,
-                card_cvv=card_cvv,
-                order_amount=order_amount,
-                order_id=order_id,
-            )
-            response = stub.VerifyTransaction(req)
-            print(f"Transaction verification response: is_verified={response.is_verified}")
-        return response.is_verified
-    except Exception as e:
-        print(f"Error connecting to transaction verification service: {e}")
-        return False
 
-def detect_fraud(card_number, order_amount, order_id):
-    try:
-        # Establish a connection with the fraud-detection gRPC service.
-        with grpc.insecure_channel('fraud_detection:50051') as channel:
-            # Create a stub object.
-            stub = fraud_detection_grpc.FraudDetectionServiceStub(channel)
-            # Call the service through the stub object.
-            response = stub.DetectFraud(
-                fraud_detection.FraudDetectionRequest(
-                    card_number=card_number,
-                    order_amount=order_amount,
+def initialize_order(order_id, order_data, service_name):
+    payload = json.dumps(order_data)
+    initial_vc = [0, 0, 0]
+
+    if service_name == "transaction_verification":
+        with grpc.insecure_channel("transaction_verification:50052") as channel:
+            stub = transaction_verification_grpc.TransactionVerificationServiceStub(channel)
+            return stub.InitOrder(
+                transaction_verification.InitOrderRequest(
                     order_id=order_id,
+                    order_payload_json=payload,
+                    vector_clock=initial_vc
                 )
-            )
-        return response.is_fraud
-    except Exception as e:
-        print(f"Error connecting to fraud detection service: {e}")
-        return False  # Default to not fraud if there's an error
+            ).acknowledged
 
-def get_suggestions(user_id, order_id):
-    # Connect to the suggestions gRPC service and get book suggestions 
-    try:
-        with grpc.insecure_channel('suggestions:50053') as channel:
-            # Create a stub object.
-            stub = suggestions_grpc.SuggestionsServiceStub(channel)
-            response = stub.GetSuggestions(suggestions.SuggestionsRequest(user_id=str(user_id), order_id=order_id))
-        return list(response.suggestions)
-    except Exception as e:
-        print(f"Error connecting to suggestions service: {e}")
-        return []
-
-def parse_suggestion(suggestion_line):
-    # Parse a suggestion line in the format "Title by Author" and return a dictionary with 'title' and 'author' keys.
-    text = (suggestion_line or '').strip()
-    if ' by ' in text:
-        parts = text.split(' by ', 1)
-        return {'title': parts[0].strip(), 'author': parts[1].strip()}
-    return {'title': text, 'author': 'Unknown'}
-
-def initialize_order_in_service(order_id, order_data, service_name):
-    request_payload = json.dumps(order_data)
-    vector_clock = {'orchestrator': 1}
-
-    if service_name == 'transaction_verification':
-        with grpc.insecure_channel('transaction_verification:50052') as channel:
-            stub = transaction_verification_grpc.TransactionVerificationServiceStub(channel)
-            request_message = transaction_verification.InitOrderRequest(
-                order_id=order_id,
-                order_payload_json=request_payload,
-            )
-            request_message.vector_clock.update(vector_clock)
-            response = stub.InitOrder(request_message)
-    elif service_name == 'fraud_detection':
-        with grpc.insecure_channel('fraud_detection:50051') as channel:
+    if service_name == "fraud_detection":
+        with grpc.insecure_channel("fraud_detection:50051") as channel:
             stub = fraud_detection_grpc.FraudDetectionServiceStub(channel)
-            request_message = fraud_detection.InitOrderRequest(
-                order_id=order_id,
-                order_payload_json=request_payload,
-            )
-            request_message.vector_clock.update(vector_clock)
-            response = stub.InitOrder(request_message)
-    elif service_name == 'suggestions':
-        with grpc.insecure_channel('suggestions:50053') as channel:
+            return stub.InitOrder(
+                fraud_detection.InitOrderRequest(
+                    order_id=order_id,
+                    order_payload_json=payload,
+                    vector_clock=initial_vc
+                )
+            ).acknowledged
+
+    if service_name == "suggestions":
+        with grpc.insecure_channel("suggestions:50053") as channel:
             stub = suggestions_grpc.SuggestionsServiceStub(channel)
-            request_message = suggestions.InitOrderRequest(
-                order_id=order_id,
-                order_payload_json=request_payload,
-            )
-            request_message.vector_clock.update(vector_clock)
-            response = stub.InitOrder(request_message)
-    else:
-        raise ValueError(f'Unknown service: {service_name}')
+            return stub.InitOrder(
+                suggestions.InitOrderRequest(
+                    order_id=order_id,
+                    order_payload_json=payload,
+                    vector_clock=initial_vc
+                )
+            ).acknowledged
 
-    logging.info(f"Initialized order {order_id} in {service_name}: acknowledged={response.acknowledged}")
-    return response.acknowledged
+    raise ValueError(f"Unknown service {service_name}")
 
-def orchestrator_checkout_flow(order_data, executor):
-    order_id = str(uuid.uuid4())
-    print(f"Processing checkout for order ID: {order_id}")
 
-    init_futures = [
-        executor.submit(initialize_order_in_service, order_id, order_data, 'transaction_verification'),
-        executor.submit(initialize_order_in_service, order_id, order_data, 'fraud_detection'),
-        executor.submit(initialize_order_in_service, order_id, order_data, 'suggestions'),
-    ]
-
-    if not all(future.result() for future in init_futures):
-        raise RuntimeError(f'Failed to initialize all services for order {order_id}')
-
-    return order_id
-
-# Flask is a web framework for Python.
-# It allows you to build a web application quickly.
-# For more information, see https://flask.palletsprojects.com/en/latest/
-# Create a simple Flask app.
 app = Flask(__name__)
-# Enable CORS for the app.
 CORS(app, resources={r'/*': {'origins': '*'}})
 
-# Define a GET endpoint.
-@app.route('/', methods=['GET'])
-def index():
-    """
-    Responds with 'Hello, [name]' when a GET request is made to '/' endpoint.
-    """
-    # Test the fraud-detection gRPC service.
-    response = detect_fraud(card_number="9991234567890", order_amount=1500, order_id='health-check')
-    # Return the response.
-    return response
 
-@app.route('/checkout', methods=['POST'])
+@app.route("/checkout", methods=["POST"])
 def checkout():
-    """
-    Responds with a JSON object containing the order ID, status, and suggested books.
-    """
-    # Get request object data to json
-    request_data = request.get_json(silent=True) or {}
+   
+    request_data = json.loads(request.data)
+    print(f"[ORCH] Checkout request payload={request_data}")
     try:
-        print(f"Received checkout request: {request.data}")
-        # Extract necessary information from the request data
-        card_info = request_data.get('creditCard', {})
-        card_number = card_info.get('number', '')
-        card_expiry = card_info.get('expirationDate', '')
-        card_cvv = card_info.get('cvv', '')
-        order_amount = card_info.get('orderAmount', 0)
-        user_id = request_data.get('userId', 'anonymous')
+        order_id = str(uuid.uuid4())
 
-        user_info = request_data.get('user', {})
-        address = request_data.get('billingAddress', {})
-        address_str = ', '.join([str(address.get(k, '')) for k in ['street', 'city', 'state', 'zip', 'country']])
-        user_data = {
-            'name': user_info.get('name', ''),
-            'email': user_info.get('contact', ''),
-            'address': address_str
-        }
-        items = request_data.get('items', [])
+        with ThreadPoolExecutor(max_workers=3) as executor:
+            futures = [
+                executor.submit(initialize_order, order_id, request_data, "transaction_verification"),
+                executor.submit(initialize_order, order_id, request_data, "fraud_detection"),
+                executor.submit(initialize_order, order_id, request_data, "suggestions"),
+            ]
+            if not all(f.result() for f in futures):
+                return {"error": "Failed to initialize all services"}, 500
 
-        with ThreadPoolExecutor() as executor:
-            order_id = orchestrator_checkout_flow(request_data, executor)
-            logging.info(f"Submitting fraud detection task to executor: card_number={card_number}, order_amount={order_amount}")
-            fraud_future = executor.submit(detect_fraud, card_number, order_amount, order_id)
-            transaction_future = executor.submit(verify_transaction, user_data, items, card_number, card_expiry, card_cvv, order_amount, order_id)
-            is_verified = transaction_future.result()
-            suggestions_future = executor.submit(get_suggestions, user_id, order_id)
-            is_fraud = fraud_future.result()
-            suggested_titles = suggestions_future.result()
-        logging.info(f"Fraud detection completed: is_fraud={is_fraud}")
-        logging.info(f"Transaction verification completed: is_verified={is_verified}")
-        logging.info(f"Suggestions retrieval completed: suggested_titles={suggested_titles}")
-        # Prepare the order status based on fraud detection and transaction verification results
-        if is_fraud:
-            status = 'Order Declined due to suspected fraud'
-        elif not is_verified:
-            status = 'Order Declined due to invalid transaction'
-        else:
-            status = 'Order Approved'
+        with grpc.insecure_channel("transaction_verification:50052") as channel:
+            stub = transaction_verification_grpc.TransactionVerificationServiceStub(channel)
+            final_resp = stub.StartCheckoutFlow(
+                transaction_verification.StartCheckoutFlowRequest(order_id=order_id)
+            )
 
-        order_status_response = {
-            'orderId': order_id,
-            'status': status,
-            'suggestedBooks': [
-                parse_suggestion(title) for title in suggested_titles[:3]
+        return {
+            "orderId": order_id,
+            "success": final_resp.success,
+            "status": final_resp.message,
+            "finalVectorClock": list(final_resp.vector_clock),
+            "suggestedBooks": [
+                {"title": s.title, "author": s.author}
+                for s in final_resp.suggestions
             ]
         }
 
-        return order_status_response
     except Exception as e:
-        logging.error(f"Error processing checkout request: {e}")
-        return {'error': 'An error occurred while processing the checkout request'}, 500
+        logging.exception("Checkout failed")
+        return {"error": str(e)}, 500
 
-if __name__ == '__main__':
-    # Run the app in debug mode to enable hot reloading.
-    # This is useful for development.
-    # The default port is 5000.
-    app.run(host='0.0.0.0')
+
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=5000)
