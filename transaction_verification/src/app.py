@@ -26,15 +26,19 @@ TOTAL_SERVICES = 3
 FINALIZE_TIMEOUT_SECONDS = 20
 
 
+# initial vector clock is [0,0,0]
 def zero_vc():
     return [0] * TOTAL_SERVICES
 
+# Utility functions for vector clock comparison and merging
 def vc_max(a, b):
     return [max(x, y) for x, y in zip(a, b)]
 
+# Returns True if vc_a <= vc_b (i.e. vc_a is causally before or concurrent with vc_b)
 def vc_leq(a, b):
     return all(x <= y for x, y in zip(a, b))
 
+# Returns a new vector clock that is the merge of local_vc and incoming_vc, and increments this service's index to reflect the new event
 def merge_and_increment(local_vc, incoming_vc, my_idx):
     merged = vc_max(local_vc, incoming_vc)
     merged[my_idx] += 1
@@ -44,8 +48,8 @@ def merge_and_increment(local_vc, incoming_vc, my_idx):
 class OrderState:
     def __init__(self, order_data):
         self.order_data = order_data
-        self.local_vc = zero_vc()
-        self.event_vc = {}
+        self.local_vc = zero_vc() # vector clock tracking this service's view of the order state
+        self.event_vc = {} # vector clocks for completed events, e.g. {"a": [1,0,0], "b": [2,0,0]}
         self.finished = False
         self.success = False
         self.message = ""
@@ -56,6 +60,7 @@ class OrderState:
 
 class TransactionVerificationService(transaction_verification_grpc.TransactionVerificationServiceServicer):
     def _get_state_or_abort(self, order_id, context):
+        # Helper to get the order state or abort the gRPC call if the order is not found
         with ORDER_CACHE_LOCK:
             state = ORDER_CACHE.get(order_id)
         if state is None:
@@ -67,6 +72,8 @@ class TransactionVerificationService(transaction_verification_grpc.TransactionVe
         with ORDER_CACHE_LOCK:
             ORDER_CACHE.pop(order_id, None)
 
+    # This is the main entry point to initialize the order state in the transaction verification service.
+    # It is called by the orchestrator at checkout start, and sets up local state and initial vector clock.
     def InitOrder(self, request, context):
         try:
             order_data = json.loads(request.order_payload_json or "{}")
@@ -80,10 +87,13 @@ class TransactionVerificationService(transaction_verification_grpc.TransactionVe
             print(f"[TV] InitOrder {request.order_id} vc={state.local_vc}")
             return transaction_verification.InitOrderResponse(acknowledged=True)
         except Exception as e:
+            # In case of any error, we return an INTERNAL gRPC error with the exception details.
             context.set_code(grpc.StatusCode.INTERNAL)
             context.set_details(str(e))
             return transaction_verification.InitOrderResponse(acknowledged=False)
 
+    # Starts the checkout event flow for the given order.
+    # Events a and b are launched in parallel, and this call waits until success/failure is finalized.
     def StartCheckoutFlow(self, request, context):
         order_id = request.order_id
         state = self._get_state_or_abort(order_id, context)
@@ -101,6 +111,7 @@ class TransactionVerificationService(transaction_verification_grpc.TransactionVe
         t_b.start()
 
         with state.cond:
+            # Wait until some service finalizes the order, or timeout triggers local failure.
             finished = state.cond.wait_for(lambda: state.finished, timeout=FINALIZE_TIMEOUT_SECONDS)
 
             if not finished:
@@ -124,6 +135,7 @@ class TransactionVerificationService(transaction_verification_grpc.TransactionVe
         self._remove_order(order_id)
         return response
 
+    # Receives final success/failure from downstream services and wakes StartCheckoutFlow waiter.
     def FinalizeOrder(self, request, context):
         state = self._get_state_or_abort(request.order_id, context)
         if state is None:
@@ -142,6 +154,7 @@ class TransactionVerificationService(transaction_verification_grpc.TransactionVe
 
         return transaction_verification.Ack(ok=True)
 
+    # Marks the order as failed locally and notifies any waiting thread.
     def _fail(self, order_id, message):
         with ORDER_CACHE_LOCK:
             state = ORDER_CACHE.get(order_id)
@@ -156,6 +169,8 @@ class TransactionVerificationService(transaction_verification_grpc.TransactionVe
             print(f"[TV] FAIL order={order_id} msg={message} vc={state.local_vc}")
             state.cond.notify_all()
 
+    # Event a: validates that the order has at least one item.
+    # If successful, triggers event c; otherwise fails immediately.
     def _run_event_a(self, order_id):
         with ORDER_CACHE_LOCK:
             state = ORDER_CACHE.get(order_id)
@@ -175,6 +190,8 @@ class TransactionVerificationService(transaction_verification_grpc.TransactionVe
 
         self._run_event_c(order_id, state.event_vc["a"])
 
+    # Event b: validates mandatory user and billing fields.
+    # On success, notifies fraud detection that b completed.
     def _run_event_b(self, order_id):
         with ORDER_CACHE_LOCK:
             state = ORDER_CACHE.get(order_id)
@@ -205,6 +222,8 @@ class TransactionVerificationService(transaction_verification_grpc.TransactionVe
         except Exception as e:
             self._fail(order_id, f"Could not notify fraud service after b: {e}")
 
+    # Event c: validates basic card format, depends on event a's vector clock.
+    # On success, notifies fraud detection that c completed.
     def _run_event_c(self, order_id, incoming_vc):
         with ORDER_CACHE_LOCK:
             state = ORDER_CACHE.get(order_id)
@@ -247,6 +266,7 @@ class TransactionVerificationService(transaction_verification_grpc.TransactionVe
 
 
 def serve():
+    # Bootstraps and starts the gRPC server for this service.
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
     transaction_verification_grpc.add_TransactionVerificationServiceServicer_to_server(
         TransactionVerificationService(), server

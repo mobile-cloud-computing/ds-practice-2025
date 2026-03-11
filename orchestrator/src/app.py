@@ -25,13 +25,15 @@ sys.path.insert(0, suggestions_grpc_path)
 import suggestions_pb2 as suggestions
 import suggestions_pb2_grpc as suggestions_grpc
 
-
+# Global in-memory cache to track order states and vector clocks for simplicity
 def initialize_order(order_id, order_data, service_name):
     payload = json.dumps(order_data)
     initial_vc = [0, 0, 0]
 
     if service_name == "transaction_verification":
+        # Initialize the order with the transaction verification service
         with grpc.insecure_channel("transaction_verification:50052") as channel:
+            # Call the InitOrder method on the transaction verification service to set up the initial state for this order
             stub = transaction_verification_grpc.TransactionVerificationServiceStub(channel)
             return stub.InitOrder(
                 transaction_verification.InitOrderRequest(
@@ -76,6 +78,7 @@ def checkout():
     request_data = json.loads(request.data)
     print(f"[ORCH] Checkout request payload={request_data}")
     try:
+        # Generate a unique order ID for this checkout flow and initialize all services in parallel
         order_id = str(uuid.uuid4())
 
         with ThreadPoolExecutor(max_workers=3) as executor:
@@ -87,6 +90,7 @@ def checkout():
             if not all(f.result() for f in futures):
                 return {"error": "Failed to initialize all services"}, 500
 
+        # Start the checkout flow by calling transaction verification, which will orchestrate the rest of the flow
         with grpc.insecure_channel("transaction_verification:50052") as channel:
             stub = transaction_verification_grpc.TransactionVerificationServiceStub(channel)
             final_resp = stub.StartCheckoutFlow(

@@ -24,15 +24,19 @@ ORDER_CACHE_LOCK = threading.Lock()
 TOTAL_SERVICES = 3
 
 
+# initial vector clock is [0,0,0]
 def zero_vc():
     return [0] * TOTAL_SERVICES
 
+# Utility functions for vector clock comparison and merging
 def vc_max(a, b):
     return [max(x, y) for x, y in zip(a, b)]
 
+# Returns True if vc_a <= vc_b (i.e. vc_a is causally before or concurrent with vc_b)
 def vc_leq(a, b):
     return all(x <= y for x, y in zip(a, b))
 
+# Returns a new vector clock that is the merge of local_vc and incoming_vc, and increments this service's index to reflect the new event
 def merge_and_increment(local_vc, incoming_vc, my_idx):
     merged = vc_max(local_vc, incoming_vc)
     merged[my_idx] += 1
@@ -100,8 +104,8 @@ def _generate_ai_recommendations(order_data):
 class OrderState:
     def __init__(self, order_data):
         self.order_data = order_data
-        self.local_vc = zero_vc()
-        self.event_vc = {}
+        self.local_vc = zero_vc() # vector clock tracking this service's view of the order state
+        self.event_vc = {} # vector clocks for completed events, e.g. {"e": [1,3,0], "f": [1,3,1]}
         self.f_started = False
         self.lock = threading.Lock()
         self.cond = threading.Condition(self.lock)
@@ -109,6 +113,7 @@ class OrderState:
 
 class SuggestionsService(suggestions_grpc.SuggestionsServiceServicer):
     def _get_state_or_abort(self, order_id, context):
+        # Helper to get the order state or abort the gRPC call if the order is not found
         with ORDER_CACHE_LOCK:
             state = ORDER_CACHE.get(order_id)
         if state is None:
@@ -120,6 +125,8 @@ class SuggestionsService(suggestions_grpc.SuggestionsServiceServicer):
         with ORDER_CACHE_LOCK:
             ORDER_CACHE.pop(order_id, None)
 
+    # This is the main entry point to initialize the order state in the suggestions service.
+    # It is called by the orchestrator at checkout start, and sets up local state and initial vector clock.
     def InitOrder(self, request, context):
         try:
             order_data = json.loads(request.order_payload_json or "{}")
@@ -132,10 +139,13 @@ class SuggestionsService(suggestions_grpc.SuggestionsServiceServicer):
             print(f"[SG] InitOrder {request.order_id} vc={state.local_vc}")
             return suggestions.InitOrderResponse(acknowledged=True)
         except Exception as e:
+            # In case of any error, we return an INTERNAL gRPC error with the exception details.
             context.set_code(grpc.StatusCode.INTERNAL)
             context.set_details(str(e))
             return suggestions.InitOrderResponse(acknowledged=False)
 
+    # notify that e completed, with the vector clock from e. We update our local vector clock, record
+    # the event vc for e, and start event f once.
     def NotifyECompleted(self, request, context):
         state = self._get_state_or_abort(request.order_id, context)
         if state is None:
@@ -153,6 +163,8 @@ class SuggestionsService(suggestions_grpc.SuggestionsServiceServicer):
 
         return suggestions.Ack(ok=True)
 
+    # Event f: depends on e and generates final book recommendations.
+    # Once complete, sends FinalizeOrder(success=True) back to transaction verification.
     def _run_event_f(self, order_id):
         with ORDER_CACHE_LOCK:
             state = ORDER_CACHE.get(order_id)
@@ -178,10 +190,13 @@ class SuggestionsService(suggestions_grpc.SuggestionsServiceServicer):
 
         self._send_success(order_id, recommendations, state.event_vc["f"])
 
+    # Sends successful completion with recommendations and final vector clock.
     def _send_success(self, order_id, recommendations, final_vc):
         try:
             with grpc.insecure_channel("transaction_verification:50052") as channel:
                 stub = transaction_verification_grpc.TransactionVerificationServiceStub(channel)
+                # We call FinalizeOrder on the transaction verification service to indicate that the checkout flow has completed successfully, 
+                # and we include the final vector clock and book recommendations in this call. This allows the transaction verification service to return the final response to the user with the recommendations included.
                 stub.FinalizeOrder(
                     transaction_verification.FinalizeOrderRequest(
                         order_id=order_id,
@@ -204,6 +219,7 @@ class SuggestionsService(suggestions_grpc.SuggestionsServiceServicer):
 
 
 def serve():
+    # Bootstraps and starts the gRPC server for this service.
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
     suggestions_grpc.add_SuggestionsServiceServicer_to_server(
         SuggestionsService(), server
