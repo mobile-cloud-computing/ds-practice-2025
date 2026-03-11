@@ -25,9 +25,7 @@ message VerificationResponse {
 }
 
 service TransactionVerificationService {
-  rpc VerifyTransaction (VerificationRequest)
+  rpc InitializeVerificationOrder (VerificationRequest)
       returns (VerificationResponse);
 }
-
-
 

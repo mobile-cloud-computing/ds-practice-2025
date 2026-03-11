@@ -34,8 +34,8 @@ class TransactionVerificationServiceStub(object):
         Args:
             channel: A grpc.Channel.
         """
-        self.VerifyTransaction = channel.unary_unary(
-                '/transaction_verification.TransactionVerificationService/VerifyTransaction',
+        self.InitializeVerificationOrder = channel.unary_unary(
+                '/transaction_verification.TransactionVerificationService/InitializeVerificationOrder',
                 request_serializer=transaction__verification__pb2.VerificationRequest.SerializeToString,
                 response_deserializer=transaction__verification__pb2.VerificationResponse.FromString,
                 _registered_method=True)
@@ -44,7 +44,7 @@ class TransactionVerificationServiceStub(object):
 class TransactionVerificationServiceServicer(object):
     """Missing associated documentation comment in .proto file."""
 
-    def VerifyTransaction(self, request, context):
+    def InitializeVerificationOrder(self, request, context):
         """Missing associated documentation comment in .proto file."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
@@ -53,8 +53,8 @@ class TransactionVerificationServiceServicer(object):
 
 def add_TransactionVerificationServiceServicer_to_server(servicer, server):
     rpc_method_handlers = {
-            'VerifyTransaction': grpc.unary_unary_rpc_method_handler(
-                    servicer.VerifyTransaction,
+            'InitializeVerificationOrder': grpc.unary_unary_rpc_method_handler(
+                    servicer.InitializeVerificationOrder,
                     request_deserializer=transaction__verification__pb2.VerificationRequest.FromString,
                     response_serializer=transaction__verification__pb2.VerificationResponse.SerializeToString,
             ),
@@ -70,7 +70,7 @@ class TransactionVerificationService(object):
     """Missing associated documentation comment in .proto file."""
 
     @staticmethod
-    def VerifyTransaction(request,
+    def InitializeVerificationOrder(request,
             target,
             options=(),
             channel_credentials=None,
@@ -83,7 +83,7 @@ class TransactionVerificationService(object):
         return grpc.experimental.unary_unary(
             request,
             target,
-            '/transaction_verification.TransactionVerificationService/VerifyTransaction',
+            '/transaction_verification.TransactionVerificationService/InitializeVerificationOrder',
             transaction__verification__pb2.VerificationRequest.SerializeToString,
             transaction__verification__pb2.VerificationResponse.FromString,
             options,

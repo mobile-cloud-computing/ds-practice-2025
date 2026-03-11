@@ -5,7 +5,7 @@ import warnings
 
 import suggestions_pb2 as suggestions__pb2
 
-GRPC_GENERATED_VERSION = '1.73.1'
+GRPC_GENERATED_VERSION = '1.78.0'
 GRPC_VERSION = grpc.__version__
 _version_not_supported = False
 
@@ -18,7 +18,7 @@ except ImportError:
 if _version_not_supported:
     raise RuntimeError(
         f'The grpc package installed is at version {GRPC_VERSION},'
-        + f' but the generated code in suggestions_pb2_grpc.py depends on'
+        + ' but the generated code in suggestions_pb2_grpc.py depends on'
         + f' grpcio>={GRPC_GENERATED_VERSION}.'
         + f' Please upgrade your grpc module to grpcio>={GRPC_GENERATED_VERSION}'
         + f' or downgrade your generated code using grpcio-tools<={GRPC_VERSION}.'
@@ -34,8 +34,8 @@ class SuggestionsServiceStub(object):
         Args:
             channel: A grpc.Channel.
         """
-        self.GetSuggestions = channel.unary_unary(
-                '/suggestions.SuggestionsService/GetSuggestions',
+        self.InitializeSuggestionsOrder = channel.unary_unary(
+                '/suggestions.SuggestionsService/InitializeSuggestionsOrder',
                 request_serializer=suggestions__pb2.SuggestionsRequest.SerializeToString,
                 response_deserializer=suggestions__pb2.SuggestionsResponse.FromString,
                 _registered_method=True)
@@ -44,7 +44,7 @@ class SuggestionsServiceStub(object):
 class SuggestionsServiceServicer(object):
     """Missing associated documentation comment in .proto file."""
 
-    def GetSuggestions(self, request, context):
+    def InitializeSuggestionsOrder(self, request, context):
         """Missing associated documentation comment in .proto file."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
@@ -53,8 +53,8 @@ class SuggestionsServiceServicer(object):
 
 def add_SuggestionsServiceServicer_to_server(servicer, server):
     rpc_method_handlers = {
-            'GetSuggestions': grpc.unary_unary_rpc_method_handler(
-                    servicer.GetSuggestions,
+            'InitializeSuggestionsOrder': grpc.unary_unary_rpc_method_handler(
+                    servicer.InitializeSuggestionsOrder,
                     request_deserializer=suggestions__pb2.SuggestionsRequest.FromString,
                     response_serializer=suggestions__pb2.SuggestionsResponse.SerializeToString,
             ),
@@ -70,7 +70,7 @@ class SuggestionsService(object):
     """Missing associated documentation comment in .proto file."""
 
     @staticmethod
-    def GetSuggestions(request,
+    def InitializeSuggestionsOrder(request,
             target,
             options=(),
             channel_credentials=None,
@@ -83,7 +83,7 @@ class SuggestionsService(object):
         return grpc.experimental.unary_unary(
             request,
             target,
-            '/suggestions.SuggestionsService/GetSuggestions',
+            '/suggestions.SuggestionsService/InitializeSuggestionsOrder',
             suggestions__pb2.SuggestionsRequest.SerializeToString,
             suggestions__pb2.SuggestionsResponse.FromString,
             options,

@@ -3,7 +3,7 @@ syntax = "proto3";
 package suggestions;
 
 service SuggestionsService {
-    rpc GetSuggestions (SuggestionsRequest) returns (SuggestionsResponse);
+    rpc InitializeSuggestionsOrder (SuggestionsRequest) returns (SuggestionsResponse);
 }
 
 message BookItem {

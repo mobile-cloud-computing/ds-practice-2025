@@ -24,7 +24,7 @@ _sym_db = _symbol_database.Default()
 
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x1etransaction_verification.proto\x12\x18transaction_verification\"[\n\x0e\x42illingAddress\x12\x0e\n\x06street\x18\x01 \x01(\t\x12\x0c\n\x04\x63ity\x18\x02 \x01(\t\x12\r\n\x05state\x18\x03 \x01(\t\x12\x0b\n\x03zip\x18\x04 \x01(\t\x12\x0f\n\x07\x63ountry\x18\x05 \x01(\t\"\xb0\x01\n\x13VerificationRequest\x12\x0c\n\x04name\x18\x01 \x01(\t\x12\r\n\x05\x65mail\x18\x02 \x01(\t\x12\x13\n\x0b\x63\x61rd_number\x18\x03 \x01(\t\x12\x17\n\x0f\x65xpiration_date\x18\x04 \x01(\t\x12\x0b\n\x03\x63vv\x18\x05 \x01(\t\x12\x41\n\x0f\x62illing_address\x18\x06 \x01(\x0b\x32(.transaction_verification.BillingAddress\"9\n\x14VerificationResponse\x12\x10\n\x08is_valid\x18\x01 \x01(\x08\x12\x0f\n\x07message\x18\x02 \x01(\t2\x94\x01\n\x1eTransactionVerificationService\x12r\n\x11VerifyTransaction\x12-.transaction_verification.VerificationRequest\x1a..transaction_verification.VerificationResponseb\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x1etransaction_verification.proto\x12\x18transaction_verification\"[\n\x0e\x42illingAddress\x12\x0e\n\x06street\x18\x01 \x01(\t\x12\x0c\n\x04\x63ity\x18\x02 \x01(\t\x12\r\n\x05state\x18\x03 \x01(\t\x12\x0b\n\x03zip\x18\x04 \x01(\t\x12\x0f\n\x07\x63ountry\x18\x05 \x01(\t\"\xb0\x01\n\x13VerificationRequest\x12\x0c\n\x04name\x18\x01 \x01(\t\x12\r\n\x05\x65mail\x18\x02 \x01(\t\x12\x13\n\x0b\x63\x61rd_number\x18\x03 \x01(\t\x12\x17\n\x0f\x65xpiration_date\x18\x04 \x01(\t\x12\x0b\n\x03\x63vv\x18\x05 \x01(\t\x12\x41\n\x0f\x62illing_address\x18\x06 \x01(\x0b\x32(.transaction_verification.BillingAddress\"9\n\x14VerificationResponse\x12\x10\n\x08is_valid\x18\x01 \x01(\x08\x12\x0f\n\x07message\x18\x02 \x01(\t2\x9e\x01\n\x1eTransactionVerificationService\x12|\n\x1bInitializeVerificationOrder\x12-.transaction_verification.VerificationRequest\x1a..transaction_verification.VerificationResponseb\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
@@ -38,5 +38,5 @@ if not _descriptor._USE_C_DESCRIPTORS:
   _globals['_VERIFICATIONRESPONSE']._serialized_start=332
   _globals['_VERIFICATIONRESPONSE']._serialized_end=389
   _globals['_TRANSACTIONVERIFICATIONSERVICE']._serialized_start=392
-  _globals['_TRANSACTIONVERIFICATIONSERVICE']._serialized_end=540
+  _globals['_TRANSACTIONVERIFICATIONSERVICE']._serialized_end=550
 # @@protoc_insertion_point(module_scope)

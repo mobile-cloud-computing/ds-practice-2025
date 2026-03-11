@@ -10,25 +10,95 @@ sys.path.insert(0, sg_grpc_path)
 import suggestions_pb2 as sg_pb2
 import suggestions_pb2_grpc as sg_grpc
 
+project_root = os.path.abspath(os.path.join(FILE, "../../.."))
+sys.path.insert(0, project_root)
+from utils.vector_clock import (
+    EVENT_TRACE_METADATA_KEY,
+    ORDER_ID_METADATA_KEY,
+    VECTOR_CLOCK_METADATA_KEY,
+    deserialize_clock,
+    merge_clocks,
+    metadata_to_dict,
+    new_clock,
+    record_event,
+    serialize_clock,
+    serialize_trace,
+    tick,
+)
+
 import logging
 import grpc
 from concurrent import futures
+from threading import Lock
 from google import genai
 
 logging.basicConfig(level=logging.INFO)
 
 # Configure Google AI
 client = genai.Client(api_key=os.getenv("GOOGLE_API_KEY"))
+order_cache = {}
+order_cache_lock = Lock()
 
 
 class SuggestionsService(sg_grpc.SuggestionsServiceServicer):
+    @staticmethod
+    def _log_clock(order_id, event, clock):
+        logging.info(
+            "Order %s suggestions %s vector clock %s",
+            order_id,
+            event,
+            serialize_clock(clock),
+        )
 
-    def GetSuggestions(self, request, context):
-        """Return AI-generated book suggestions based on purchased items."""
-        items = request.items
+    def _respond(self, context, trace, clock, suggested_books):
+        clock = tick(clock, "suggestions")
+        record_event(trace, clock, "suggestions", "get_suggestions_completed")
+        self._log_clock(
+            metadata_to_dict(context.invocation_metadata()).get(ORDER_ID_METADATA_KEY, ""),
+            "respond",
+            clock,
+        )
+        context.set_trailing_metadata(
+            (
+                (VECTOR_CLOCK_METADATA_KEY, serialize_clock(clock)),
+                (EVENT_TRACE_METADATA_KEY, serialize_trace(trace)),
+            )
+        )
+        return sg_pb2.SuggestionsResponse(books=suggested_books)
+
+    def InitializeSuggestionsOrder(self, request, context):
+        metadata = metadata_to_dict(context.invocation_metadata())
+        order_id = metadata.get(ORDER_ID_METADATA_KEY, "")
+        incoming_clock = deserialize_clock(metadata.get(VECTOR_CLOCK_METADATA_KEY))
+        with order_cache_lock:
+            cached_order = order_cache.get(order_id)
+
+            if not cached_order:
+                clock = tick(merge_clocks(new_clock(), incoming_clock), "suggestions")
+                self._log_clock(order_id, "initialize", clock)
+                trace = []
+                record_event(trace, clock, "suggestions", "suggestions_order_cached")
+                order_cache[order_id] = {
+                    "items": [
+                        {"name": item.name, "quantity": item.quantity}
+                        for item in request.items
+                    ],
+                    "clock": clock,
+                    "trace": trace,
+                }
+                logging.info("Cached suggestions order %s", order_id)
+                return self._respond(context, trace, clock, [])
+
+        clock = tick(merge_clocks(cached_order["clock"], incoming_clock), "suggestions")
+        trace = list(cached_order["trace"])
+        self._log_clock(order_id, "execute", clock)
+
+        record_event(trace, clock, "suggestions", "get_suggestions_request_received")
+
+        items = cached_order["items"]
         logging.info(f"Getting suggestions for {len(items)} items")
 
-        items_str = ", ".join([f"{item.name} (qty: {item.quantity})" for item in items])
+        items_str = ", ".join([f"{item['name']} (qty: {item['quantity']})" for item in items])
 
         prompt = f"Based on the user's purchased books: {items_str}, suggest 2 relevant books. For each book, provide title and author. Respond in the format: 1. Title: [title], Author: [author] 2. Title: [title], Author: [author]"
         response = client.models.generate_content(model='gemma-3-27b-it', contents=prompt)
@@ -49,7 +119,7 @@ class SuggestionsService(sg_grpc.SuggestionsServiceServicer):
                     ))
 
         logging.info(f"Returning {len(suggested_books)} suggestions")
-        return sg_pb2.SuggestionsResponse(books=suggested_books)
+        return self._respond(context, trace, clock, suggested_books)
 
 
 def serve():

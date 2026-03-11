@@ -28,102 +28,241 @@ from flask_cors import CORS
 import json
 import grpc
 import logging
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from uuid import uuid4
+
+project_root = os.path.abspath(os.path.join(FILE, "../../.."))
+sys.path.insert(0, project_root)
+from utils.vector_clock import (
+    EVENT_TRACE_METADATA_KEY,
+    ORDER_ID_METADATA_KEY,
+    SUGGESTED_BOOKS_METADATA_KEY,
+    VECTOR_CLOCK_METADATA_KEY,
+    deserialize_clock,
+    deserialize_trace,
+    merge_clocks,
+    metadata_to_dict,
+    new_clock,
+    record_event,
+    serialize_clock,
+    tick,
+)
 
 logging.basicConfig(level=logging.INFO)
 
 
-def detect_fraud(card_number, order_amount):
+def _metadata(order_id, clock):
+    return (
+        (ORDER_ID_METADATA_KEY, order_id),
+        (VECTOR_CLOCK_METADATA_KEY, serialize_clock(clock)),
+    )
+
+
+def _merge_service_result(event_trace, vector_clock, service_clock, service_trace):
+    event_trace.extend(service_trace)
+    return merge_clocks(vector_clock, service_clock)
+
+
+def _deny_response(order_id, reason, vector_clock, event_trace):
+    return {
+        "orderId": order_id,
+        "status": "Order Denied",
+        "reason": reason,
+        "suggestedBooks": [],
+        "vectorClock": vector_clock,
+        "eventTrace": event_trace,
+    }
+
+
+def initialize_fraud_detection(card_number, order_amount, order_id, clock):
     try:
-        # Establish a connection with the fraud-detection gRPC service.
         with grpc.insecure_channel("fraud_detection:50051") as channel:
-            # Create a stub object.
             stub = fd_grpc.FraudDetectionServiceStub(channel)
-            # Call the service through the stub object.
-            response = stub.CheckFraud(
-                fd_pb2.FraudRequest(card_number=card_number, order_amount=order_amount)
+            response, call = stub.InitializeFraudOrder.with_call(
+                fd_pb2.FraudRequest(card_number=card_number, order_amount=order_amount),
+                metadata=_metadata(order_id, clock),
             )
-        return response.is_fraud
+        metadata = metadata_to_dict(call.trailing_metadata())
+        return (
+            response.is_fraud,
+            "Fraud order cached",
+            deserialize_clock(metadata.get(VECTOR_CLOCK_METADATA_KEY)),
+            deserialize_trace(metadata.get(EVENT_TRACE_METADATA_KEY)),
+        )
+    except grpc.RpcError:
+        raise
     except Exception as e:
         logging.error(f"gRPC Call Failed: {e}")
-        return True  # default to fraud if error
+        return True, "Fraud detection service error", clock, []
 
 
-def get_suggestions(items):
+def initialize_suggestions(items, order_id, clock):
     try:
         with grpc.insecure_channel("suggestions:50053") as channel:
             stub = sg_grpc.SuggestionsServiceStub(channel)
-            # Build the request from checkout items
             book_items = [
                 sg_pb2.BookItem(
                     name=item.get("name", ""), quantity=item.get("quantity", 0)
                 )
                 for item in items
             ]
-            response = stub.GetSuggestions(sg_pb2.SuggestionsRequest(items=book_items))
-        return [
-            {"bookId": book.bookId, "title": book.title, "author": book.author}
-            for book in response.books
-        ]
+            response, call = stub.InitializeSuggestionsOrder.with_call(
+                sg_pb2.SuggestionsRequest(items=book_items),
+                metadata=_metadata(order_id, clock),
+            )
+        metadata = metadata_to_dict(call.trailing_metadata())
+        return (
+            [
+                {"bookId": book.bookId, "title": book.title, "author": book.author}
+                for book in response.books
+            ],
+            "Suggestions order cached",
+            deserialize_clock(metadata.get(VECTOR_CLOCK_METADATA_KEY)),
+            deserialize_trace(metadata.get(EVENT_TRACE_METADATA_KEY)),
+        )
+    except grpc.RpcError:
+        raise
     except Exception as e:
         logging.error(f"gRPC Call Failed: {e}")
-        return []
+        return [], "Suggestions service error", clock, []
 
 
-def verify_transaction(payload: dict):
-    """
-    Call Transaction Verification service.
-    Returns (is_valid: bool, message: str)
-    Default to invalid if error.
-    """
+def _verification_request(payload):
+    user = payload.get("user", {}) or {}
+    cc = payload.get("creditCard", {}) or {}
+    billing = payload.get("billingAddress", {}) or {}
+
+    return tv_pb2.VerificationRequest(
+        name=user.get("name", ""),
+        email=user.get("contact", ""),
+        card_number=cc.get("number", ""),
+        expiration_date=cc.get("expirationDate", "") or cc.get("expiry", ""),
+        cvv=cc.get("cvv", ""),
+        billing_address=tv_pb2.BillingAddress(
+            street=billing.get("street", ""),
+            city=billing.get("city", ""),
+            state=billing.get("state", ""),
+            zip=billing.get("zip", ""),
+            country=billing.get("country", ""),
+        ),
+    )
+
+
+def initialize_transaction_verification(payload: dict, order_id, clock):
     try:
-        logging.info("Starting transaction verification")
-
-        user = payload.get("user", {}) or {}
-        name = user.get("name", "")
-        email = user.get("contact", "")
-
-        cc = payload.get("creditCard", {}) or {}
-        card_number = cc.get("number", "")
-        expiration_date = cc.get("expirationDate", "") or cc.get("expiry", "")
-        cvv = cc.get("cvv", "")
-        billing = payload.get("billingAddress", {}) or {}
-
-        logging.info(
-            f"Verification payload extracted: "
-            f"name='{name}', email='{email}', "
-            f"card_number_ending='{card_number[-4:] if card_number else ''}'"
-        )
-
+        logging.info("Initializing transaction verification")
+        req = _verification_request(payload)
         with grpc.insecure_channel("transaction_verification:50052") as channel:
             stub = tv_grpc.TransactionVerificationServiceStub(channel)
-            req = tv_pb2.VerificationRequest(
-                name=name,
-                email=email,
-                card_number=card_number,
-                expiration_date=expiration_date,
-                cvv=cvv,
-                billing_address=tv_pb2.BillingAddress(
-                    street=billing.get("street", ""),
-                    city=billing.get("city", ""),
-                    state=billing.get("state", ""),
-                    zip=billing.get("zip", ""),
-                    country=billing.get("country", ""),
-                ),
+            res, call = stub.InitializeVerificationOrder.with_call(
+                req, metadata=_metadata(order_id, clock)
             )
-
-            logging.info("Calling TransactionVerification gRPC service")
-            res = stub.VerifyTransaction(req)
-
-        logging.info(
-            f"TransactionVerification response: "
-            f"is_valid={res.is_valid}, message='{res.message}'"
+        metadata = metadata_to_dict(call.trailing_metadata())
+        return (
+            bool(res.is_valid),
+            getattr(res, "message", ""),
+            json.loads(metadata.get(SUGGESTED_BOOKS_METADATA_KEY, "[]")),
+            deserialize_clock(metadata.get(VECTOR_CLOCK_METADATA_KEY)),
+            deserialize_trace(metadata.get(EVENT_TRACE_METADATA_KEY)),
         )
-
-        return bool(res.is_valid), getattr(res, "message", "")
-
+    except grpc.RpcError:
+        raise
     except Exception as e:
         logging.error(f"Transaction Verification gRPC Call Failed: {e}")
-        return False, "Transaction verification service error"
+        return False, "Transaction verification service error", clock, []
+
+
+def run_order_execution_flow(
+    order_id,
+    init_futures,
+    initial_clock,
+    initial_trace,
+):
+    vector_clock = initial_clock
+    event_trace = list(initial_trace)
+    future_to_service = {future: name for name, future in init_futures.items()}
+    final_result = None
+
+    for future in as_completed(future_to_service):
+        service_name = future_to_service[future]
+        try:
+            result = future.result()
+        except grpc.RpcError as exc:
+            for pending in future_to_service:
+                if pending is not future:
+                    pending.cancel()
+            vector_clock = tick(vector_clock, "orchestrator")
+            record_event(
+                event_trace,
+                vector_clock,
+                "orchestrator",
+                f"{service_name}_initialization_failed",
+            )
+            return _deny_response(
+                order_id,
+                exc.details() or f"{service_name} initialization failed",
+                vector_clock,
+                event_trace,
+            )
+
+        if service_name == "transaction_verification":
+            is_valid, message, suggested_books, service_clock, service_trace = result
+            final_result = (is_valid, message, suggested_books)
+        else:
+            _, _, service_clock, service_trace = result
+
+        vector_clock = _merge_service_result(
+            event_trace, vector_clock, service_clock, service_trace
+        )
+        vector_clock = tick(vector_clock, "orchestrator")
+        record_event(
+            event_trace,
+            vector_clock,
+            "orchestrator",
+            (
+                "transaction_verification_result_received"
+                if service_name == "transaction_verification"
+                else f"{service_name}_initialized"
+            ),
+        )
+
+    if final_result is None:
+        vector_clock = tick(vector_clock, "orchestrator")
+        record_event(
+            event_trace,
+            vector_clock,
+            "orchestrator",
+            "transaction_verification_result_missing",
+        )
+        return _deny_response(
+            order_id,
+            "Transaction verification result missing",
+            vector_clock,
+            event_trace,
+        )
+
+    is_valid, message, suggested_books = final_result
+
+    if not is_valid:
+        vector_clock = tick(vector_clock, "orchestrator")
+        record_event(
+            event_trace, vector_clock, "orchestrator", "checkout_denied_invalid"
+        )
+        return _deny_response(
+            order_id, message or "Invalid transaction data", vector_clock, event_trace
+        )
+
+    response = {
+        "orderId": order_id,
+        "status": "Order Approved",
+        "reason": "",
+        "suggestedBooks": suggested_books,
+    }
+    vector_clock = tick(vector_clock, "orchestrator")
+    record_event(event_trace, vector_clock, "orchestrator", "checkout_response_ready")
+    response["vectorClock"] = vector_clock
+    response["eventTrace"] = event_trace
+    return response
 
 
 app = Flask(__name__)
@@ -156,43 +295,81 @@ def index():
 
 @app.route("/checkout", methods=["POST"])
 def checkout():
-    """Process a checkout request through the sequential pipeline: transaction verification → fraud detection → suggestions."""
+    """Process a checkout request through a partially ordered pipeline with vector clocks."""
     # Get request object data to json
     request_data = json.loads(request.data)
     logging.info(
         f"Checkout request received with {len(request_data.get('items', []))} items"
     )
 
+    order_id = str(uuid4())
+    vector_clock = new_clock()
+    event_trace = []
+
+    vector_clock = tick(vector_clock, "orchestrator")
+    record_event(event_trace, vector_clock, "orchestrator", "checkout_request_received")
+    vector_clock = tick(vector_clock, "orchestrator")
+    record_event(event_trace, vector_clock, "orchestrator", "order_id_created")
+
     items = request_data.get("items", [])
     card_number = request_data.get("creditCard", {}).get("number", "")
     order_amount = str(sum(item.get("quantity", 0) for item in items))
 
-    from concurrent.futures import ThreadPoolExecutor
-    with ThreadPoolExecutor(max_workers=3) as executor:
-        future_fraud = executor.submit(detect_fraud, card_number, order_amount)
-        future_verification = executor.submit(verify_transaction, request_data)
-        future_suggestions = executor.submit(get_suggestions, items)
+    executor = ThreadPoolExecutor(max_workers=4)
+    try:
+        suggestions_init_clock = tick(vector_clock, "orchestrator")
+        record_event(
+            event_trace,
+            suggestions_init_clock,
+            "orchestrator",
+            "dispatch_suggestions_init",
+        )
+        future_suggestions_init = executor.submit(
+            initialize_suggestions, items, order_id, suggestions_init_clock
+        )
 
-        is_fraud = future_fraud.result()
-        is_valid, message = future_verification.result()
-        suggested_books = future_suggestions.result()
+        fraud_init_clock = tick(suggestions_init_clock, "orchestrator")
+        record_event(
+            event_trace,
+            fraud_init_clock,
+            "orchestrator",
+            "dispatch_fraud_detection_init",
+        )
+        future_fraud_init = executor.submit(
+            initialize_fraud_detection,
+            card_number,
+            order_amount,
+            order_id,
+            fraud_init_clock,
+        )
+        verification_init_clock = tick(fraud_init_clock, "orchestrator")
+        record_event(
+            event_trace,
+            verification_init_clock,
+            "orchestrator",
+            "dispatch_transaction_verification_init",
+        )
+        future_verification_init = executor.submit(
+            initialize_transaction_verification,
+            request_data,
+            order_id,
+            verification_init_clock,
+        )
+        future_pipeline = executor.submit(
+            run_order_execution_flow,
+            order_id,
+            {
+                "suggestions": future_suggestions_init,
+                "fraud_detection": future_fraud_init,
+                "transaction_verification": future_verification_init,
+            },
+            verification_init_clock,
+            event_trace,
+        )
 
-    if not is_valid:
-        return {
-            "orderId": "12345",
-            "status": "Order Denied",
-            "reason": message or "Invalid transaction data",
-            "suggestedBooks": [],
-        }, 200
-
-    order_status_response = {
-        "orderId": "12345",
-        "status": "Order Denied" if is_fraud else "Order Approved",
-        "reason": "Fraud detected" if is_fraud else "",
-        "suggestedBooks": suggested_books,
-    }
-
-    return order_status_response
+        return future_pipeline.result()
+    finally:
+        executor.shutdown(wait=False, cancel_futures=True)
 
 
 if __name__ == "__main__":

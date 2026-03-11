@@ -15,7 +15,52 @@ graph TD
     C -->|gRPC| F[Suggestions<br/>Port: 50053]
 ```
 
-All backend services run in Docker containers. The orchestrator calls the three gRPC services **concurrently** using threading. Transaction verification is checked first; if invalid, the order is denied without fraud check results. Suggestions are fetched concurrently but only included in the response if the transaction is valid.
+All backend services run in Docker containers. The orchestrator now sends `initOrder`-style RPCs to all three gRPC services at the start so they cache the order and initialize per-order vector clocks. The transaction-verification init call also starts the processing chain, and from there the backend services communicate directly over gRPC in the order transaction verification -> fraud detection -> suggestions.
+
+## Event Partial Order And Vector Clocks
+
+The checkout flow now uses an init-driven protocol. The orchestrator first generates a unique `OrderID`, sends that ID to every backend service, and each service caches the order plus initializes a per-order vector clock. The transaction-verification init call then continues directly into the backend execution chain.
+
+Events used in the flow:
+
+- `a`: orchestrator receives the checkout request
+- `b`: orchestrator creates a unique `OrderID`
+- `c`: transaction-verification service caches the order
+- `d`: suggestions service caches the order
+- `e`: fraud-detection service caches the order
+- `f`: transaction-verification service executes validation from cached state
+- `g`: fraud-detection service executes after verification succeeds
+- `h`: suggestions service generates recommendations after fraud detection passes
+- `i`: orchestrator finalizes the checkout response
+
+Partial order:
+
+- `a < b`
+- `b < c`, `b < d`, `b < e`
+- `c`, `d`, and `e` can happen in parallel
+- `c < f`
+- `e < g`
+- `d < h`
+- `f < g < h`
+- `i` depends on `h` for successful orders
+
+The `/checkout` response includes:
+
+- `orderId`: the generated unique order identifier
+- `vectorClock`: the final merged vector clock
+- `eventTrace`: the ordered list of recorded events with their vector clocks
+
+RPC layout:
+
+- Transaction verification: `InitializeVerificationOrder`
+- Suggestions: `InitializeSuggestionsOrder`
+- Fraud detection: `InitializeFraudOrder`
+
+Failure handling:
+
+- Initialization failures are returned to the orchestrator immediately
+- Verification failures short-circuit the flow before fraud detection
+- Only fully successful executions propagate suggested books back to the user
 
 ## Services
 
@@ -40,22 +85,31 @@ sequenceDiagram
 
     U->>F: Submit order form
     F->>O: POST /checkout
-    par Concurrent gRPC calls
-        O->>TV: gRPC VerifyTransaction
-        O->>FD: gRPC CheckFraud
-        O->>S: gRPC GetSuggestions
+    O->>O: Generate unique OrderID
+    par Parallel init stage
+        O->>TV: gRPC VerifyTransaction (init + OrderID)
+        O->>S: gRPC GetSuggestions (init + OrderID)
+        O->>FD: gRPC CheckFraud (init + OrderID)
     end
-    TV-->>O: is valid + message
-    FD-->>O: is fraud
-    S-->>O: list of books
+    TV-->>O: order cached
+    S-->>O: order cached
+    FD-->>O: order cached
+    O->>TV: gRPC VerifyTransaction (init + start)
+    TV->>FD: gRPC CheckFraud (execute)
     alt Transaction invalid
         O-->>F: Order Denied (reason from TV)
         F-->>U: Yellow/amber error with specific message
     else Transaction valid
         alt Fraud detected
+            FD-->>TV: fraud
+            TV-->>O: invalid + fraud reason
             O-->>F: Order Denied (fraud)
             F-->>U: Red error with fraud message
-        else Order approved
+        else Not fraud
+            FD->>S: gRPC GetSuggestions (execute)
+            S-->>FD: list of books
+            FD-->>TV: not fraud + books
+            TV-->>O: valid + books
             O-->>F: Order Approved and list of suggested books
             F-->>U: Green success + suggested books
         end
