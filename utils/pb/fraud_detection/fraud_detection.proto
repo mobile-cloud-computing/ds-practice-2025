@@ -1,27 +1,52 @@
 syntax = "proto3";
 
-package hello;
+package fraud_detection;
 
-service HelloService {
-  rpc SayHello (HelloRequest) returns (HelloResponse);
-  rpc CheckFraud (FraudCheckRequest) returns (FraudCheckResponse);
+service FraudDetectionService {
+  // Required for Seminar 5:
+  // Orchestrator sends the order once, service stores it locally and
+  // initializes its per-order vector clock.
+  rpc InitOrder (InitOrderRequest) returns (EventResponse);
+
+  // Example Seminar 5 fraud-related events:
+  rpc CheckUserFraud (EventRequest) returns (EventResponse);
+  rpc CheckCardFraud (EventRequest) returns (EventResponse);
+
+  // Optional bonus event from Seminar 5:
+  rpc ClearOrder (ClearOrderRequest) returns (EventResponse);
 }
 
-message HelloRequest {
-  string name = 1;
+message VectorClock {
+  repeated int32 values = 1;
 }
 
-message HelloResponse {
-  string greeting = 1;
+message OrderData {
+  string order_id = 1;
+  string user_name = 2;
+  string user_contact = 3;
+  string card_number = 4;
+  string expiration_date = 5;
+  string cvv = 6;
+  int32 item_count = 7;
+  bool terms_accepted = 8;
 }
 
-message FraudCheckRequest {
-  string user_name = 1;
-  string card_number = 2;
-  int32 item_count = 3;
+message InitOrderRequest {
+  OrderData order = 1;
 }
 
-message FraudCheckResponse {
-  bool is_fraud = 1;
+message EventRequest {
+  string order_id = 1;
+  VectorClock vc = 2;
+}
+
+message EventResponse {
+  bool success = 1;
   string message = 2;
+  VectorClock vc = 3;
+}
+
+message ClearOrderRequest {
+  string order_id = 1;
+  VectorClock final_vc = 2;
 }

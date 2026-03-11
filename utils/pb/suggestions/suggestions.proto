@@ -3,12 +3,42 @@ syntax = "proto3";
 package suggestions;
 
 service SuggestionsService {
-  rpc GetSuggestions (SuggestionsRequest) returns (SuggestionsResponse);
+  rpc InitOrder (InitOrderRequest) returns (EventResponse);
+
+  rpc PrecomputeSuggestions (EventRequest) returns (EventResponse);
+  rpc FinalizeSuggestions (EventRequest) returns (SuggestionsEventResponse);
+
+  rpc ClearOrder (ClearOrderRequest) returns (EventResponse);
 }
 
-message SuggestionsRequest {
-  string user_name = 1;
-  int32 item_count = 2;
+message VectorClock {
+  repeated int32 values = 1;
+}
+
+message OrderData {
+  string order_id = 1;
+  string user_name = 2;
+  string user_contact = 3;
+  string card_number = 4;
+  string expiration_date = 5;
+  string cvv = 6;
+  int32 item_count = 7;
+  bool terms_accepted = 8;
+}
+
+message InitOrderRequest {
+  OrderData order = 1;
+}
+
+message EventRequest {
+  string order_id = 1;
+  VectorClock vc = 2;
+}
+
+message EventResponse {
+  bool success = 1;
+  string message = 2;
+  VectorClock vc = 3;
 }
 
 message SuggestedBook {
@@ -17,6 +47,14 @@ message SuggestedBook {
   string author = 3;
 }
 
-message SuggestionsResponse {
-  repeated SuggestedBook books = 1;
+message SuggestionsEventResponse {
+  bool success = 1;
+  string message = 2;
+  VectorClock vc = 3;
+  repeated SuggestedBook books = 4;
+}
+
+message ClearOrderRequest {
+  string order_id = 1;
+  VectorClock final_vc = 2;
 }
