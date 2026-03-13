@@ -11,8 +11,9 @@ services:
       # Access the application at http://localhost:8080
       - "8080:80"
     volumes:
-      # Mount the frontend directory
-      - ./frontend/src:/usr/share/nginx/html
+      # Mount the frontend directory (exclusive relabel for this container)
+      - ./frontend/src:/usr/share/nginx/html:Z
+
   orchestrator:
     build:
       # Use the current directory as the build context
@@ -31,10 +32,10 @@ services:
       # Check app.py in the orchestrator directory to see how this is used
       - PYTHONFILE=/app/orchestrator/src/app.py
     volumes:
-      # Mount the utils directory in the current directory to the /app/utils directory in the container
-      - ./utils:/app/utils
-      # Mount the orchestrator/src directory in the current directory to the /app/orchestrator/src directory in the container
-      - ./orchestrator/src:/app/orchestrator/src
+      # Shared utils (allow multiple containers) — use :z
+      - ./utils:/app/utils:z
+      # Orchestrator source (exclusive)
+      - ./orchestrator/src:/app/orchestrator/src:Z
     depends_on:
       - fraud_detection
       - suggestions
@@ -56,11 +57,11 @@ services:
       # Check app.py in the fraud_detection directory to see how this is used
       - PYTHONFILE=/app/fraud_detection/src/app.py
     volumes:
-      # Mount the utils directory in the current directory to the /app/utils directory in the container
-      - ./utils:/app/utils
-      # Mount the fraud_detection/src directory in the current directory to the /app/fraud_detection/src directory in the container
-      - ./fraud_detection/src:/app/fraud_detection/src
-      - ./fraud_detection/ai:/app/fraud_detection/ai
+      # Shared utils (allow multiple containers) — use :z
+      - ./utils:/app/utils:z
+      # Fraud source (exclusive)
+      - ./fraud_detection/src:/app/fraud_detection/src:Z
+      - ./fraud_detection/ai:/app/fraud_detection/ai:Z
   suggestions:
     build:
       context: ./
@@ -74,8 +75,10 @@ services:
       - PYTHONFILE=/app/suggestions/src/app.py
       - GEMINI_API_KEY=${GEMINI_API_KEY}
     volumes:
-      - ./utils:/app/utils
-      - ./suggestions/src:/app/suggestions/src
+      # Shared utils (allow multiple containers) — use :z
+      - ./utils:/app/utils:z
+      # Suggestions source (exclusive)
+      - ./suggestions/src:/app/suggestions/src:Z
 
   transaction_verification:
     build:
@@ -95,7 +98,7 @@ services:
       # Check app.py in the transaction_verification directory to see how this is used
       - PYTHONFILE=/app/transaction_verification/src/app.py
     volumes:
-      # Mount the utils directory in the current directory to the /app/utils directory in the container
-      - ./utils:/app/utils
-      # Mount the transaction_verification/src directory in the current directory to the /app/transaction_verification/src directory in the container
-      - ./transaction_verification/src:/app/transaction_verification/src
+      # Shared utils (allow multiple containers) — use :z
+      - ./utils:/app/utils:z
+      # Transaction verification source (exclusive)
+      - ./transaction_verification/src:/app/transaction_verification/src:Z
