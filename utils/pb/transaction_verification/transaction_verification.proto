@@ -4,19 +4,57 @@ package transaction_verification;
 
 service TransactionVerificationService {
   rpc VerifyTransaction (TransactionVerificationRequest) returns (TransactionVerificationResponse);
+  rpc TriggerVerification (TriggerRequest) returns (TransactionVerificationResponse);
+  rpc GetVectorClock (VectorClockRequest) returns (VectorClockResponse);
+  rpc ClearOrder (ClearOrderRequest) returns (ClearOrderResponse);
 }
 
 message TransactionVerificationRequest {
-  string user_name = 1;
-  string user_contact = 2;
-  string card_number = 3;
-  string expiration_date = 4;
-  string cvv = 5;
-  int32 item_count = 6;
-  bool terms_accepted = 7;
+  string order_id = 1;
+  string user_name = 2;
+  string user_contact = 3;
+  string card_number = 4;
+  string expiration_date = 5;
+  string cvv = 6;
+  int32 item_count = 7;
+  bool terms_accepted = 8;
 }
 
 message TransactionVerificationResponse {
   bool is_valid = 1;
+  string message = 2;
+  bool failed = 3;
+}
+
+message TriggerRequest {
+  string order_id = 1;
+  string event_type = 2;
+}
+
+message VectorClockRequest {
+  string order_id = 1;
+}
+
+message VectorClockResponse {
+  int32 transaction_verification = 1;
+  int32 tv_event_a = 2;
+  int32 tv_event_b = 3;
+  int32 tv_event_c = 4;
+  int32 fraud_detection = 5;
+  int32 suggestions = 6;
+}
+
+message ClearOrderRequest {
+  string order_id = 1;
+  int32 final_vc_transaction_verification = 2;
+  int32 final_vc_tv_event_a = 3;
+  int32 final_vc_tv_event_b = 4;
+  int32 final_vc_tv_event_c = 5;
+  int32 final_vc_fraud_detection = 6;
+  int32 final_vc_suggestions = 7;
+}
+
+message ClearOrderResponse {
+  bool success = 1;
   string message = 2;
 }
