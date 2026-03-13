@@ -35,33 +35,45 @@ logging.basicConfig(
 
 logger = logging.getLogger(__name__)
 
+
+fraud_channel = grpc.insecure_channel('fraud_detection:50051')
+verification_channel = grpc.insecure_channel('transaction_verification:50052')
+suggestion_channel = grpc.insecure_channel("suggestions:50053")
+
+fraud_stub = fraud_detection_grpc.FraudDetectionServiceStub(fraud_channel)
+verification_stub = transaction_verification_grpc.transactionServiceStub(verification_channel)
+suggestion_stub = suggestions_grpc.SuggestionsServiceStub(suggestion_channel)
+
+
 def detect_fraud(card_nr, order_ammount):
-    # Establish a connection with the fraud-detection gRPC service.
-    with grpc.insecure_channel('fraud_detection:50051') as channel:
-        # Create a stub object.
-        stub = fraud_detection_grpc.FraudDetectionServiceStub(channel)
-        # Call the service through the stub object.
-        response = stub.checkFraud(fraud_detection.FraudRequest(card_nr=card_nr, order_ammount=order_ammount))
-        if response.is_fraud:
-            logger.warning(f"Fraud detected for card {card_nr} with amount {order_ammount}")
+    # Call the service through the stub object.
+    response = fraud_stub.checkFraud(fraud_detection.FraudRequest(card_nr=card_nr, order_ammount=order_ammount))
+    if response.is_fraud:
+        logger.warning(f"Fraud detected for card {card_nr} with amount {order_ammount}")
     return response.is_fraud
 
 def verify_transaction(card_nr, order_id, money):
-    with grpc.insecure_channel('transaction_verification:50052') as channel:
-        # Create a stub object.
-        stub = transaction_verification_grpc.transactionServiceStub(channel)
-        # Call the service through the stub object.
-        response = stub.verifyTransaction(transaction_verification.PayRequest(card_nr=str(card_nr), order_id=order_id, money=money))
-        logger.info(f"Transaction with {card_nr} {order_id} {money} result {response.verified}")
-        if response.order_id != order_id: return False
+    response = verification_stub.verifyTransaction(transaction_verification.PayRequest(card_nr=str(card_nr), order_id=order_id, money=money))
+    logger.info(f"Transaction with {card_nr} {order_id} {money} result {response.verified}")
+    if response.order_id != order_id: return False
     return response.verified
 
 def get_suggested_books(ordered_books):
-    with grpc.insecure_channel("suggestions:50053") as channel:
-        stub = suggestions_grpc.SuggestionsServiceStub(channel)
-
-        response = stub.suggest(suggestions.SuggestRequest(ordered_books=ordered_books))
+    response = suggestion_stub.suggest(suggestions.SuggestRequest(ordered_books=ordered_books))
     return response.suggested_books
+
+
+
+
+
+def orchestrator_checkout_flow(order_id, order_data):
+    fraud_stub.InitOrder(order_id, order_data)
+
+    def fraud_event():
+        resp = fraud_stub.IsFraud(order_id)
+        if resp["fail"]:
+            raise Exception(f"fraud failed with {order_data}")
+
 
 # Import Flask.
 # Flask is a web framework for Python.
@@ -92,6 +104,7 @@ def checkout():
     """
     # Get request object data to json
     request_data = json.loads(request.data)
+    order_id = int.from_bytes(os.urandom(8)) # equivalent to random.randint(0, 2**63 - 1) a random 64 bit unsigned integer
     # Print request object data
 
     quantity = sum([item["quantity"] for item in request_data["items"]])
@@ -110,7 +123,6 @@ def checkout():
         })
 
     # Generate order_id
-    order_id = random.randint(0, 2**63 - 1)
 
     verified = verify_transaction(request_data["creditCard"]["number"], order_id, quantity)
     if not verified:
@@ -125,6 +137,9 @@ def checkout():
 
     return jsonify(order_status_response)
 
+suggestion_channel.close()
+verification_channel.close()
+fraud_channel.close()
 
 if __name__ == '__main__':
     # Run the app in debug mode to enable hot reloading.
