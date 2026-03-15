@@ -7,6 +7,9 @@ service SuggestionsService {
 
     // fraud service notifies suggestions service that e completed
     rpc NotifyECompleted (DependencyNotificationRequest) returns (Ack);
+
+    // orchestrator broadcasts final cleanup after checkout flow ends
+    rpc CleanupOrder (CleanupOrderRequest) returns (CleanupOrderResponse);
 }
 
 message InitOrderRequest {
@@ -27,4 +30,16 @@ message DependencyNotificationRequest {
     string order_id = 1;
     string event_name = 2;
     repeated int32 vector_clock = 3;
+}
+
+message CleanupOrderRequest {
+    string order_id = 1;
+    repeated int32 final_vector_clock = 2;
+}
+
+message CleanupOrderResponse {
+    bool cleaned = 1;
+    bool vc_valid = 2;
+    string message = 3;
+    repeated int32 local_vector_clock = 4;
 }

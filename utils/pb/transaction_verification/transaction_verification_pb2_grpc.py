@@ -5,7 +5,7 @@ import warnings
 
 import transaction_verification_pb2 as transaction__verification__pb2
 
-GRPC_GENERATED_VERSION = '1.70.0'
+GRPC_GENERATED_VERSION = '1.78.0'
 GRPC_VERSION = grpc.__version__
 _version_not_supported = False
 
@@ -18,7 +18,7 @@ except ImportError:
 if _version_not_supported:
     raise RuntimeError(
         f'The grpc package installed is at version {GRPC_VERSION},'
-        + f' but the generated code in transaction_verification_pb2_grpc.py depends on'
+        + ' but the generated code in transaction_verification_pb2_grpc.py depends on'
         + f' grpcio>={GRPC_GENERATED_VERSION}.'
         + f' Please upgrade your grpc module to grpcio>={GRPC_GENERATED_VERSION}'
         + f' or downgrade your generated code using grpcio-tools<={GRPC_VERSION}.'
@@ -49,6 +49,11 @@ class TransactionVerificationServiceStub(object):
                 request_serializer=transaction__verification__pb2.FinalizeOrderRequest.SerializeToString,
                 response_deserializer=transaction__verification__pb2.Ack.FromString,
                 _registered_method=True)
+        self.CleanupOrder = channel.unary_unary(
+                '/transaction.TransactionVerificationService/CleanupOrder',
+                request_serializer=transaction__verification__pb2.CleanupOrderRequest.SerializeToString,
+                response_deserializer=transaction__verification__pb2.CleanupOrderResponse.FromString,
+                _registered_method=True)
 
 
 class TransactionVerificationServiceServicer(object):
@@ -74,6 +79,13 @@ class TransactionVerificationServiceServicer(object):
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
+    def CleanupOrder(self, request, context):
+        """orchestrator broadcasts final cleanup after checkout flow ends
+        """
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
 
 def add_TransactionVerificationServiceServicer_to_server(servicer, server):
     rpc_method_handlers = {
@@ -91,6 +103,11 @@ def add_TransactionVerificationServiceServicer_to_server(servicer, server):
                     servicer.FinalizeOrder,
                     request_deserializer=transaction__verification__pb2.FinalizeOrderRequest.FromString,
                     response_serializer=transaction__verification__pb2.Ack.SerializeToString,
+            ),
+            'CleanupOrder': grpc.unary_unary_rpc_method_handler(
+                    servicer.CleanupOrder,
+                    request_deserializer=transaction__verification__pb2.CleanupOrderRequest.FromString,
+                    response_serializer=transaction__verification__pb2.CleanupOrderResponse.SerializeToString,
             ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
@@ -174,6 +191,33 @@ class TransactionVerificationService(object):
             '/transaction.TransactionVerificationService/FinalizeOrder',
             transaction__verification__pb2.FinalizeOrderRequest.SerializeToString,
             transaction__verification__pb2.Ack.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def CleanupOrder(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/transaction.TransactionVerificationService/CleanupOrder',
+            transaction__verification__pb2.CleanupOrderRequest.SerializeToString,
+            transaction__verification__pb2.CleanupOrderResponse.FromString,
             options,
             channel_credentials,
             insecure,

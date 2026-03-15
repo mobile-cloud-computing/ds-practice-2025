@@ -68,6 +68,61 @@ def initialize_order(order_id, order_data, service_name):
     raise ValueError(f"Unknown service {service_name}")
 
 
+def cleanup_order(order_id, final_vector_clock, service_name):
+    if service_name == "transaction_verification":
+        with grpc.insecure_channel("transaction_verification:50052") as channel:
+            stub = transaction_verification_grpc.TransactionVerificationServiceStub(channel)
+            response = stub.CleanupOrder(
+                transaction_verification.CleanupOrderRequest(
+                    order_id=order_id,
+                    final_vector_clock=final_vector_clock,
+                )
+            )
+            return {
+                "service": service_name,
+                "cleaned": response.cleaned,
+                "vcValid": response.vc_valid,
+                "message": response.message,
+                "localVectorClock": list(response.local_vector_clock),
+            }
+
+    if service_name == "fraud_detection":
+        with grpc.insecure_channel("fraud_detection:50051") as channel:
+            stub = fraud_detection_grpc.FraudDetectionServiceStub(channel)
+            response = stub.CleanupOrder(
+                fraud_detection.CleanupOrderRequest(
+                    order_id=order_id,
+                    final_vector_clock=final_vector_clock,
+                )
+            )
+            return {
+                "service": service_name,
+                "cleaned": response.cleaned,
+                "vcValid": response.vc_valid,
+                "message": response.message,
+                "localVectorClock": list(response.local_vector_clock),
+            }
+
+    if service_name == "suggestions":
+        with grpc.insecure_channel("suggestions:50053") as channel:
+            stub = suggestions_grpc.SuggestionsServiceStub(channel)
+            response = stub.CleanupOrder(
+                suggestions.CleanupOrderRequest(
+                    order_id=order_id,
+                    final_vector_clock=final_vector_clock,
+                )
+            )
+            return {
+                "service": service_name,
+                "cleaned": response.cleaned,
+                "vcValid": response.vc_valid,
+                "message": response.message,
+                "localVectorClock": list(response.local_vector_clock),
+            }
+
+    raise ValueError(f"Unknown service {service_name}")
+
+
 app = Flask(__name__)
 CORS(app, resources={r'/*': {'origins': '*'}})
 
@@ -97,15 +152,43 @@ def checkout():
                 transaction_verification.StartCheckoutFlowRequest(order_id=order_id)
             )
 
+        final_vector_clock = list(final_resp.vector_clock)
+        cleanup_results = []
+        with ThreadPoolExecutor(max_workers=3) as executor:
+            cleanup_services = ["transaction_verification", "fraud_detection", "suggestions"]
+            cleanup_futures = {
+                executor.submit(cleanup_order, order_id, final_vector_clock, service_name): service_name
+                for service_name in cleanup_services
+            }
+            for cleanup_future, service_name in cleanup_futures.items():
+                try:
+                    cleanup_results.append(cleanup_future.result())
+                except Exception as cleanup_error:
+                    cleanup_results.append(
+                        {
+                            "service": service_name,
+                            "cleaned": False,
+                            "vcValid": False,
+                            "message": f"Cleanup call failed: {cleanup_error}",
+                            "localVectorClock": [],
+                        }
+                    )
+
+        cleanup_ok = all(item.get("cleaned") and item.get("vcValid") for item in cleanup_results)
+
         return {
             "orderId": order_id,
             "success": final_resp.success,
             "status": final_resp.message,
-            "finalVectorClock": list(final_resp.vector_clock),
+            "finalVectorClock": final_vector_clock,
             "suggestedBooks": [
                 {"title": s.title, "author": s.author}
                 for s in final_resp.suggestions
-            ]
+            ],
+            "cleanup": {
+                "success": cleanup_ok,
+                "results": cleanup_results,
+            },
         }
 
     except Exception as e:

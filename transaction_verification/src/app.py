@@ -132,7 +132,6 @@ class TransactionVerificationService(transaction_verification_grpc.TransactionVe
                     for item in state.recommendations
                 ]
             )
-        self._remove_order(order_id)
         return response
 
     # Receives final success/failure from downstream services and wakes StartCheckoutFlow waiter.
@@ -153,6 +152,43 @@ class TransactionVerificationService(transaction_verification_grpc.TransactionVe
             state.cond.notify_all()
 
         return transaction_verification.Ack(ok=True)
+
+    # Final cleanup event broadcast by orchestrator.
+    # Service only clears cached order state if local_vc <= final_vector_clock.
+    def CleanupOrder(self, request, context):
+        with ORDER_CACHE_LOCK:
+            state = ORDER_CACHE.get(request.order_id)
+
+        if state is None:
+            return transaction_verification.CleanupOrderResponse(
+                cleaned=True,
+                vc_valid=True,
+                message="Order not found (already cleaned or never initialized)",
+                local_vector_clock=zero_vc(),
+            )
+
+        final_vc = list(request.final_vector_clock)
+        with state.cond:
+            local_vc = list(state.local_vc)
+            is_valid = vc_leq(local_vc, final_vc)
+
+        if is_valid:
+            self._remove_order(request.order_id)
+            print(f"[TV] CleanupOrder order={request.order_id} local_vc={local_vc} final_vc={final_vc} status=cleaned")
+            return transaction_verification.CleanupOrderResponse(
+                cleaned=True,
+                vc_valid=True,
+                message="Cleanup successful",
+                local_vector_clock=local_vc,
+            )
+
+        print(f"[TV] CleanupOrder order={request.order_id} local_vc={local_vc} final_vc={final_vc} status=rejected")
+        return transaction_verification.CleanupOrderResponse(
+            cleaned=False,
+            vc_valid=False,
+            message="Cleanup rejected: local vector clock is not <= final vector clock",
+            local_vector_clock=local_vc,
+        )
 
     # Marks the order as failed locally and notifies any waiting thread.
     def _fail(self, order_id, message):

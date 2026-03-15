@@ -163,6 +163,43 @@ class SuggestionsService(suggestions_grpc.SuggestionsServiceServicer):
 
         return suggestions.Ack(ok=True)
 
+    # Final cleanup event broadcast by orchestrator.
+    # Service only clears cached order state if local_vc <= final_vector_clock.
+    def CleanupOrder(self, request, context):
+        with ORDER_CACHE_LOCK:
+            state = ORDER_CACHE.get(request.order_id)
+
+        if state is None:
+            return suggestions.CleanupOrderResponse(
+                cleaned=True,
+                vc_valid=True,
+                message="Order not found (already cleaned or never initialized)",
+                local_vector_clock=zero_vc(),
+            )
+
+        final_vc = list(request.final_vector_clock)
+        with state.cond:
+            local_vc = list(state.local_vc)
+            is_valid = vc_leq(local_vc, final_vc)
+
+        if is_valid:
+            self._remove_order(request.order_id)
+            print(f"[SG] CleanupOrder order={request.order_id} local_vc={local_vc} final_vc={final_vc} status=cleaned")
+            return suggestions.CleanupOrderResponse(
+                cleaned=True,
+                vc_valid=True,
+                message="Cleanup successful",
+                local_vector_clock=local_vc,
+            )
+
+        print(f"[SG] CleanupOrder order={request.order_id} local_vc={local_vc} final_vc={final_vc} status=rejected")
+        return suggestions.CleanupOrderResponse(
+            cleaned=False,
+            vc_valid=False,
+            message="Cleanup rejected: local vector clock is not <= final vector clock",
+            local_vector_clock=local_vc,
+        )
+
     # Event f: depends on e and generates final book recommendations.
     # Once complete, sends FinalizeOrder(success=True) back to transaction verification.
     def _run_event_f(self, order_id):
@@ -214,8 +251,6 @@ class SuggestionsService(suggestions_grpc.SuggestionsServiceServicer):
                 )
         except Exception as e:
             print(f"[SG] failed to send success: {e}")
-        finally:
-            self._remove_order(order_id)
 
 
 def serve():

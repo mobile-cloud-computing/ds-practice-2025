@@ -10,6 +10,9 @@ service TransactionVerificationService {
 
     // Final result is reported back here
     rpc FinalizeOrder (FinalizeOrderRequest) returns (Ack);
+
+    // orchestrator broadcasts final cleanup after checkout flow ends
+    rpc CleanupOrder (CleanupOrderRequest) returns (CleanupOrderResponse);
 }
 
 message InitOrderRequest {
@@ -48,4 +51,16 @@ message FinalizeOrderRequest {
     string message = 3;
     repeated int32 vector_clock = 4;
     repeated BookSuggestion suggestions = 5;
+}
+
+message CleanupOrderRequest {
+    string order_id = 1;
+    repeated int32 final_vector_clock = 2;
+}
+
+message CleanupOrderResponse {
+    bool cleaned = 1;
+    bool vc_valid = 2;
+    string message = 3;
+    repeated int32 local_vector_clock = 4;
 }

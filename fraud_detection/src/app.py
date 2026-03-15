@@ -146,6 +146,43 @@ class FraudDetectionService(fraud_detection_grpc.FraudDetectionServiceServicer):
 
         return fraud_detection.Ack(ok=True)
 
+    # Final cleanup event broadcast by orchestrator.
+    # Service only clears cached order state if local_vc <= final_vector_clock.
+    def CleanupOrder(self, request, context):
+        with ORDER_CACHE_LOCK:
+            state = ORDER_CACHE.get(request.order_id)
+
+        if state is None:
+            return fraud_detection.CleanupOrderResponse(
+                cleaned=True,
+                vc_valid=True,
+                message="Order not found (already cleaned or never initialized)",
+                local_vector_clock=zero_vc(),
+            )
+
+        final_vc = list(request.final_vector_clock)
+        with state.cond:
+            local_vc = list(state.local_vc)
+            is_valid = vc_leq(local_vc, final_vc)
+
+        if is_valid:
+            self._remove_order(request.order_id)
+            print(f"[FD] CleanupOrder order={request.order_id} local_vc={local_vc} final_vc={final_vc} status=cleaned")
+            return fraud_detection.CleanupOrderResponse(
+                cleaned=True,
+                vc_valid=True,
+                message="Cleanup successful",
+                local_vector_clock=local_vc,
+            )
+
+        print(f"[FD] CleanupOrder order={request.order_id} local_vc={local_vc} final_vc={final_vc} status=rejected")
+        return fraud_detection.CleanupOrderResponse(
+            cleaned=False,
+            vc_valid=False,
+            message="Cleanup rejected: local vector clock is not <= final vector clock",
+            local_vector_clock=local_vc,
+        )
+
     # Helper to determine the required vector clock for event e, which depends on both b and c. We need to wait for both b and c to complete, and then take the max of their vector clocks as the required vc for e.
     def _required_for_e(self, state):
         vc_c = state.event_vc.get("c")
@@ -255,8 +292,6 @@ class FraudDetectionService(fraud_detection_grpc.FraudDetectionServiceServicer):
                 )
         except Exception as e:
             print(f"[FD] failed to send failure: {e}")
-        finally:
-            self._remove_order(order_id)
 
 
 def serve():
