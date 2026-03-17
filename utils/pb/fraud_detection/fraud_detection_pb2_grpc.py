@@ -5,7 +5,7 @@ import warnings
 
 import fraud_detection_pb2 as fraud__detection__pb2
 
-GRPC_GENERATED_VERSION = '1.78.0'
+GRPC_GENERATED_VERSION = '1.70.0'
 GRPC_VERSION = grpc.__version__
 _version_not_supported = False
 
@@ -18,7 +18,7 @@ except ImportError:
 if _version_not_supported:
     raise RuntimeError(
         f'The grpc package installed is at version {GRPC_VERSION},'
-        + ' but the generated code in fraud_detection_pb2_grpc.py depends on'
+        + f' but the generated code in fraud_detection_pb2_grpc.py depends on'
         + f' grpcio>={GRPC_GENERATED_VERSION}.'
         + f' Please upgrade your grpc module to grpcio>={GRPC_GENERATED_VERSION}'
         + f' or downgrade your generated code using grpcio-tools<={GRPC_VERSION}.'
@@ -39,13 +39,13 @@ class FraudDetectionServiceStub(object):
                 request_serializer=fraud__detection__pb2.InitOrderRequest.SerializeToString,
                 response_deserializer=fraud__detection__pb2.InitOrderResponse.FromString,
                 _registered_method=True)
-        self.NotifyBCompleted = channel.unary_unary(
-                '/fraud.FraudDetectionService/NotifyBCompleted',
+        self.NotifyMandatoryUserDataValidated = channel.unary_unary(
+                '/fraud.FraudDetectionService/NotifyMandatoryUserDataValidated',
                 request_serializer=fraud__detection__pb2.DependencyNotificationRequest.SerializeToString,
                 response_deserializer=fraud__detection__pb2.Ack.FromString,
                 _registered_method=True)
-        self.NotifyCCompleted = channel.unary_unary(
-                '/fraud.FraudDetectionService/NotifyCCompleted',
+        self.NotifyCreditCardFormatValidated = channel.unary_unary(
+                '/fraud.FraudDetectionService/NotifyCreditCardFormatValidated',
                 request_serializer=fraud__detection__pb2.DependencyNotificationRequest.SerializeToString,
                 response_deserializer=fraud__detection__pb2.Ack.FromString,
                 _registered_method=True)
@@ -65,15 +65,15 @@ class FraudDetectionServiceServicer(object):
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
-    def NotifyBCompleted(self, request, context):
-        """transaction service notifies fraud service that b completed
+    def NotifyMandatoryUserDataValidated(self, request, context):
+        """transaction service notifies fraud service that mandatory user data validation completed
         """
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
-    def NotifyCCompleted(self, request, context):
-        """transaction service notifies fraud service that c completed
+    def NotifyCreditCardFormatValidated(self, request, context):
+        """transaction service notifies fraud service that credit card format validation completed
         """
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
@@ -94,13 +94,13 @@ def add_FraudDetectionServiceServicer_to_server(servicer, server):
                     request_deserializer=fraud__detection__pb2.InitOrderRequest.FromString,
                     response_serializer=fraud__detection__pb2.InitOrderResponse.SerializeToString,
             ),
-            'NotifyBCompleted': grpc.unary_unary_rpc_method_handler(
-                    servicer.NotifyBCompleted,
+            'NotifyMandatoryUserDataValidated': grpc.unary_unary_rpc_method_handler(
+                    servicer.NotifyMandatoryUserDataValidated,
                     request_deserializer=fraud__detection__pb2.DependencyNotificationRequest.FromString,
                     response_serializer=fraud__detection__pb2.Ack.SerializeToString,
             ),
-            'NotifyCCompleted': grpc.unary_unary_rpc_method_handler(
-                    servicer.NotifyCCompleted,
+            'NotifyCreditCardFormatValidated': grpc.unary_unary_rpc_method_handler(
+                    servicer.NotifyCreditCardFormatValidated,
                     request_deserializer=fraud__detection__pb2.DependencyNotificationRequest.FromString,
                     response_serializer=fraud__detection__pb2.Ack.SerializeToString,
             ),
@@ -148,7 +148,7 @@ class FraudDetectionService(object):
             _registered_method=True)
 
     @staticmethod
-    def NotifyBCompleted(request,
+    def NotifyMandatoryUserDataValidated(request,
             target,
             options=(),
             channel_credentials=None,
@@ -161,7 +161,7 @@ class FraudDetectionService(object):
         return grpc.experimental.unary_unary(
             request,
             target,
-            '/fraud.FraudDetectionService/NotifyBCompleted',
+            '/fraud.FraudDetectionService/NotifyMandatoryUserDataValidated',
             fraud__detection__pb2.DependencyNotificationRequest.SerializeToString,
             fraud__detection__pb2.Ack.FromString,
             options,
@@ -175,7 +175,7 @@ class FraudDetectionService(object):
             _registered_method=True)
 
     @staticmethod
-    def NotifyCCompleted(request,
+    def NotifyCreditCardFormatValidated(request,
             target,
             options=(),
             channel_credentials=None,
@@ -188,7 +188,7 @@ class FraudDetectionService(object):
         return grpc.experimental.unary_unary(
             request,
             target,
-            '/fraud.FraudDetectionService/NotifyCCompleted',
+            '/fraud.FraudDetectionService/NotifyCreditCardFormatValidated',
             fraud__detection__pb2.DependencyNotificationRequest.SerializeToString,
             fraud__detection__pb2.Ack.FromString,
             options,

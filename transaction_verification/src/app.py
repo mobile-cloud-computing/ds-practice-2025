@@ -105,8 +105,8 @@ class TransactionVerificationService(transaction_verification_grpc.TransactionVe
                 suggestions=[]
             )
 
-        t_a = threading.Thread(target=self._run_event_a, args=(order_id,))
-        t_b = threading.Thread(target=self._run_event_b, args=(order_id,))
+        t_a = threading.Thread(target=self._validate_order_items, args=(order_id,))
+        t_b = threading.Thread(target=self._validate_mandatory_user_data, args=(order_id,))
         t_a.start()
         t_b.start()
 
@@ -207,7 +207,7 @@ class TransactionVerificationService(transaction_verification_grpc.TransactionVe
 
     # Event a: validates that the order has at least one item.
     # If successful, triggers event c; otherwise fails immediately.
-    def _run_event_a(self, order_id):
+    def _validate_order_items(self, order_id):
         with ORDER_CACHE_LOCK:
             state = ORDER_CACHE.get(order_id)
         if state is None:
@@ -224,11 +224,11 @@ class TransactionVerificationService(transaction_verification_grpc.TransactionVe
             self._fail(order_id, "Order Declined: no items in order")
             return
 
-        self._run_event_c(order_id, state.event_vc["a"])
+        self._validate_credit_card_format(order_id, state.event_vc["a"])
 
     # Event b: validates mandatory user and billing fields.
     # On success, notifies fraud detection that b completed.
-    def _run_event_b(self, order_id):
+    def _validate_mandatory_user_data(self, order_id):
         with ORDER_CACHE_LOCK:
             state = ORDER_CACHE.get(order_id)
         if state is None:
@@ -248,7 +248,7 @@ class TransactionVerificationService(transaction_verification_grpc.TransactionVe
         try:
             with grpc.insecure_channel("fraud_detection:50051") as channel:
                 stub = fraud_detection_grpc.FraudDetectionServiceStub(channel)
-                stub.NotifyBCompleted(
+                stub.NotifyMandatoryUserDataValidated(
                     fraud_detection.DependencyNotificationRequest(
                         order_id=order_id,
                         event_name="b",
@@ -260,7 +260,7 @@ class TransactionVerificationService(transaction_verification_grpc.TransactionVe
 
     # Event c: validates basic card format, depends on event a's vector clock.
     # On success, notifies fraud detection that c completed.
-    def _run_event_c(self, order_id, incoming_vc):
+    def _validate_credit_card_format(self, order_id, incoming_vc):
         with ORDER_CACHE_LOCK:
             state = ORDER_CACHE.get(order_id)
         if state is None:
@@ -290,7 +290,7 @@ class TransactionVerificationService(transaction_verification_grpc.TransactionVe
         try:
             with grpc.insecure_channel("fraud_detection:50051") as channel:
                 stub = fraud_detection_grpc.FraudDetectionServiceStub(channel)
-                stub.NotifyCCompleted(
+                stub.NotifyCreditCardFormatValidated(
                     fraud_detection.DependencyNotificationRequest(
                         order_id=order_id,
                         event_name="c",

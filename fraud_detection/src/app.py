@@ -106,7 +106,7 @@ class FraudDetectionService(fraud_detection_grpc.FraudDetectionServiceServicer):
 
     # notify that b completed, with the vector clock from b. We update our local vector clock, record the event vc for b, 
     # and check if we can run event d
-    def NotifyBCompleted(self, request, context):
+    def NotifyMandatoryUserDataValidated(self, request, context):
         state = self._get_state_or_abort(request.order_id, context)
         if state is None:
             return fraud_detection.Ack(ok=False)
@@ -119,7 +119,7 @@ class FraudDetectionService(fraud_detection_grpc.FraudDetectionServiceServicer):
 
             if not state.d_started:
                 state.d_started = True
-                threading.Thread(target=self._run_event_d, args=(request.order_id,)).start()
+                threading.Thread(target=self._check_user_data_for_fraud, args=(request.order_id,)).start()
 
             state.cond.notify_all()
 
@@ -127,7 +127,7 @@ class FraudDetectionService(fraud_detection_grpc.FraudDetectionServiceServicer):
 
     # notify that c completed, with the vector clock from c. We update our local vector clock, record the event vc for c,
     #  and check if we can run event e (which depends on both b and c)
-    def NotifyCCompleted(self, request, context):
+    def NotifyCreditCardFormatValidated(self, request, context):
         state = self._get_state_or_abort(request.order_id, context)
         if state is None:
             return fraud_detection.Ack(ok=False)
@@ -140,7 +140,7 @@ class FraudDetectionService(fraud_detection_grpc.FraudDetectionServiceServicer):
 
             if not state.e_started:
                 state.e_started = True
-                threading.Thread(target=self._run_event_e, args=(request.order_id,)).start()
+                threading.Thread(target=self._check_card_data_for_fraud, args=(request.order_id,)).start()
 
             state.cond.notify_all()
 
@@ -184,7 +184,7 @@ class FraudDetectionService(fraud_detection_grpc.FraudDetectionServiceServicer):
         )
 
     # Helper to determine the required vector clock for event e, which depends on both b and c. We need to wait for both b and c to complete, and then take the max of their vector clocks as the required vc for e.
-    def _required_for_e(self, state):
+    def _required_for_card_fraud_check(self, state):
         vc_c = state.event_vc.get("c")
         vc_d = state.event_vc.get("d")
         if vc_c is None or vc_d is None:
@@ -192,7 +192,7 @@ class FraudDetectionService(fraud_detection_grpc.FraudDetectionServiceServicer):
         return vc_max(vc_c, vc_d)
     
     # The implementations of event d (fraud-detection service checks the user data for fraud)
-    def _run_event_d(self, order_id):
+    def _check_user_data_for_fraud(self, order_id):
         with ORDER_CACHE_LOCK:
             state = ORDER_CACHE.get(order_id)
         if state is None:
@@ -221,7 +221,7 @@ class FraudDetectionService(fraud_detection_grpc.FraudDetectionServiceServicer):
             self._send_failure(order_id, "Order Declined: fraud detected in user data")
 
     # The implementation of event e (fraud-detection service checks the credit card data for fraud). 
-    def _run_event_e(self, order_id):
+    def _check_card_data_for_fraud(self, order_id):
         with ORDER_CACHE_LOCK:
             state = ORDER_CACHE.get(order_id)
         if state is None:
@@ -230,9 +230,9 @@ class FraudDetectionService(fraud_detection_grpc.FraudDetectionServiceServicer):
         with state.cond:
             # We need to wait for both b and c to complete before we can run e, so we wait until we have recorded the vcs for both b and c in our event_vc. 
             # This ensures the causal ordering that e happens after both b and c.
-            state.cond.wait_for(lambda: self._required_for_e(state) is not None)
+            state.cond.wait_for(lambda: self._required_for_card_fraud_check(state) is not None)
 
-            required = self._required_for_e(state)
+            required = self._required_for_card_fraud_check(state)
 
             # We wait until our local vc has caught up with the required vc to ensure we have seen all events that causally precede b and c before we run e.
             state.cond.wait_for(lambda: vc_leq(required, state.local_vc))
@@ -261,7 +261,7 @@ class FraudDetectionService(fraud_detection_grpc.FraudDetectionServiceServicer):
             # We include the vector clock for event e in this notification to maintain causal consistency across services.
             with grpc.insecure_channel("suggestions:50053") as channel:
                 stub = suggestions_grpc.SuggestionsServiceStub(channel)
-                stub.NotifyECompleted(
+                stub.NotifyCardFraudCheckCompleted(
                     suggestions.DependencyNotificationRequest(
                         order_id=order_id,
                         event_name="e",

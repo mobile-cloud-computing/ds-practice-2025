@@ -146,7 +146,7 @@ class SuggestionsService(suggestions_grpc.SuggestionsServiceServicer):
 
     # notify that e completed, with the vector clock from e. We update our local vector clock, record
     # the event vc for e, and start event f once.
-    def NotifyECompleted(self, request, context):
+    def NotifyCardFraudCheckCompleted(self, request, context):
         state = self._get_state_or_abort(request.order_id, context)
         if state is None:
             return suggestions.Ack(ok=False)
@@ -157,7 +157,7 @@ class SuggestionsService(suggestions_grpc.SuggestionsServiceServicer):
 
             if not state.f_started:
                 state.f_started = True
-                threading.Thread(target=self._run_event_f, args=(request.order_id,)).start()
+                threading.Thread(target=self._generate_book_suggestions, args=(request.order_id,)).start()
 
             state.cond.notify_all()
 
@@ -202,7 +202,7 @@ class SuggestionsService(suggestions_grpc.SuggestionsServiceServicer):
 
     # Event f: depends on e and generates final book recommendations.
     # Once complete, sends FinalizeOrder(success=True) back to transaction verification.
-    def _run_event_f(self, order_id):
+    def _generate_book_suggestions(self, order_id):
         with ORDER_CACHE_LOCK:
             state = ORDER_CACHE.get(order_id)
         if state is None:

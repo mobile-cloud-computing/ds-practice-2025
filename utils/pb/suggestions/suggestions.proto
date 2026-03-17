@@ -5,8 +5,8 @@ package suggestions;
 service SuggestionsService {
     rpc InitOrder (InitOrderRequest) returns (InitOrderResponse);
 
-    // fraud service notifies suggestions service that e completed
-    rpc NotifyECompleted (DependencyNotificationRequest) returns (Ack);
+    // fraud service notifies suggestions service that card fraud check completed
+    rpc NotifyCardFraudCheckCompleted (DependencyNotificationRequest) returns (Ack);
 
     // orchestrator broadcasts final cleanup after checkout flow ends
     rpc CleanupOrder (CleanupOrderRequest) returns (CleanupOrderResponse);

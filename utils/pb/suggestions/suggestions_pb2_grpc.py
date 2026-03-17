@@ -5,7 +5,7 @@ import warnings
 
 import suggestions_pb2 as suggestions__pb2
 
-GRPC_GENERATED_VERSION = '1.78.0'
+GRPC_GENERATED_VERSION = '1.70.0'
 GRPC_VERSION = grpc.__version__
 _version_not_supported = False
 
@@ -18,7 +18,7 @@ except ImportError:
 if _version_not_supported:
     raise RuntimeError(
         f'The grpc package installed is at version {GRPC_VERSION},'
-        + ' but the generated code in suggestions_pb2_grpc.py depends on'
+        + f' but the generated code in suggestions_pb2_grpc.py depends on'
         + f' grpcio>={GRPC_GENERATED_VERSION}.'
         + f' Please upgrade your grpc module to grpcio>={GRPC_GENERATED_VERSION}'
         + f' or downgrade your generated code using grpcio-tools<={GRPC_VERSION}.'
@@ -39,8 +39,8 @@ class SuggestionsServiceStub(object):
                 request_serializer=suggestions__pb2.InitOrderRequest.SerializeToString,
                 response_deserializer=suggestions__pb2.InitOrderResponse.FromString,
                 _registered_method=True)
-        self.NotifyECompleted = channel.unary_unary(
-                '/suggestions.SuggestionsService/NotifyECompleted',
+        self.NotifyCardFraudCheckCompleted = channel.unary_unary(
+                '/suggestions.SuggestionsService/NotifyCardFraudCheckCompleted',
                 request_serializer=suggestions__pb2.DependencyNotificationRequest.SerializeToString,
                 response_deserializer=suggestions__pb2.Ack.FromString,
                 _registered_method=True)
@@ -60,8 +60,8 @@ class SuggestionsServiceServicer(object):
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
-    def NotifyECompleted(self, request, context):
-        """fraud service notifies suggestions service that e completed
+    def NotifyCardFraudCheckCompleted(self, request, context):
+        """fraud service notifies suggestions service that card fraud check completed
         """
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
@@ -82,8 +82,8 @@ def add_SuggestionsServiceServicer_to_server(servicer, server):
                     request_deserializer=suggestions__pb2.InitOrderRequest.FromString,
                     response_serializer=suggestions__pb2.InitOrderResponse.SerializeToString,
             ),
-            'NotifyECompleted': grpc.unary_unary_rpc_method_handler(
-                    servicer.NotifyECompleted,
+            'NotifyCardFraudCheckCompleted': grpc.unary_unary_rpc_method_handler(
+                    servicer.NotifyCardFraudCheckCompleted,
                     request_deserializer=suggestions__pb2.DependencyNotificationRequest.FromString,
                     response_serializer=suggestions__pb2.Ack.SerializeToString,
             ),
@@ -131,7 +131,7 @@ class SuggestionsService(object):
             _registered_method=True)
 
     @staticmethod
-    def NotifyECompleted(request,
+    def NotifyCardFraudCheckCompleted(request,
             target,
             options=(),
             channel_credentials=None,
@@ -144,7 +144,7 @@ class SuggestionsService(object):
         return grpc.experimental.unary_unary(
             request,
             target,
-            '/suggestions.SuggestionsService/NotifyECompleted',
+            '/suggestions.SuggestionsService/NotifyCardFraudCheckCompleted',
             suggestions__pb2.DependencyNotificationRequest.SerializeToString,
             suggestions__pb2.Ack.FromString,
             options,
