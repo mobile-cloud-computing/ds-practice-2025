@@ -35,3 +35,7 @@ class SuggestionsResponse(_message.Message):
     BOOKS_FIELD_NUMBER: _ClassVar[int]
     books: _containers.RepeatedCompositeFieldContainer[SuggestedBook]
     def __init__(self, books: _Optional[_Iterable[_Union[SuggestedBook, _Mapping]]] = ...) -> None: ...
+
+class Empty(_message.Message):
+    __slots__ = ()
+    def __init__(self) -> None: ...

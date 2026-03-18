@@ -12,4 +12,4 @@ COPY ./fraud_detection/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Set the command to run the application
-CMD python -m grpc_tools.protoc -I utils/pb/fraud_detection --python_out=utils/pb/fraud_detection --pyi_out=utils/pb/fraud_detection --grpc_python_out=utils/pb/fraud_detection utils/pb/fraud_detection/fraud_detection.proto && python utils/other/hotreload.py "fraud_detection/src/app.py"
+CMD python -m grpc_tools.protoc -I utils/pb/fraud_detection --python_out=utils/pb/fraud_detection --pyi_out=utils/pb/fraud_detection --grpc_python_out=utils/pb/fraud_detection utils/pb/fraud_detection/fraud_detection.proto && python -m grpc_tools.protoc -I utils/pb/suggestions --python_out=utils/pb/suggestions --pyi_out=utils/pb/suggestions --grpc_python_out=utils/pb/suggestions utils/pb/suggestions/suggestions.proto && python utils/other/hotreload.py "fraud_detection/src/app.py"

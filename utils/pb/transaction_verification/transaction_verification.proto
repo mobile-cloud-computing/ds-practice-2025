@@ -10,6 +10,11 @@ message BillingAddress {
   string country = 5;
 }
 
+message BookItem {
+  string name = 1;
+  int32 quantity = 2;
+}
+
 message VerificationRequest {
   string name = 1;
   string email = 2;
@@ -17,6 +22,7 @@ message VerificationRequest {
   string expiration_date = 4;
   string cvv = 5;
   BillingAddress billing_address = 6;
+  repeated BookItem items = 7;
 }
 
 message VerificationResponse {
@@ -24,8 +30,13 @@ message VerificationResponse {
   string message = 2;
 }
 
-service TransactionVerificationService {
-  rpc InitializeVerificationOrder (VerificationRequest)
-      returns (VerificationResponse);
-}
+message Empty {}
 
+service TransactionVerificationService {
+  rpc InitializeVerificationOrder (VerificationRequest) returns (VerificationResponse);
+  rpc StartVerificationFlow (Empty) returns (VerificationResponse);
+  rpc CheckItemsNotEmpty (Empty) returns (VerificationResponse);
+  rpc CheckMandatoryUserData (Empty) returns (VerificationResponse);
+  rpc CheckCardFormat (Empty) returns (VerificationResponse);
+  rpc ClearVerificationOrder (Empty) returns (VerificationResponse);
+}

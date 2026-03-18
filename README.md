@@ -10,57 +10,14 @@ The frontend sends checkout requests to an orchestrator, which coordinates trans
 graph TD
     A[User] --> B[Frontend<br/>Port: 8080<br/>Nginx / HTTP]
     B --> C[Orchestrator<br/>Port: 8081<br/>Flask REST API]
-    C -->|gRPC| E[Fraud Detection<br/>Port: 50051]
     C -->|gRPC| D[Transaction Verification<br/>Port: 50052]
+    C -->|gRPC| E[Fraud Detection<br/>Port: 50051]
     C -->|gRPC| F[Suggestions<br/>Port: 50053]
+    D -->|gRPC| E
+    E -->|gRPC| F
 ```
 
-All backend services run in Docker containers. The orchestrator now sends `initOrder`-style RPCs to all three gRPC services at the start so they cache the order and initialize per-order vector clocks. The transaction-verification init call also starts the processing chain, and from there the backend services communicate directly over gRPC in the order transaction verification -> fraud detection -> suggestions.
-
-## Event Partial Order And Vector Clocks
-
-The checkout flow now uses an init-driven protocol. The orchestrator first generates a unique `OrderID`, sends that ID to every backend service, and each service caches the order plus initializes a per-order vector clock. The transaction-verification init call then continues directly into the backend execution chain.
-
-Events used in the flow:
-
-- `a`: orchestrator receives the checkout request
-- `b`: orchestrator creates a unique `OrderID`
-- `c`: transaction-verification service caches the order
-- `d`: suggestions service caches the order
-- `e`: fraud-detection service caches the order
-- `f`: transaction-verification service executes validation from cached state
-- `g`: fraud-detection service executes after verification succeeds
-- `h`: suggestions service generates recommendations after fraud detection passes
-- `i`: orchestrator finalizes the checkout response
-
-Partial order:
-
-- `a < b`
-- `b < c`, `b < d`, `b < e`
-- `c`, `d`, and `e` can happen in parallel
-- `c < f`
-- `e < g`
-- `d < h`
-- `f < g < h`
-- `i` depends on `h` for successful orders
-
-The `/checkout` response includes:
-
-- `orderId`: the generated unique order identifier
-- `vectorClock`: the final merged vector clock
-- `eventTrace`: the ordered list of recorded events with their vector clocks
-
-RPC layout:
-
-- Transaction verification: `InitializeVerificationOrder`
-- Suggestions: `InitializeSuggestionsOrder`
-- Fraud detection: `InitializeFraudOrder`
-
-Failure handling:
-
-- Initialization failures are returned to the orchestrator immediately
-- Verification failures short-circuit the flow before fraud detection
-- Only fully successful executions propagate suggested books back to the user
+All backend services run in Docker containers. The orchestrator dispatches parallel init RPCs to all three services, then triggers the execution flow via `StartVerificationFlow` on transaction verification. Backend services communicate directly over gRPC: TV calls FD for fraud checks, FD calls Suggestions for book recommendations. After the terminal result, the orchestrator broadcasts `ClearOrder` to all services.
 
 ## Services
 
@@ -68,11 +25,32 @@ Failure handling:
 |---------|------|----------|-------------|
 | **Frontend** | 8080 | HTTP (Nginx) | Static HTML/JS checkout form served by Nginx |
 | **Orchestrator** | 8081 | REST (Flask) | Receives checkout requests, coordinates gRPC calls |
-| **Fraud Detection** | 50051 | gRPC | AI-powered fraud analysis using Google Gen AI (Gemma 3 27B) |
-| **Transaction Verification** | 50052 | gRPC | Validates email, card number, CVV, expiration date, and billing address |
-| **Suggestions** | 50053 | gRPC | AI-generated book recommendations based on purchased items |
+| **Transaction Verification** | 50052 | gRPC | Validates items, user data, and card format |
+| **Fraud Detection** | 50051 | gRPC | Deterministic fraud analysis on user data and card data |
+| **Suggestions** | 50053 | gRPC | AI-generated book recommendations (Google Gemma 3 27B) with deterministic fallback |
 
-## System diagram
+## Checkout Flow
+
+The checkout uses a two-stage protocol with vector clocks tracking causal order across services.
+
+**Stage 1 — Initialization:** The orchestrator generates a unique `OrderID` and dispatches three parallel init RPCs with the same parent vector clock. Each service caches the order payload and returns immediately.
+
+**Stage 2 — Execution:** The orchestrator calls `StartVerificationFlow` on TV, which runs this 6-event partial order:
+
+```
+         ┌── (a) check items ──── (c) check card format ───┐
+  init ──┤                                                  ├── (e) check card fraud ── (f) suggestions
+         └── (b) check user data ── (d) check user fraud ──┘
+```
+
+- **a ‖ b** — run in parallel within TV
+- **c** depends on **a**; **d** depends on **b** — **c ‖ d** is the main cross-service concurrency
+- **e** depends on both **c** and **d** (clocks merged at join point)
+- **f** depends on **e**
+
+Any failure short-circuits downstream events. Suggestions failure is non-fatal (order approved with empty book list). After the terminal result, the orchestrator broadcasts `ClearOrder` with the final vector clock `VCf` — services clear cached data only if their local clock `<= VCf`.
+
+## System Diagram
 
 ```mermaid
 sequenceDiagram
@@ -85,45 +63,53 @@ sequenceDiagram
 
     U->>F: Submit order form
     F->>O: POST /checkout
-    O->>O: Generate unique OrderID
-    par Parallel init stage
-        O->>TV: gRPC VerifyTransaction (init + OrderID)
-        O->>S: gRPC GetSuggestions (init + OrderID)
-        O->>FD: gRPC CheckFraud (init + OrderID)
+    O->>O: Generate OrderID + vector clock
+
+    par Parallel initialization
+        O->>TV: InitializeVerificationOrder
+        O->>FD: InitializeFraudOrder
+        O->>S: InitializeSuggestionsOrder
     end
-    TV-->>O: order cached
-    S-->>O: order cached
-    FD-->>O: order cached
-    O->>TV: gRPC VerifyTransaction (init + start)
-    TV->>FD: gRPC CheckFraud (execute)
-    alt Transaction invalid
-        O-->>F: Order Denied (reason from TV)
-        F-->>U: Yellow/amber error with specific message
-    else Transaction valid
-        alt Fraud detected
-            FD-->>TV: fraud
-            TV-->>O: invalid + fraud reason
-            O-->>F: Order Denied (fraud)
-            F-->>U: Red error with fraud message
-        else Not fraud
-            FD->>S: gRPC GetSuggestions (execute)
-            S-->>FD: list of books
-            FD-->>TV: not fraud + books
-            TV-->>O: valid + books
-            O-->>F: Order Approved and list of suggested books
-            F-->>U: Green success + suggested books
-        end
+    TV-->>O: cached
+    FD-->>O: cached
+    S-->>O: cached
+
+    O->>TV: StartVerificationFlow
+
+    par a ‖ b
+        TV->>TV: (a) CheckItemsNotEmpty
+        TV->>TV: (b) CheckMandatoryUserData
+    end
+
+    par c ‖ d
+        TV->>TV: (c) CheckCardFormat
+        TV->>FD: (d) CheckUserFraud
+    end
+
+    TV->>FD: (e) CheckCardFraud
+    FD->>S: (f) GenerateSuggestions
+    S-->>FD: books
+    FD-->>TV: result + books
+    TV-->>O: result + books
+    O-->>F: response + vectorClock + eventTrace
+    F-->>U: Order Approved / Denied
+
+    par Cleanup broadcast
+        O->>TV: ClearVerificationOrder (VCf)
+        O->>FD: ClearFraudOrder (VCf)
+        O->>S: ClearSuggestionsOrder (VCf)
     end
 ```
 
-## Validation Rules (Transaction Verification)
+## Validation Rules
 
 | Field | Rule |
 |-------|------|
+| Name | Required (non-empty) |
 | Email | Must match `[^@]+@[^@]+\.[^@]+` |
 | Card number | Exactly 16 digits |
 | CVV | 3 or 4 digits |
-| Expiration date | Format `MM/YY`, must not be expired (year/month comparison) |
+| Expiration date | Format `MM/YY`, must not be expired |
 | Billing street | At least 5 characters |
 | Billing city | At least 2 characters |
 | Billing state | Alphabetic characters only |
@@ -132,37 +118,32 @@ sequenceDiagram
 
 ## Fraud Detection Rules
 
-Fraud detection is now powered by AI using Google Gen AI (Gemma 3 27B model). The AI analyzes the card number and order amount to determine if a transaction is fraudulent. Previous rule-based checks (amount > 1000 or card prefix "999") have been replaced with intelligent analysis.
+Fraud detection uses deterministic rules:
+
+- Card `4111111111111111` always passes (test card)
+- Cards starting with `999` are flagged as fraudulent
+- Order amounts exceeding 1000 trigger fraud detection
+- User names or emails containing "fraud" are flagged
 
 ## How to Run
 
 ### Setting up Google AI API Key
 
-The `fraud_detection` and `suggestions` services use Google's Gen AI API with the Gemma 3 27B model. You need a Google AI API key:
+The suggestions service uses Google Gemma 3 27B for AI-generated book recommendations. You need a Google AI API key from [Google AI Studio](https://aistudio.google.com/apikey).
 
-1. Visit [Google AI Studio](https://aistudio.google.com/apikey) to generate an API key.
-2. Set the `GOOGLE_API_KEY` environment variable before running the services.
-
-**Option 1: Export in terminal (recommended for development)**
+**Option 1: Export in terminal**
 ```bash
 export GOOGLE_API_KEY=your_actual_api_key_here
 docker compose up --build
 ```
 
-**Option 2: Add to docker-compose.yaml**
-Add the following to the `environment` section of `fraud_detection` and `suggestions` services:
-```yaml
-- GOOGLE_API_KEY=your_actual_api_key_here
-```
-
-**Option 3: Use a .env file**
+**Option 2: Use a .env file**
 Create a `.env` file in the project root:
 ```
 GOOGLE_API_KEY=your_actual_api_key_here
 ```
-Then update `docker-compose.yaml` to include `env_file: - .env` for both services.
 
-**Note:** Never commit API keys to version control. Use `.gitignore` for `.env` files.
+If no API key is provided, suggestions fall back to a static book list.
 
 ### Running the Application
 
@@ -172,30 +153,23 @@ docker compose up --build
 
 The frontend will be available at [http://localhost:8080](http://localhost:8080).
 
-Services are configured in `docker-compose.yaml`. Code changes are hot-reloaded automatically — no restart needed during development.
-
-### Running locally (alternative)
-
-- Python 3.8+, pip, [grpcio-tools](https://grpc.io/docs/languages/python/quickstart/)
-- Install each service's `requirements.txt`
-- Frontend: open `frontend/src/index.html` in a browser
+Code changes are hot-reloaded automatically — no restart needed during development.
 
 ## Project Structure
 
 ```
-frontend/          Static HTML/JS checkout page (served by Nginx)
-orchestrator/      Flask REST API — coordinates the checkout pipeline
-fraud_detection/   gRPC service — fraud rule checks
-transaction_verification/  gRPC service — field validation
-suggestions/       gRPC service — book recommendations
-utils/             Shared protobuf definitions and helper scripts
-docs/              Documentation and project plans
+frontend/                     Static HTML/JS checkout page (served by Nginx)
+orchestrator/                 Flask REST API — coordinates the checkout pipeline
+transaction_verification/     gRPC service — field validation (events a, b, c)
+fraud_detection/              gRPC service — fraud checks (events d, e)
+suggestions/                  gRPC service — AI book recommendations (event f)
+utils/                        Shared protobuf definitions and vector clock helpers
+docs/                         Documentation and project plans
 ```
 
 ## Known Limitations
 
-- Suggestions are now AI-generated but may not always be contextually accurate
-- Order amount for fraud detection is based on item quantity sum, not actual prices
-- Item list is hardcoded in the frontend (Book A, Book B)
-- Only 5 digits zip codes are supported for billing address
-- The orchestrator assigns a static order ID ("12345")
+- Item list is hardcoded in the frontend (two books)
+- Only 5-digit ZIP codes are supported for billing address
+- Order amount is based on item quantity sum, not actual prices
+- AI suggestions may not always parse correctly (falls back to static list)

@@ -5,7 +5,7 @@ import warnings
 
 import transaction_verification_pb2 as transaction__verification__pb2
 
-GRPC_GENERATED_VERSION = '1.73.1'
+GRPC_GENERATED_VERSION = '1.78.0'
 GRPC_VERSION = grpc.__version__
 _version_not_supported = False
 
@@ -18,7 +18,7 @@ except ImportError:
 if _version_not_supported:
     raise RuntimeError(
         f'The grpc package installed is at version {GRPC_VERSION},'
-        + f' but the generated code in transaction_verification_pb2_grpc.py depends on'
+        + ' but the generated code in transaction_verification_pb2_grpc.py depends on'
         + f' grpcio>={GRPC_GENERATED_VERSION}.'
         + f' Please upgrade your grpc module to grpcio>={GRPC_GENERATED_VERSION}'
         + f' or downgrade your generated code using grpcio-tools<={GRPC_VERSION}.'
@@ -39,6 +39,31 @@ class TransactionVerificationServiceStub(object):
                 request_serializer=transaction__verification__pb2.VerificationRequest.SerializeToString,
                 response_deserializer=transaction__verification__pb2.VerificationResponse.FromString,
                 _registered_method=True)
+        self.StartVerificationFlow = channel.unary_unary(
+                '/transaction_verification.TransactionVerificationService/StartVerificationFlow',
+                request_serializer=transaction__verification__pb2.Empty.SerializeToString,
+                response_deserializer=transaction__verification__pb2.VerificationResponse.FromString,
+                _registered_method=True)
+        self.CheckItemsNotEmpty = channel.unary_unary(
+                '/transaction_verification.TransactionVerificationService/CheckItemsNotEmpty',
+                request_serializer=transaction__verification__pb2.Empty.SerializeToString,
+                response_deserializer=transaction__verification__pb2.VerificationResponse.FromString,
+                _registered_method=True)
+        self.CheckMandatoryUserData = channel.unary_unary(
+                '/transaction_verification.TransactionVerificationService/CheckMandatoryUserData',
+                request_serializer=transaction__verification__pb2.Empty.SerializeToString,
+                response_deserializer=transaction__verification__pb2.VerificationResponse.FromString,
+                _registered_method=True)
+        self.CheckCardFormat = channel.unary_unary(
+                '/transaction_verification.TransactionVerificationService/CheckCardFormat',
+                request_serializer=transaction__verification__pb2.Empty.SerializeToString,
+                response_deserializer=transaction__verification__pb2.VerificationResponse.FromString,
+                _registered_method=True)
+        self.ClearVerificationOrder = channel.unary_unary(
+                '/transaction_verification.TransactionVerificationService/ClearVerificationOrder',
+                request_serializer=transaction__verification__pb2.Empty.SerializeToString,
+                response_deserializer=transaction__verification__pb2.VerificationResponse.FromString,
+                _registered_method=True)
 
 
 class TransactionVerificationServiceServicer(object):
@@ -50,12 +75,67 @@ class TransactionVerificationServiceServicer(object):
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
+    def StartVerificationFlow(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def CheckItemsNotEmpty(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def CheckMandatoryUserData(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def CheckCardFormat(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def ClearVerificationOrder(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
 
 def add_TransactionVerificationServiceServicer_to_server(servicer, server):
     rpc_method_handlers = {
             'InitializeVerificationOrder': grpc.unary_unary_rpc_method_handler(
                     servicer.InitializeVerificationOrder,
                     request_deserializer=transaction__verification__pb2.VerificationRequest.FromString,
+                    response_serializer=transaction__verification__pb2.VerificationResponse.SerializeToString,
+            ),
+            'StartVerificationFlow': grpc.unary_unary_rpc_method_handler(
+                    servicer.StartVerificationFlow,
+                    request_deserializer=transaction__verification__pb2.Empty.FromString,
+                    response_serializer=transaction__verification__pb2.VerificationResponse.SerializeToString,
+            ),
+            'CheckItemsNotEmpty': grpc.unary_unary_rpc_method_handler(
+                    servicer.CheckItemsNotEmpty,
+                    request_deserializer=transaction__verification__pb2.Empty.FromString,
+                    response_serializer=transaction__verification__pb2.VerificationResponse.SerializeToString,
+            ),
+            'CheckMandatoryUserData': grpc.unary_unary_rpc_method_handler(
+                    servicer.CheckMandatoryUserData,
+                    request_deserializer=transaction__verification__pb2.Empty.FromString,
+                    response_serializer=transaction__verification__pb2.VerificationResponse.SerializeToString,
+            ),
+            'CheckCardFormat': grpc.unary_unary_rpc_method_handler(
+                    servicer.CheckCardFormat,
+                    request_deserializer=transaction__verification__pb2.Empty.FromString,
+                    response_serializer=transaction__verification__pb2.VerificationResponse.SerializeToString,
+            ),
+            'ClearVerificationOrder': grpc.unary_unary_rpc_method_handler(
+                    servicer.ClearVerificationOrder,
+                    request_deserializer=transaction__verification__pb2.Empty.FromString,
                     response_serializer=transaction__verification__pb2.VerificationResponse.SerializeToString,
             ),
     }
@@ -85,6 +165,141 @@ class TransactionVerificationService(object):
             target,
             '/transaction_verification.TransactionVerificationService/InitializeVerificationOrder',
             transaction__verification__pb2.VerificationRequest.SerializeToString,
+            transaction__verification__pb2.VerificationResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def StartVerificationFlow(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/transaction_verification.TransactionVerificationService/StartVerificationFlow',
+            transaction__verification__pb2.Empty.SerializeToString,
+            transaction__verification__pb2.VerificationResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def CheckItemsNotEmpty(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/transaction_verification.TransactionVerificationService/CheckItemsNotEmpty',
+            transaction__verification__pb2.Empty.SerializeToString,
+            transaction__verification__pb2.VerificationResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def CheckMandatoryUserData(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/transaction_verification.TransactionVerificationService/CheckMandatoryUserData',
+            transaction__verification__pb2.Empty.SerializeToString,
+            transaction__verification__pb2.VerificationResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def CheckCardFormat(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/transaction_verification.TransactionVerificationService/CheckCardFormat',
+            transaction__verification__pb2.Empty.SerializeToString,
+            transaction__verification__pb2.VerificationResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def ClearVerificationOrder(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/transaction_verification.TransactionVerificationService/ClearVerificationOrder',
+            transaction__verification__pb2.Empty.SerializeToString,
             transaction__verification__pb2.VerificationResponse.FromString,
             options,
             channel_credentials,

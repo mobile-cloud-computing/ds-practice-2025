@@ -2,15 +2,32 @@ syntax = "proto3";
 
 package fraud_detection;
 
-service FraudDetectionService {
-    rpc InitializeFraudOrder (FraudRequest) returns (FraudResponse);
+message BillingAddress {
+  string street = 1;
+  string city = 2;
+  string state = 3;
+  string zip = 4;
+  string country = 5;
 }
 
 message FraudRequest {
-    string card_number = 1;
-    string order_amount = 2;
+  string card_number = 1;
+  string order_amount = 2;
+  string name = 3;
+  string email = 4;
+  BillingAddress billing_address = 5;
 }
 
 message FraudResponse {
-    bool is_fraud = 1;
+  bool is_fraud = 1;
+  string message = 2;
+}
+
+message Empty {}
+
+service FraudDetectionService {
+  rpc InitializeFraudOrder (FraudRequest) returns (FraudResponse);
+  rpc CheckUserFraud (Empty) returns (FraudResponse);
+  rpc CheckCardFraud (Empty) returns (FraudResponse);
+  rpc ClearFraudOrder (Empty) returns (FraudResponse);
 }

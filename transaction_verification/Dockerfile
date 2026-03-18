@@ -12,4 +12,4 @@ COPY ./transaction_verification/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Set the command to run the application
-CMD python -m grpc_tools.protoc -I utils/pb/transaction_verification --python_out=utils/pb/transaction_verification --pyi_out=utils/pb/transaction_verification --grpc_python_out=utils/pb/transaction_verification utils/pb/transaction_verification/transaction_verification.proto && python utils/other/hotreload.py "transaction_verification/src/app.py"
+CMD python -m grpc_tools.protoc -I utils/pb/transaction_verification --python_out=utils/pb/transaction_verification --pyi_out=utils/pb/transaction_verification --grpc_python_out=utils/pb/transaction_verification utils/pb/transaction_verification/transaction_verification.proto && python -m grpc_tools.protoc -I utils/pb/fraud_detection --python_out=utils/pb/fraud_detection --pyi_out=utils/pb/fraud_detection --grpc_python_out=utils/pb/fraud_detection utils/pb/fraud_detection/fraud_detection.proto && python utils/other/hotreload.py "transaction_verification/src/app.py"

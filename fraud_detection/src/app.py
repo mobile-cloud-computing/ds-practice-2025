@@ -1,9 +1,6 @@
 import sys
 import os
 
-# This set of lines are needed to import the gRPC stubs.
-# The path of the stubs is relative to the current file, or absolute inside the container.
-# Change these lines only if strictly needed.
 FILE = __file__ if "__file__" in globals() else os.getenv("PYTHONFILE", "")
 fd_grpc_path = os.path.abspath(os.path.join(FILE, "../../../utils/pb/fraud_detection"))
 sys.path.insert(0, fd_grpc_path)
@@ -22,11 +19,13 @@ from utils.vector_clock import (
     ORDER_ID_METADATA_KEY,
     SUGGESTED_BOOKS_METADATA_KEY,
     VECTOR_CLOCK_METADATA_KEY,
+    clock_le,
     deserialize_clock,
     deserialize_trace,
     merge_clocks,
     metadata_to_dict,
     new_clock,
+    process_event,
     record_event,
     serialize_clock,
     serialize_trace,
@@ -38,147 +37,225 @@ import logging
 import grpc
 from concurrent import futures
 from threading import Lock
-from google import genai
-import time
 
 logging.basicConfig(level=logging.INFO)
 
-# Configure Google AI
-client = genai.Client(api_key=os.getenv("GOOGLE_API_KEY"))
 order_cache = {}
 order_cache_lock = Lock()
 
 
+def _order_metadata(order_id, clock):
+    return (
+        (ORDER_ID_METADATA_KEY, order_id),
+        (VECTOR_CLOCK_METADATA_KEY, serialize_clock(clock)),
+    )
+
+
+def _set_trailing(context, clock, trace, extra=()):
+    metadata = [
+        (VECTOR_CLOCK_METADATA_KEY, serialize_clock(clock)),
+        (EVENT_TRACE_METADATA_KEY, serialize_trace(trace)),
+    ]
+    metadata.extend(extra)
+    context.set_trailing_metadata(tuple(metadata))
+
+
 class FraudDetectionService(fd_grpc.FraudDetectionServiceServicer):
+
     @staticmethod
-    def _log_clock(order_id, event, clock):
+    def _log(order_id, event, clock):
         logging.info(
-            "Order %s fraud_detection %s vector clock %s",
-            order_id,
-            event,
-            serialize_clock(clock),
+            "[%s] fraud_detection %s — VC: %s",
+            order_id, event, serialize_clock(clock),
         )
 
-    def _respond(self, context, trace, clock, is_fraud, extra_metadata=()):
-        clock = tick(clock, "fraud_detection")
-        record_event(trace, clock, "fraud_detection", "check_fraud_completed")
-        self._log_clock(
-            metadata_to_dict(context.invocation_metadata()).get(ORDER_ID_METADATA_KEY, ""),
-            "respond",
-            clock,
-        )
-        metadata = [
-            (VECTOR_CLOCK_METADATA_KEY, serialize_clock(clock)),
-            (EVENT_TRACE_METADATA_KEY, serialize_trace(trace)),
-        ]
-        metadata.extend(extra_metadata)
-        context.set_trailing_metadata(tuple(metadata))
-        return fd_pb2.FraudResponse(is_fraud=is_fraud)
+    def _get_order(self, order_id, context):
+        with order_cache_lock:
+            order = order_cache.get(order_id)
+        if not order:
+            context.abort(
+                grpc.StatusCode.FAILED_PRECONDITION,
+                f"Fraud order {order_id} not initialized",
+            )
+        return order
 
-    def _execute_suggestions(self, order_id, clock):
-        deadline = time.monotonic() + 5
-        while True:
-            try:
-                with grpc.insecure_channel("suggestions:50053") as channel:
-                    stub = sg_grpc.SuggestionsServiceStub(channel)
-                    response, call = stub.InitializeSuggestionsOrder.with_call(
-                        sg_pb2.SuggestionsRequest(items=[]),
-                        metadata=(
-                            (ORDER_ID_METADATA_KEY, order_id),
-                            (VECTOR_CLOCK_METADATA_KEY, serialize_clock(clock)),
-                        ),
-                    )
-                metadata = metadata_to_dict(call.trailing_metadata())
-                books = [
-                    {"bookId": book.bookId, "title": book.title, "author": book.author}
-                    for book in response.books
-                ]
-                return (
-                    books,
-                    deserialize_clock(metadata.get(VECTOR_CLOCK_METADATA_KEY)),
-                    deserialize_trace(metadata.get(EVENT_TRACE_METADATA_KEY)),
-                )
-            except grpc.RpcError as exc:
-                if (
-                    exc.code() == grpc.StatusCode.FAILED_PRECONDITION
-                    and time.monotonic() < deadline
-                ):
-                    time.sleep(0.05)
-                    continue
-                raise
+    # ── Init (cache only) ──
 
     def InitializeFraudOrder(self, request, context):
         metadata = metadata_to_dict(context.invocation_metadata())
         order_id = metadata.get(ORDER_ID_METADATA_KEY, "")
         incoming_clock = deserialize_clock(metadata.get(VECTOR_CLOCK_METADATA_KEY))
+
+        clock = tick(merge_clocks(new_clock(), incoming_clock), "fraud_detection")
+        self._log(order_id, "initialize", clock)
+
+        cached = {
+            "card_number": request.card_number,
+            "order_amount": request.order_amount,
+            "name": request.name,
+            "email": request.email,
+            "billing_address": {
+                "street": request.billing_address.street if request.billing_address else "",
+                "city": request.billing_address.city if request.billing_address else "",
+                "state": request.billing_address.state if request.billing_address else "",
+                "zip": request.billing_address.zip if request.billing_address else "",
+                "country": request.billing_address.country if request.billing_address else "",
+            },
+            "clock": clock,
+            "trace": [],
+            "completed_events": set(),
+        }
+        record_event(cached["trace"], clock, "fraud_detection", "fraud_order_cached")
+
         with order_cache_lock:
-            cached_order = order_cache.get(order_id)
+            order_cache[order_id] = cached
 
-            if not cached_order:
-                clock = tick(merge_clocks(new_clock(), incoming_clock), "fraud_detection")
-                self._log_clock(order_id, "initialize", clock)
-                trace = []
-                record_event(trace, clock, "fraud_detection", "fraud_order_cached")
-                order_cache[order_id] = {
-                    "card_number": request.card_number,
-                    "order_amount": request.order_amount,
-                    "clock": clock,
-                    "trace": trace,
-                }
-                logging.info("Cached fraud order %s", order_id)
-                return self._respond(context, trace, clock, False)
+        logging.info("Cached fraud order %s", order_id)
+        _set_trailing(context, clock, cached["trace"])
+        return fd_pb2.FraudResponse(is_fraud=False, message="Order cached")
 
-        clock = tick(
-            merge_clocks(cached_order["clock"], incoming_clock),
-            "fraud_detection",
-        )
-        trace = list(cached_order["trace"])
-        self._log_clock(order_id, "execute", clock)
+    # ── Event d: check user data for fraud ──
 
-        record_event(trace, clock, "fraud_detection", "check_fraud_request_received")
+    def CheckUserFraud(self, request, context):
+        metadata = metadata_to_dict(context.invocation_metadata())
+        order_id = metadata.get(ORDER_ID_METADATA_KEY, "")
+        incoming_clock = deserialize_clock(metadata.get(VECTOR_CLOCK_METADATA_KEY))
+        order = self._get_order(order_id, context)
 
-        card_number = cached_order["card_number"]
-        order_amount = cached_order["order_amount"]
+        clock = process_event(order, "fraud_detection", "check_user_fraud", incoming_clock)
+        self._log(order_id, "check_user_fraud", clock)
+        order["completed_events"].add("d")
 
-        logging.info(
-            f"Checking fraud for card ending in {card_number[-4:]} with amount {order_amount}"
-        )
+        # Deterministic user-fraud check
+        name = order.get("name", "").lower()
+        email = order.get("email", "").lower()
 
-        prompt = f"Analyze this transaction for fraud. Card number: {card_number}, Quantity of items: {order_amount}. Respond with only 'not fraud' if it is not fraudulent, otherwise respond with 'fraud' and the reason."
-        response = client.models.generate_content(
-            model="gemma-3-27b-it", contents=prompt
-        )
-        result = response.text.strip().lower()
-        logging.info(f"AI response: {result}")
+        is_fraud = False
+        message = "User data clean"
 
-        is_fraud = (result != "not fraud")
+        # Simple deterministic rules
+        if "fraud" in name or "fraud" in email:
+            is_fraud = True
+            message = "Suspicious user identity detected"
+        elif email.endswith(".suspicious"):
+            is_fraud = True
+            message = "Suspicious email domain"
+
+        if is_fraud:
+            logging.info("[%s] User fraud detected: %s", order_id, message)
+
+        _set_trailing(context, clock, list(order["trace"]))
+        return fd_pb2.FraudResponse(is_fraud=is_fraud, message=message)
+
+    # ── Event e: check card data for fraud ──
+
+    def CheckCardFraud(self, request, context):
+        metadata = metadata_to_dict(context.invocation_metadata())
+        order_id = metadata.get(ORDER_ID_METADATA_KEY, "")
+        incoming_clock = deserialize_clock(metadata.get(VECTOR_CLOCK_METADATA_KEY))
+        order = self._get_order(order_id, context)
+
+        clock = process_event(order, "fraud_detection", "check_card_fraud", incoming_clock)
+        self._log(order_id, "check_card_fraud", clock)
+        order["completed_events"].add("e")
+
+        card_number = order["card_number"]
+        order_amount = order["order_amount"]
+
+        is_fraud = False
+        message = "Card data clean"
+
+        # Deterministic card-fraud rules
         if card_number == "4111111111111111":
-            is_fraud = False  # Override for testing with a known card number
-            logging.info("Override: Card number is a known test card, marking as not fraud.")
+            is_fraud = False  # Known test card, always safe
+            logging.info("[%s] Test card detected, marking as not fraud", order_id)
+        elif card_number.startswith("999"):
+            is_fraud = True
+            message = "Card prefix flagged as fraudulent"
+        else:
+            try:
+                amount = int(order_amount)
+                if amount > 1000:
+                    is_fraud = True
+                    message = f"Order amount {amount} exceeds fraud threshold"
+            except (ValueError, TypeError):
+                pass
 
-        if not is_fraud:
-            downstream_clock = tick(clock, "fraud_detection")
-            record_event(
-                trace,
-                downstream_clock,
-                "fraud_detection",
-                "dispatch_suggestions",
-            )
-            books, suggestions_clock, suggestions_trace = self._execute_suggestions(
-                order_id, downstream_clock
-            )
-            trace.extend(suggestions_trace)
-            clock = merge_clocks(downstream_clock, suggestions_clock)
-            return self._respond(
-                context,
-                trace,
-                clock,
-                False,
-                extra_metadata=((SUGGESTED_BOOKS_METADATA_KEY, json.dumps(books)),),
-            )
+        if is_fraud:
+            logging.info("[%s] Card fraud detected: %s", order_id, message)
+            _set_trailing(context, clock, list(order["trace"]))
+            return fd_pb2.FraudResponse(is_fraud=True, message=message)
 
-        logging.info(f"Fraud check result: is_fraud={is_fraud}")
-        return self._respond(context, trace, clock, is_fraud)
+        # Not fraud — call suggestions (event f)
+        downstream_clock = tick(clock, "fraud_detection")
+        record_event(order["trace"], downstream_clock, "fraud_detection", "dispatch_suggestions")
+        self._log(order_id, "dispatch_suggestions", downstream_clock)
+
+        try:
+            with grpc.insecure_channel("suggestions:50053") as ch:
+                stub = sg_grpc.SuggestionsServiceStub(ch)
+                res_f, call_f = stub.GenerateSuggestions.with_call(
+                    sg_pb2.Empty(),
+                    metadata=_order_metadata(order_id, downstream_clock),
+                )
+            meta_f = metadata_to_dict(call_f.trailing_metadata())
+            clock_f = deserialize_clock(meta_f.get(VECTOR_CLOCK_METADATA_KEY))
+            trace_f = deserialize_trace(meta_f.get(EVENT_TRACE_METADATA_KEY))
+
+            books = [
+                {"bookId": book.bookId, "title": book.title, "author": book.author}
+                for book in res_f.books
+            ]
+
+            final_clock = merge_clocks(downstream_clock, clock_f)
+            final_clock = tick(final_clock, "fraud_detection")
+            record_event(order["trace"], final_clock, "fraud_detection", "suggestions_received")
+            self._log(order_id, "suggestions_received", final_clock)
+
+            all_trace = list(order["trace"])
+            all_trace.extend(trace_f)
+            order["clock"] = final_clock
+
+            _set_trailing(context, final_clock, all_trace,
+                          extra=((SUGGESTED_BOOKS_METADATA_KEY, json.dumps(books)),))
+            return fd_pb2.FraudResponse(is_fraud=False, message="Card data clean")
+
+        except Exception as e:
+            # Suggestions failure is non-fatal
+            logging.warning("[%s] Suggestions failed (non-fatal): %s", order_id, e)
+            final_clock = tick(downstream_clock, "fraud_detection")
+            record_event(order["trace"], final_clock, "fraud_detection", "suggestions_failed")
+            order["clock"] = final_clock
+            _set_trailing(context, final_clock, list(order["trace"]),
+                          extra=((SUGGESTED_BOOKS_METADATA_KEY, "[]"),))
+            return fd_pb2.FraudResponse(is_fraud=False, message="Card data clean")
+
+    # ── Clear (bonus) ──
+
+    def ClearFraudOrder(self, request, context):
+        metadata = metadata_to_dict(context.invocation_metadata())
+        order_id = metadata.get(ORDER_ID_METADATA_KEY, "")
+        incoming_clock = deserialize_clock(metadata.get(VECTOR_CLOCK_METADATA_KEY))
+
+        with order_cache_lock:
+            order = order_cache.get(order_id)
+            if not order:
+                logging.info("Clear: fraud order %s already cleared", order_id)
+                _set_trailing(context, incoming_clock, [])
+                return fd_pb2.FraudResponse(is_fraud=False, message="Already cleared")
+
+            if clock_le(order["clock"], incoming_clock):
+                del order_cache[order_id]
+                logging.info("[%s] Cleared fraud order data", order_id)
+                _set_trailing(context, incoming_clock, [])
+                return fd_pb2.FraudResponse(is_fraud=False, message="Order cleared")
+            else:
+                logging.error(
+                    "[%s] Clear rejected: local VC %s NOT <= final VC %s",
+                    order_id, serialize_clock(order["clock"]), serialize_clock(incoming_clock),
+                )
+                _set_trailing(context, order["clock"], [])
+                return fd_pb2.FraudResponse(is_fraud=False, message="Clock ordering violation")
 
 
 def serve():
@@ -187,7 +264,7 @@ def serve():
     port = "50051"
     server.add_insecure_port("[::]:" + port)
     server.start()
-    logging.info(f"Fraud Detection service started on port {port}")
+    logging.info("Fraud Detection service started on port %s", port)
     server.wait_for_termination()
 
 

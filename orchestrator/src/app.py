@@ -1,9 +1,6 @@
 import sys
 import os
 
-# This set of lines are needed to import the gRPC stubs.
-# The path of the stubs is relative to the current file, or absolute inside the container.
-# Change these lines only if strictly needed.
 FILE = __file__ if "__file__" in globals() else os.getenv("PYTHONFILE", "")
 
 fd_grpc_path = os.path.abspath(os.path.join(FILE, "../../../utils/pb/fraud_detection"))
@@ -58,11 +55,6 @@ def _metadata(order_id, clock):
     )
 
 
-def _merge_service_result(event_trace, vector_clock, service_clock, service_trace):
-    event_trace.extend(service_trace)
-    return merge_clocks(vector_clock, service_clock)
-
-
 def _deny_response(order_id, reason, vector_clock, event_trace):
     return {
         "orderId": order_id,
@@ -74,65 +66,16 @@ def _deny_response(order_id, reason, vector_clock, event_trace):
     }
 
 
-def initialize_fraud_detection(card_number, order_amount, order_id, clock):
-    try:
-        with grpc.insecure_channel("fraud_detection:50051") as channel:
-            stub = fd_grpc.FraudDetectionServiceStub(channel)
-            response, call = stub.InitializeFraudOrder.with_call(
-                fd_pb2.FraudRequest(card_number=card_number, order_amount=order_amount),
-                metadata=_metadata(order_id, clock),
-            )
-        metadata = metadata_to_dict(call.trailing_metadata())
-        return (
-            response.is_fraud,
-            "Fraud order cached",
-            deserialize_clock(metadata.get(VECTOR_CLOCK_METADATA_KEY)),
-            deserialize_trace(metadata.get(EVENT_TRACE_METADATA_KEY)),
-        )
-    except grpc.RpcError:
-        raise
-    except Exception as e:
-        logging.error(f"gRPC Call Failed: {e}")
-        return True, "Fraud detection service error", clock, []
+# ── Init helpers (one per service) ──
 
 
-def initialize_suggestions(items, order_id, clock):
-    try:
-        with grpc.insecure_channel("suggestions:50053") as channel:
-            stub = sg_grpc.SuggestionsServiceStub(channel)
-            book_items = [
-                sg_pb2.BookItem(
-                    name=item.get("name", ""), quantity=item.get("quantity", 0)
-                )
-                for item in items
-            ]
-            response, call = stub.InitializeSuggestionsOrder.with_call(
-                sg_pb2.SuggestionsRequest(items=book_items),
-                metadata=_metadata(order_id, clock),
-            )
-        metadata = metadata_to_dict(call.trailing_metadata())
-        return (
-            [
-                {"bookId": book.bookId, "title": book.title, "author": book.author}
-                for book in response.books
-            ],
-            "Suggestions order cached",
-            deserialize_clock(metadata.get(VECTOR_CLOCK_METADATA_KEY)),
-            deserialize_trace(metadata.get(EVENT_TRACE_METADATA_KEY)),
-        )
-    except grpc.RpcError:
-        raise
-    except Exception as e:
-        logging.error(f"gRPC Call Failed: {e}")
-        return [], "Suggestions service error", clock, []
-
-
-def _verification_request(payload):
+def initialize_transaction_verification(payload, order_id, clock):
     user = payload.get("user", {}) or {}
     cc = payload.get("creditCard", {}) or {}
     billing = payload.get("billingAddress", {}) or {}
+    items = payload.get("items", [])
 
-    return tv_pb2.VerificationRequest(
+    req = tv_pb2.VerificationRequest(
         name=user.get("name", ""),
         email=user.get("contact", ""),
         card_number=cc.get("number", ""),
@@ -145,235 +88,273 @@ def _verification_request(payload):
             zip=billing.get("zip", ""),
             country=billing.get("country", ""),
         ),
+        items=[
+            tv_pb2.BookItem(name=item.get("name", ""), quantity=item.get("quantity", 0))
+            for item in items
+        ],
+    )
+    with grpc.insecure_channel("transaction_verification:50052") as channel:
+        stub = tv_grpc.TransactionVerificationServiceStub(channel)
+        res, call = stub.InitializeVerificationOrder.with_call(
+            req, metadata=_metadata(order_id, clock)
+        )
+    meta = metadata_to_dict(call.trailing_metadata())
+    return (
+        deserialize_clock(meta.get(VECTOR_CLOCK_METADATA_KEY)),
+        deserialize_trace(meta.get(EVENT_TRACE_METADATA_KEY)),
     )
 
 
-def initialize_transaction_verification(payload: dict, order_id, clock):
-    try:
-        logging.info("Initializing transaction verification")
-        req = _verification_request(payload)
-        with grpc.insecure_channel("transaction_verification:50052") as channel:
-            stub = tv_grpc.TransactionVerificationServiceStub(channel)
-            res, call = stub.InitializeVerificationOrder.with_call(
-                req, metadata=_metadata(order_id, clock)
-            )
-        metadata = metadata_to_dict(call.trailing_metadata())
-        return (
-            bool(res.is_valid),
-            getattr(res, "message", ""),
-            json.loads(metadata.get(SUGGESTED_BOOKS_METADATA_KEY, "[]")),
-            deserialize_clock(metadata.get(VECTOR_CLOCK_METADATA_KEY)),
-            deserialize_trace(metadata.get(EVENT_TRACE_METADATA_KEY)),
+def initialize_fraud_detection(payload, order_id, clock):
+    user = payload.get("user", {}) or {}
+    cc = payload.get("creditCard", {}) or {}
+    billing = payload.get("billingAddress", {}) or {}
+    items = payload.get("items", [])
+    order_amount = str(sum(item.get("quantity", 0) for item in items))
+
+    req = fd_pb2.FraudRequest(
+        card_number=cc.get("number", ""),
+        order_amount=order_amount,
+        name=user.get("name", ""),
+        email=user.get("contact", ""),
+        billing_address=fd_pb2.BillingAddress(
+            street=billing.get("street", ""),
+            city=billing.get("city", ""),
+            state=billing.get("state", ""),
+            zip=billing.get("zip", ""),
+            country=billing.get("country", ""),
+        ),
+    )
+    with grpc.insecure_channel("fraud_detection:50051") as channel:
+        stub = fd_grpc.FraudDetectionServiceStub(channel)
+        res, call = stub.InitializeFraudOrder.with_call(
+            req, metadata=_metadata(order_id, clock)
         )
-    except grpc.RpcError:
-        raise
-    except Exception as e:
-        logging.error(f"Transaction Verification gRPC Call Failed: {e}")
-        return False, "Transaction verification service error", clock, []
+    meta = metadata_to_dict(call.trailing_metadata())
+    return (
+        deserialize_clock(meta.get(VECTOR_CLOCK_METADATA_KEY)),
+        deserialize_trace(meta.get(EVENT_TRACE_METADATA_KEY)),
+    )
 
 
-def run_order_execution_flow(
-    order_id,
-    init_futures,
-    initial_clock,
-    initial_trace,
-):
-    vector_clock = initial_clock
-    event_trace = list(initial_trace)
-    future_to_service = {future: name for name, future in init_futures.items()}
-    final_result = None
+def initialize_suggestions(items, order_id, clock):
+    book_items = [
+        sg_pb2.BookItem(name=item.get("name", ""), quantity=item.get("quantity", 0))
+        for item in items
+    ]
+    with grpc.insecure_channel("suggestions:50053") as channel:
+        stub = sg_grpc.SuggestionsServiceStub(channel)
+        res, call = stub.InitializeSuggestionsOrder.with_call(
+            sg_pb2.SuggestionsRequest(items=book_items),
+            metadata=_metadata(order_id, clock),
+        )
+    meta = metadata_to_dict(call.trailing_metadata())
+    return (
+        deserialize_clock(meta.get(VECTOR_CLOCK_METADATA_KEY)),
+        deserialize_trace(meta.get(EVENT_TRACE_METADATA_KEY)),
+    )
 
-    for future in as_completed(future_to_service):
-        service_name = future_to_service[future]
+
+# ── Clear broadcast (bonus) ──
+
+
+def broadcast_clear(order_id, final_clock):
+    """Send ClearOrder to all three services with the final vector clock."""
+    def clear_tv():
         try:
-            result = future.result()
-        except grpc.RpcError as exc:
-            for pending in future_to_service:
-                if pending is not future:
-                    pending.cancel()
-            vector_clock = tick(vector_clock, "orchestrator")
-            record_event(
-                event_trace,
-                vector_clock,
-                "orchestrator",
-                f"{service_name}_initialization_failed",
-            )
-            return _deny_response(
-                order_id,
-                exc.details() or f"{service_name} initialization failed",
-                vector_clock,
-                event_trace,
-            )
+            with grpc.insecure_channel("transaction_verification:50052") as ch:
+                stub = tv_grpc.TransactionVerificationServiceStub(ch)
+                stub.ClearVerificationOrder.with_call(
+                    tv_pb2.Empty(), metadata=_metadata(order_id, final_clock)
+                )
+            logging.info("[%s] Clear broadcast: TV cleared", order_id)
+        except Exception as e:
+            logging.warning("[%s] Clear broadcast TV failed: %s", order_id, e)
 
-        if service_name == "transaction_verification":
-            is_valid, message, suggested_books, service_clock, service_trace = result
-            final_result = (is_valid, message, suggested_books)
-        else:
-            _, _, service_clock, service_trace = result
+    def clear_fd():
+        try:
+            with grpc.insecure_channel("fraud_detection:50051") as ch:
+                stub = fd_grpc.FraudDetectionServiceStub(ch)
+                stub.ClearFraudOrder.with_call(
+                    fd_pb2.Empty(), metadata=_metadata(order_id, final_clock)
+                )
+            logging.info("[%s] Clear broadcast: FD cleared", order_id)
+        except Exception as e:
+            logging.warning("[%s] Clear broadcast FD failed: %s", order_id, e)
 
-        vector_clock = _merge_service_result(
-            event_trace, vector_clock, service_clock, service_trace
-        )
-        vector_clock = tick(vector_clock, "orchestrator")
-        record_event(
-            event_trace,
-            vector_clock,
-            "orchestrator",
-            (
-                "transaction_verification_result_received"
-                if service_name == "transaction_verification"
-                else f"{service_name}_initialized"
-            ),
-        )
+    def clear_sg():
+        try:
+            with grpc.insecure_channel("suggestions:50053") as ch:
+                stub = sg_grpc.SuggestionsServiceStub(ch)
+                stub.ClearSuggestionsOrder.with_call(
+                    sg_pb2.Empty(), metadata=_metadata(order_id, final_clock)
+                )
+            logging.info("[%s] Clear broadcast: SG cleared", order_id)
+        except Exception as e:
+            logging.warning("[%s] Clear broadcast SG failed: %s", order_id, e)
 
-    if final_result is None:
-        vector_clock = tick(vector_clock, "orchestrator")
-        record_event(
-            event_trace,
-            vector_clock,
-            "orchestrator",
-            "transaction_verification_result_missing",
-        )
-        return _deny_response(
-            order_id,
-            "Transaction verification result missing",
-            vector_clock,
-            event_trace,
-        )
+    with ThreadPoolExecutor(max_workers=3) as pool:
+        pool.submit(clear_tv)
+        pool.submit(clear_fd)
+        pool.submit(clear_sg)
 
-    is_valid, message, suggested_books = final_result
 
-    if not is_valid:
-        vector_clock = tick(vector_clock, "orchestrator")
-        record_event(
-            event_trace, vector_clock, "orchestrator", "checkout_denied_invalid"
-        )
-        return _deny_response(
-            order_id, message or "Invalid transaction data", vector_clock, event_trace
-        )
-
-    response = {
-        "orderId": order_id,
-        "status": "Order Approved",
-        "reason": "",
-        "suggestedBooks": suggested_books,
-    }
-    vector_clock = tick(vector_clock, "orchestrator")
-    record_event(event_trace, vector_clock, "orchestrator", "checkout_response_ready")
-    response["vectorClock"] = vector_clock
-    response["eventTrace"] = event_trace
-    return response
-
+# ── Flask app ──
 
 app = Flask(__name__)
-# Enable CORS for the app.
 CORS(app, resources={r"/*": {"origins": "*"}})
 
 
-# Define a GET endpoint.
 @app.route("/", methods=["GET"])
 def index():
-    """
-    Responds with 'Hello, [name]' when a GET request is made to '/' endpoint.
-    """
-    # Test the fraud-detection gRPC service.
-    response = "Hello, orchestrator!"
-    # Return the response.
-    return response
-
-
-# @app.route("/suggestions", methods=["POST"])
-# def suggestions_endpoint():
-#     """
-#     Tests the suggestions gRPC service by returning suggested books for given items.
-#     """
-#     request_data = json.loads(request.data)
-#     items = request_data.get("items", [])
-#     suggested_books = get_suggestions(items)
-#     return {"suggestedBooks": suggested_books}
+    return "Hello, orchestrator!"
 
 
 @app.route("/checkout", methods=["POST"])
 def checkout():
     """Process a checkout request through a partially ordered pipeline with vector clocks."""
-    # Get request object data to json
     request_data = json.loads(request.data)
     logging.info(
-        f"Checkout request received with {len(request_data.get('items', []))} items"
+        "Checkout request received with %d items",
+        len(request_data.get("items", [])),
     )
 
     order_id = str(uuid4())
     vector_clock = new_clock()
     event_trace = []
 
+    # ── Orchestrator events: receive + create order ID ──
     vector_clock = tick(vector_clock, "orchestrator")
     record_event(event_trace, vector_clock, "orchestrator", "checkout_request_received")
     vector_clock = tick(vector_clock, "orchestrator")
     record_event(event_trace, vector_clock, "orchestrator", "order_id_created")
 
-    items = request_data.get("items", [])
-    card_number = request_data.get("creditCard", {}).get("number", "")
-    order_amount = str(sum(item.get("quantity", 0) for item in items))
+    # ── Stage 1: Parallel init (same parent clock snapshot for true concurrency) ──
+    init_clock = dict(vector_clock)  # snapshot — all three get the SAME clock
 
     executor = ThreadPoolExecutor(max_workers=4)
     try:
-        suggestions_init_clock = tick(vector_clock, "orchestrator")
-        record_event(
-            event_trace,
-            suggestions_init_clock,
-            "orchestrator",
-            "dispatch_suggestions_init",
+        record_event(event_trace, init_clock, "orchestrator", "dispatch_init_rpcs")
+
+        future_tv = executor.submit(
+            initialize_transaction_verification, request_data, order_id, init_clock
         )
-        future_suggestions_init = executor.submit(
-            initialize_suggestions, items, order_id, suggestions_init_clock
+        future_fd = executor.submit(
+            initialize_fraud_detection, request_data, order_id, init_clock
+        )
+        future_sg = executor.submit(
+            initialize_suggestions, request_data.get("items", []), order_id, init_clock
         )
 
-        fraud_init_clock = tick(suggestions_init_clock, "orchestrator")
+        init_futures = {
+            future_tv: "transaction_verification",
+            future_fd: "fraud_detection",
+            future_sg: "suggestions",
+        }
+
+        # Wait for all inits, fail fast on any error
+        for future in as_completed(init_futures):
+            service_name = init_futures[future]
+            try:
+                service_clock, service_trace = future.result()
+                event_trace.extend(service_trace)
+                vector_clock = merge_clocks(vector_clock, service_clock)
+                vector_clock = tick(vector_clock, "orchestrator")
+                record_event(
+                    event_trace, vector_clock, "orchestrator",
+                    f"{service_name}_initialized",
+                )
+            except Exception as exc:
+                # Cancel remaining init futures
+                for f in init_futures:
+                    if f is not future:
+                        f.cancel()
+                vector_clock = tick(vector_clock, "orchestrator")
+                record_event(
+                    event_trace, vector_clock, "orchestrator",
+                    f"{service_name}_initialization_failed",
+                )
+                logging.error("[%s] Init failed for %s: %s", order_id, service_name, exc)
+                result = _deny_response(
+                    order_id,
+                    f"{service_name} initialization failed: {exc}",
+                    vector_clock,
+                    event_trace,
+                )
+                # Clear broadcast even on init failure
+                broadcast_clear(order_id, vector_clock)
+                return result
+
+        logging.info("[%s] All services initialized, starting verification flow", order_id)
+
+        # ── Stage 2: Execution via StartVerificationFlow ──
+        vector_clock = tick(vector_clock, "orchestrator")
         record_event(
-            event_trace,
-            fraud_init_clock,
-            "orchestrator",
-            "dispatch_fraud_detection_init",
-        )
-        future_fraud_init = executor.submit(
-            initialize_fraud_detection,
-            card_number,
-            order_amount,
-            order_id,
-            fraud_init_clock,
-        )
-        verification_init_clock = tick(fraud_init_clock, "orchestrator")
-        record_event(
-            event_trace,
-            verification_init_clock,
-            "orchestrator",
-            "dispatch_transaction_verification_init",
-        )
-        future_verification_init = executor.submit(
-            initialize_transaction_verification,
-            request_data,
-            order_id,
-            verification_init_clock,
-        )
-        future_pipeline = executor.submit(
-            run_order_execution_flow,
-            order_id,
-            {
-                "suggestions": future_suggestions_init,
-                "fraud_detection": future_fraud_init,
-                "transaction_verification": future_verification_init,
-            },
-            verification_init_clock,
-            event_trace,
+            event_trace, vector_clock, "orchestrator",
+            "dispatch_start_verification_flow",
         )
 
-        return future_pipeline.result()
+        try:
+            with grpc.insecure_channel("transaction_verification:50052") as channel:
+                stub = tv_grpc.TransactionVerificationServiceStub(channel)
+                res, call = stub.StartVerificationFlow.with_call(
+                    tv_pb2.Empty(), metadata=_metadata(order_id, vector_clock)
+                )
+            meta = metadata_to_dict(call.trailing_metadata())
+            service_clock = deserialize_clock(meta.get(VECTOR_CLOCK_METADATA_KEY))
+            service_trace = deserialize_trace(meta.get(EVENT_TRACE_METADATA_KEY))
+            books_payload = meta.get(SUGGESTED_BOOKS_METADATA_KEY, "[]")
+
+            event_trace.extend(service_trace)
+            vector_clock = merge_clocks(vector_clock, service_clock)
+            vector_clock = tick(vector_clock, "orchestrator")
+
+            if not res.is_valid:
+                record_event(
+                    event_trace, vector_clock, "orchestrator", "checkout_denied",
+                )
+                result = _deny_response(
+                    order_id,
+                    res.message or "Verification failed",
+                    vector_clock,
+                    event_trace,
+                )
+                broadcast_clear(order_id, vector_clock)
+                return result
+
+            # Success
+            suggested_books = json.loads(books_payload)
+            record_event(
+                event_trace, vector_clock, "orchestrator", "checkout_response_ready",
+            )
+
+            result = {
+                "orderId": order_id,
+                "status": "Order Approved",
+                "reason": "Transaction valid",
+                "suggestedBooks": suggested_books,
+                "vectorClock": vector_clock,
+                "eventTrace": event_trace,
+            }
+            broadcast_clear(order_id, vector_clock)
+            return result
+
+        except Exception as exc:
+            logging.error("[%s] StartVerificationFlow error: %s", order_id, exc)
+            vector_clock = tick(vector_clock, "orchestrator")
+            record_event(
+                event_trace, vector_clock, "orchestrator",
+                "verification_flow_error",
+            )
+            result = _deny_response(
+                order_id, str(exc), vector_clock, event_trace
+            )
+            broadcast_clear(order_id, vector_clock)
+            return result
+
     finally:
         executor.shutdown(wait=False, cancel_futures=True)
 
 
 if __name__ == "__main__":
-    # Run the app in debug mode to enable hot reloading.
-    # This is useful for development.
-    # The default port is 5000.
     app.run(host="0.0.0.0")

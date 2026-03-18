@@ -72,3 +72,27 @@ def metadata_to_dict(metadata):
     if not metadata:
         return {}
     return {key: value for key, value in metadata}
+
+
+def clock_le(a, b):
+    """Return True if vector clock a <= b (component-wise)."""
+    a = normalize_clock(a)
+    b = normalize_clock(b)
+    return all(a[s] <= b[s] for s in SERVICES)
+
+
+def process_event(order_cache_entry, service, event, incoming_clock=None):
+    """Standard merge/tick/record pattern used by every event handler.
+
+    Merges incoming_clock (if any) with the order's local clock,
+    ticks the service component, records the event, and persists the clock.
+    Returns the updated clock.
+    """
+    if incoming_clock:
+        clock = merge_clocks(order_cache_entry["clock"], incoming_clock)
+    else:
+        clock = dict(order_cache_entry["clock"])
+    clock = tick(clock, service)
+    order_cache_entry["clock"] = clock
+    record_event(order_cache_entry["trace"], clock, service, event)
+    return clock

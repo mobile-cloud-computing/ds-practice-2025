@@ -52,7 +52,7 @@ services:
       # The PYTHONFILE environment variable specifies the absolute entry point of the application
       # Check app.py in the fraud_detection directory to see how this is used
       - PYTHONFILE=/app/fraud_detection/src/app.py
-      - GOOGLE_API_KEY=${GOOGLE_API_KEY}
+
     volumes:
       # Mount the utils directory in the current directory to the /app/utils directory in the container
       - ./utils:/app/utils
@@ -68,6 +68,7 @@ services:
       - PYTHONUNBUFFERED=TRUE
       - PYTHONFILE=/app/suggestions/src/app.py
       - GOOGLE_API_KEY=${GOOGLE_API_KEY}
+
     volumes:
       - ./utils:/app/utils
       - ./suggestions/src:/app/suggestions/src
