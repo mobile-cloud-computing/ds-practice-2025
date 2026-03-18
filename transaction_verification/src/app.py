@@ -79,7 +79,7 @@ class TransactionVerificationService(transaction_verification_grpc.TransactionVe
             order_data = json.loads(request.order_payload_json or "{}")
             print(f"[TV] InitOrder {request.order_id} payload={order_data} vc={request.vector_clock}")
             state = OrderState(order_data)
-            state.local_vc = merge_and_increment(zero_vc(), list(request.vector_clock), MY_IDX)
+            state.local_vc = vc_max(zero_vc(), list(request.vector_clock)) # initialize local vc to the merge of the incoming vc and zero, to capture any causally prior events that we should be aware of at initialization
 
             with ORDER_CACHE_LOCK:
                 ORDER_CACHE[request.order_id] = state

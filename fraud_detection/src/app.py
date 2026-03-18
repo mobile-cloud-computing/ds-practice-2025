@@ -91,7 +91,7 @@ class FraudDetectionService(fraud_detection_grpc.FraudDetectionServiceServicer):
         try:
             order_data = json.loads(request.order_payload_json or "{}")
             state = OrderState(order_data)
-            state.local_vc = merge_and_increment(zero_vc(), list(request.vector_clock), MY_IDX) # merge with incoming vc and increment for this event
+            state.local_vc = vc_max(zero_vc(), list(request.vector_clock)) # initialize local vc to the merge of the incoming vc and zero, to capture any causally prior events that we should be aware of at initialization
 
             with ORDER_CACHE_LOCK:
                 ORDER_CACHE[request.order_id] = state
@@ -112,7 +112,9 @@ class FraudDetectionService(fraud_detection_grpc.FraudDetectionServiceServicer):
             return fraud_detection.Ack(ok=False)
         with state.cond:
             # merge the incoming vc with our local vc and increment for this new event of receiving b's completion notification
-            state.local_vc = merge_and_increment(state.local_vc, list(request.vector_clock), MY_IDX)
+            #state.local_vc = merge_and_increment(state.local_vc, list(request.vector_clock), MY_IDX)
+            # only merge
+            state.local_vc = vc_max(state.local_vc, list(request.vector_clock))
             # record the vc for event b's completion, which will be needed to determine when we can run event d
             state.event_vc["b"] = list(request.vector_clock)
             print(f"[FD] got b vc={request.vector_clock}, local={state.local_vc}")
@@ -133,7 +135,9 @@ class FraudDetectionService(fraud_detection_grpc.FraudDetectionServiceServicer):
             return fraud_detection.Ack(ok=False)
         with state.cond:
             # merge the incoming vc with our local vc and increment for this new event of receiving c's completion notification
-            state.local_vc = merge_and_increment(state.local_vc, list(request.vector_clock), MY_IDX)
+            #state.local_vc = merge_and_increment(state.local_vc, list(request.vector_clock), MY_IDX)
+            # only merge
+            state.local_vc = vc_max(state.local_vc, list(request.vector_clock))
             # record the vc for event c's completion, which will be needed to determine when we can run event e
             state.event_vc["c"] = list(request.vector_clock)
             print(f"[FD] got c vc={request.vector_clock}, local={state.local_vc}")

@@ -131,7 +131,7 @@ class SuggestionsService(suggestions_grpc.SuggestionsServiceServicer):
         try:
             order_data = json.loads(request.order_payload_json or "{}")
             state = OrderState(order_data)
-            state.local_vc = merge_and_increment(zero_vc(), list(request.vector_clock), MY_IDX)
+            state.local_vc = vc_max(zero_vc(), list(request.vector_clock)) # initialize local vc to the merge of the incoming vc and zero, to capture any causally prior events that we should be aware of at initialization
 
             with ORDER_CACHE_LOCK:
                 ORDER_CACHE[request.order_id] = state
@@ -151,7 +151,9 @@ class SuggestionsService(suggestions_grpc.SuggestionsServiceServicer):
         if state is None:
             return suggestions.Ack(ok=False)
         with state.cond:
-            state.local_vc = merge_and_increment(state.local_vc, list(request.vector_clock), MY_IDX)
+            #state.local_vc = merge_and_increment(state.local_vc, list(request.vector_clock), MY_IDX)
+            # only merge
+            state.local_vc = vc_max(state.local_vc, list(request.vector_clock))
             state.event_vc["e"] = list(request.vector_clock)
             print(f"[SG] got e vc={request.vector_clock}, local={state.local_vc}")
 
