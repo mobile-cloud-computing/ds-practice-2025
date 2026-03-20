@@ -22,19 +22,32 @@ _runtime_version.ValidateProtobufRuntimeVersion(
 _sym_db = _symbol_database.Default()
 
 
+from google.protobuf import empty_pb2 as google_dot_protobuf_dot_empty__pb2
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x1etransaction_verification.proto\x12\x18transaction_verification\">\n\nPayRequest\x12\x0f\n\x07\x63\x61rd_nr\x18\x01 \x01(\t\x12\x10\n\x08order_id\x18\x02 \x01(\x03\x12\r\n\x05money\x18\x03 \x01(\x02\"1\n\x0bPayResponse\x12\x10\n\x08verified\x18\x01 \x01(\x08\x12\x10\n\x08order_id\x18\x02 \x01(\x03\x32v\n\x12transactionService\x12`\n\x11verifyTransaction\x12$.transaction_verification.PayRequest\x1a%.transaction_verification.PayResponseb\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x1etransaction_verification.proto\x12\x18transaction_verification\x1a\x1bgoogle/protobuf/empty.proto\"\x7f\n\x0bVectorClock\x12\x41\n\x06values\x18\x01 \x03(\x0b\x32\x31.transaction_verification.VectorClock.ValuesEntry\x1a-\n\x0bValuesEntry\x12\x0b\n\x03key\x18\x01 \x01(\t\x12\r\n\x05value\x18\x02 \x01(\x04:\x02\x38\x01\"3\n\tOdrerData\x12\x0f\n\x07\x63\x61rd_nr\x18\x01 \x01(\t\x12\x15\n\rorder_ammount\x18\x02 \x01(\x02\"W\n\x0bInitRequest\x12\x10\n\x08order_id\x18\x01 \x01(\x03\x12\x36\n\torderData\x18\x02 \x01(\x0b\x32#.transaction_verification.OdrerData\"Z\n\x10\x43heckCardRequest\x12\x10\n\x08order_id\x18\x01 \x01(\x03\x12\x34\n\x05\x63lock\x18\x02 \x01(\x0b\x32%.transaction_verification.VectorClock\"[\n\x11\x43heckMoneyRequest\x12\x10\n\x08order_id\x18\x01 \x01(\x03\x12\x34\n\x05\x63lock\x18\x02 \x01(\x0b\x32%.transaction_verification.VectorClock\"]\n\x13StartPaymentRequest\x12\x10\n\x08order_id\x18\x01 \x01(\x03\x12\x34\n\x05\x63lock\x18\x02 \x01(\x0b\x32%.transaction_verification.VectorClock2\xdb\x02\n\x12transactionService\x12J\n\tinitOrder\x12%.transaction_verification.InitRequest\x1a\x16.google.protobuf.Empty\x12O\n\tcheckCard\x12*.transaction_verification.CheckCardRequest\x1a\x16.google.protobuf.Empty\x12Q\n\ncheckMoney\x12+.transaction_verification.CheckMoneyRequest\x1a\x16.google.protobuf.Empty\x12U\n\x0cstartPayment\x12-.transaction_verification.StartPaymentRequest\x1a\x16.google.protobuf.Emptyb\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
 _builder.BuildTopDescriptorsAndMessages(DESCRIPTOR, 'transaction_verification_pb2', _globals)
 if not _descriptor._USE_C_DESCRIPTORS:
   DESCRIPTOR._loaded_options = None
-  _globals['_PAYREQUEST']._serialized_start=60
-  _globals['_PAYREQUEST']._serialized_end=122
-  _globals['_PAYRESPONSE']._serialized_start=124
-  _globals['_PAYRESPONSE']._serialized_end=173
-  _globals['_TRANSACTIONSERVICE']._serialized_start=175
-  _globals['_TRANSACTIONSERVICE']._serialized_end=293
+  _globals['_VECTORCLOCK_VALUESENTRY']._loaded_options = None
+  _globals['_VECTORCLOCK_VALUESENTRY']._serialized_options = b'8\001'
+  _globals['_VECTORCLOCK']._serialized_start=89
+  _globals['_VECTORCLOCK']._serialized_end=216
+  _globals['_VECTORCLOCK_VALUESENTRY']._serialized_start=171
+  _globals['_VECTORCLOCK_VALUESENTRY']._serialized_end=216
+  _globals['_ODRERDATA']._serialized_start=218
+  _globals['_ODRERDATA']._serialized_end=269
+  _globals['_INITREQUEST']._serialized_start=271
+  _globals['_INITREQUEST']._serialized_end=358
+  _globals['_CHECKCARDREQUEST']._serialized_start=360
+  _globals['_CHECKCARDREQUEST']._serialized_end=450
+  _globals['_CHECKMONEYREQUEST']._serialized_start=452
+  _globals['_CHECKMONEYREQUEST']._serialized_end=543
+  _globals['_STARTPAYMENTREQUEST']._serialized_start=545
+  _globals['_STARTPAYMENTREQUEST']._serialized_end=638
+  _globals['_TRANSACTIONSERVICE']._serialized_start=641
+  _globals['_TRANSACTIONSERVICE']._serialized_end=988
 # @@protoc_insertion_point(module_scope)

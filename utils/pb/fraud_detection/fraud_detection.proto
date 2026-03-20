@@ -5,37 +5,31 @@ package fraud_detection;
 import "google/protobuf/empty.proto";
 
 service FraudDetectionService {
-    rpc checkFraud (FraudRequest) returns (FraudResponse);
-    rpc initOrder (initRequest) returns (google.protobuf.Empty);
-    rpc bookCheck (bookCheckRequest) returns (google.protobuf.Empty);
-    rpc userCheck (userCheckRequest) returns (fraudResult);
-
+    rpc initOrder (InitRequest) returns (google.protobuf.Empty);
+    rpc bookCheck (BookCheckRequest) returns (google.protobuf.Empty); // called by orchestrator
+    rpc userCheck (UserCheckRequest) returns (google.protobuf.Empty); // is called by transaction verification and fraud detection itself. only processes when both have arrived and vector clock is correct.
 }
 
-message FraudRequest {
+message OdrerData { // duplicated across all proto files
     string card_nr = 1;
     float order_ammount = 2;
 }
 
-message FraudResponse {
-    bool is_fraud = 1;
+message VectorClock {
+    map<string, uint64> values = 1;
 }
 
-message initRequest {
+message InitRequest {
     int64 order_id = 1;
-    string card_nr = 2;
-    float order_ammount = 3;
+    OdrerData orderData = 2;
 }
 
-message bookCheckRequest {
-    int64 order_id = 1;
-}
-
-message userCheckRequest {
+message BookCheckRequest { // called by orchestrator
     int64 order_id = 1;
 }
 
-message fraudResult {
+message UserCheckRequest {
     int64 order_id = 1;
-    bool is_fraud = 2;
+    VectorClock clock = 2;
+
 }

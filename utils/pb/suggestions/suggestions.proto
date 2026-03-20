@@ -2,20 +2,28 @@ syntax = "proto3";
 
 package suggestions;
 
+import "google/protobuf/empty.proto";
+
 service SuggestionsService {
-    rpc suggest (SuggestRequest) returns (SuggestResponse);
+    rpc initOrder (InitRequest) returns (google.protobuf.Empty);
+    rpc getSuggestions (getSuggestionsRequest) returns (google.protobuf.Empty); // is called by transaction_verification and fraud_detection. then calls orchestrator
 }
 
-message Book {
-    string bookId = 1;
-    string title = 2;
-    string author = 3;
+message VectorClock {
+    map<string, uint64> values = 1;
 }
 
-message SuggestRequest {
-    repeated string ordered_books = 1;
+message OdrerData { // duplicated across all proto files
+    string card_nr = 1;
+    float order_ammount = 2;
 }
 
-message SuggestResponse {
-    repeated Book suggested_books = 1;
+message InitRequest {
+    int64 order_id = 1;
+    OdrerData orderData = 2;
+}
+
+message getSuggestionsRequest {
+    int64 order_id = 1;
+    VectorClock clock = 2;
 }
