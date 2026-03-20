@@ -17,7 +17,7 @@ init_grpc_pathes()
 
 
 # import pb.order_details.order_details_pb2 as order_details
-import pb.order_details_pb2 as order_details
+import pb.services.order_details_pb2 as order_details
 import grpc
 
 

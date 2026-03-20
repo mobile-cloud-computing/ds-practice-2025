@@ -10,19 +10,13 @@ from service_wrappers.base_service_wrapper import BaseServiceWrapper, init_grpc_
 init_grpc_pathes()
 
 
-# import pb.transaction_verification.transaction_verification_pb2 as transaction_verification
-# import pb.transaction_verification.transaction_verification_pb2_grpc as transaction_verification_grpc
+import pb.services.order_details_pb2 as order_details
 
-# import pb.fraud_detection.fraud_detection_pb2_grpc as fraud_detection_grpc
-# import pb.recommendation_system.recommendation_system_pb2_grpc as recommendation_system_grpc
+import pb.services.transaction_verification_pb2 as transaction_verification
+import pb.services.transaction_verification_pb2_grpc as transaction_verification_grpc
 
-import pb.order_details_pb2 as order_details
-
-import pb.transaction_verification_pb2 as transaction_verification
-import pb.transaction_verification_pb2_grpc as transaction_verification_grpc
-
-import pb.fraud_detection_pb2_grpc as fraud_detection_grpc
-import pb.recommendation_system_pb2_grpc as recommendation_system_grpc
+import pb.services.fraud_detection_pb2_grpc as fraud_detection_grpc
+import pb.services.recommendation_system_pb2_grpc as recommendation_system_grpc
 
 import grpc
 from concurrent import futures

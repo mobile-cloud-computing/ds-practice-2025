@@ -26,9 +26,9 @@ logger.addHandler(default_handler)
 # import pb.transaction_verification.transaction_verification_pb2_grpc as transaction_verification_grpc
 # import pb.order_details.order_details_pb2 as order_details
 
-import pb.transaction_verification_pb2 as transaction_verification
-import pb.transaction_verification_pb2_grpc as transaction_verification_grpc
-import pb.order_details_pb2 as order_details
+import pb.services.transaction_verification_pb2 as transaction_verification
+import pb.services.transaction_verification_pb2_grpc as transaction_verification_grpc
+import pb.services.order_details_pb2 as order_details
 
 import grpc
 
