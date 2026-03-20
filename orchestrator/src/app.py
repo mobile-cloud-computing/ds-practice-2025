@@ -9,6 +9,7 @@ FILE = __file__ if '__file__' in globals() else os.getenv("PYTHONFILE", "")
 fraud_detection_grpc_path = os.path.abspath(os.path.join(FILE, '../../../utils/pb/fraud_detection'))
 transaction_verification_grpc_path = os.path.abspath(os.path.join(FILE, '../../../utils/pb/transaction_verification'))
 suggestions_grpc_path = os.path.abspath(os.path.join(FILE, '../../../utils/pb/suggestions'))
+orchestrator_grpc_path = os.path.abspath(os.path.join(FILE, '../../../utils/pb/suggestions'))
 sys.path.insert(0, fraud_detection_grpc_path)
 import fraud_detection_pb2 as fraud_detection
 import fraud_detection_pb2_grpc as fraud_detection_grpc
@@ -19,6 +20,10 @@ import transaction_verification_pb2_grpc as transaction_verification_grpc
 sys.path.insert(0, suggestions_grpc_path)
 import suggestions_pb2 as suggestions
 import suggestions_pb2_grpc as suggestions_grpc
+
+sys.path.insert(0, orchestrator_grpc_path)
+import orchestrator_pb2 as orchestrator
+import orchestrator_pb2_grpc as orchestrator_grpc
 
 import grpc
 
@@ -43,24 +48,6 @@ suggestion_channel = grpc.insecure_channel("suggestions:50053")
 fraud_stub = fraud_detection_grpc.FraudDetectionServiceStub(fraud_channel)
 verification_stub = transaction_verification_grpc.transactionServiceStub(verification_channel)
 suggestion_stub = suggestions_grpc.SuggestionsServiceStub(suggestion_channel)
-
-
-def detect_fraud(card_nr, order_ammount):
-    # Call the service through the stub object.
-    response = fraud_stub.checkFraud(fraud_detection.FraudRequest(card_nr=card_nr, order_ammount=order_ammount))
-    if response.is_fraud:
-        logger.warning(f"Fraud detected for card {card_nr} with amount {order_ammount}")
-    return response.is_fraud
-
-def verify_transaction(card_nr, order_id, money):
-    response = verification_stub.verifyTransaction(transaction_verification.PayRequest(card_nr=str(card_nr), order_id=order_id, money=money))
-    logger.info(f"Transaction with {card_nr} {order_id} {money} result {response.verified}")
-    if response.order_id != order_id: return False
-    return response.verified
-
-def get_suggested_books(ordered_books):
-    response = suggestion_stub.suggest(suggestions.SuggestRequest(ordered_books=ordered_books))
-    return response.suggested_books
 
 
 
@@ -113,12 +100,6 @@ def checkout():
         order_id, request_data["creditCard"]["number"], quantity,
     ]
 
-    is_fraud = detect_fraud(request_data["creditCard"]["number"], quantity)
-    suggested_books = get_suggested_books([i["name"] for i in request_data["items"]])
-    logger.info(f"Got suggested books.")
-    verified = verify_transaction(request_data["creditCard"]["number"], order_id, quantity)
-    if not verified:
-        is_fraud = True
 
     # Convert the gRPC response to a dictionary
     suggested_books_dicts = []
