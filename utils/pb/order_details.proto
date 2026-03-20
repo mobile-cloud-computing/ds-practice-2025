@@ -1,0 +1,65 @@
+syntax = "proto3";
+
+package bookstore;
+
+message User {
+    string name = 1;
+    string contact = 2;
+}
+
+message CreditCard {
+    string number = 1;
+    string expiration_date = 2;
+    string cvv = 3;
+}
+
+message OrderItem {
+    string name = 1;
+    int32 quantity = 2;
+}
+
+message BillingAddress {
+    string street = 1;
+    string city = 2;
+    string state = 3;
+    string zip = 4;
+    string country = 5;
+}
+
+message RecommendedBook {
+    string book_id = 1;
+    string title = 2;
+    string author = 3;
+    string reason = 4;
+    string description = 5;
+}
+
+
+message InputOrderDetails {
+    string order_id = 1;
+    User user = 2;
+    CreditCard credit_card = 3;
+    string user_comment = 4;
+    repeated OrderItem items = 5;
+    BillingAddress billing_address = 6;
+    string shipping_method = 7;
+    bool gift_wrapping = 8;
+    bool terms_accepted = 9;
+}
+
+message StatusMessage {
+    bool success = 1;
+    string order_id = 2;
+    repeated int32 vector_clock = 3;
+    optional string error_message = 4;
+}
+
+message OperationalMessage {
+    string order_id = 1;
+    repeated int32 vector_clock = 2;
+}
+
+message OrderResponce {
+    StatusMessage status = 1;
+    repeated RecommendedBook recommended_books = 2;
+}
