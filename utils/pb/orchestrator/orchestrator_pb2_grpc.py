@@ -4,7 +4,7 @@ import grpc
 import warnings
 
 from google.protobuf import empty_pb2 as google_dot_protobuf_dot_empty__pb2
-import suggestions_pb2 as suggestions__pb2
+import orchestrator_pb2 as orchestrator__pb2
 
 GRPC_GENERATED_VERSION = '1.70.0'
 GRPC_VERSION = grpc.__version__
@@ -19,14 +19,14 @@ except ImportError:
 if _version_not_supported:
     raise RuntimeError(
         f'The grpc package installed is at version {GRPC_VERSION},'
-        + f' but the generated code in suggestions_pb2_grpc.py depends on'
+        + f' but the generated code in orchestrator_pb2_grpc.py depends on'
         + f' grpcio>={GRPC_GENERATED_VERSION}.'
         + f' Please upgrade your grpc module to grpcio>={GRPC_GENERATED_VERSION}'
         + f' or downgrade your generated code using grpcio-tools<={GRPC_VERSION}.'
     )
 
 
-class SuggestionsServiceStub(object):
+class OrchestratorServiceStub(object):
     """Missing associated documentation comment in .proto file."""
 
     def __init__(self, channel):
@@ -35,60 +35,75 @@ class SuggestionsServiceStub(object):
         Args:
             channel: A grpc.Channel.
         """
-        self.initOrder = channel.unary_unary(
-                '/suggestions.SuggestionsService/initOrder',
-                request_serializer=suggestions__pb2.InitRequest.SerializeToString,
+        self.fraudDone = channel.unary_unary(
+                '/orchestrator.OrchestratorService/fraudDone',
+                request_serializer=orchestrator__pb2.fraudDoneRequest.SerializeToString,
                 response_deserializer=google_dot_protobuf_dot_empty__pb2.Empty.FromString,
                 _registered_method=True)
-        self.getSuggestions = channel.unary_unary(
-                '/suggestions.SuggestionsService/getSuggestions',
-                request_serializer=suggestions__pb2.getSuggestionsRequest.SerializeToString,
+        self.verificationDone = channel.unary_unary(
+                '/orchestrator.OrchestratorService/verificationDone',
+                request_serializer=orchestrator__pb2.verificationDoneRequest.SerializeToString,
+                response_deserializer=google_dot_protobuf_dot_empty__pb2.Empty.FromString,
+                _registered_method=True)
+        self.suggestionsDone = channel.unary_unary(
+                '/orchestrator.OrchestratorService/suggestionsDone',
+                request_serializer=orchestrator__pb2.suggestionsDoneRequest.SerializeToString,
                 response_deserializer=google_dot_protobuf_dot_empty__pb2.Empty.FromString,
                 _registered_method=True)
 
 
-class SuggestionsServiceServicer(object):
+class OrchestratorServiceServicer(object):
     """Missing associated documentation comment in .proto file."""
 
-    def initOrder(self, request, context):
+    def fraudDone(self, request, context):
         """Missing associated documentation comment in .proto file."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
-    def getSuggestions(self, request, context):
-        """is called by transaction_verification and fraud_detection. then calls orchestrator
-        """
+    def verificationDone(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def suggestionsDone(self, request, context):
+        """Missing associated documentation comment in .proto file."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
 
-def add_SuggestionsServiceServicer_to_server(servicer, server):
+def add_OrchestratorServiceServicer_to_server(servicer, server):
     rpc_method_handlers = {
-            'initOrder': grpc.unary_unary_rpc_method_handler(
-                    servicer.initOrder,
-                    request_deserializer=suggestions__pb2.InitRequest.FromString,
+            'fraudDone': grpc.unary_unary_rpc_method_handler(
+                    servicer.fraudDone,
+                    request_deserializer=orchestrator__pb2.fraudDoneRequest.FromString,
                     response_serializer=google_dot_protobuf_dot_empty__pb2.Empty.SerializeToString,
             ),
-            'getSuggestions': grpc.unary_unary_rpc_method_handler(
-                    servicer.getSuggestions,
-                    request_deserializer=suggestions__pb2.getSuggestionsRequest.FromString,
+            'verificationDone': grpc.unary_unary_rpc_method_handler(
+                    servicer.verificationDone,
+                    request_deserializer=orchestrator__pb2.verificationDoneRequest.FromString,
+                    response_serializer=google_dot_protobuf_dot_empty__pb2.Empty.SerializeToString,
+            ),
+            'suggestionsDone': grpc.unary_unary_rpc_method_handler(
+                    servicer.suggestionsDone,
+                    request_deserializer=orchestrator__pb2.suggestionsDoneRequest.FromString,
                     response_serializer=google_dot_protobuf_dot_empty__pb2.Empty.SerializeToString,
             ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
-            'suggestions.SuggestionsService', rpc_method_handlers)
+            'orchestrator.OrchestratorService', rpc_method_handlers)
     server.add_generic_rpc_handlers((generic_handler,))
-    server.add_registered_method_handlers('suggestions.SuggestionsService', rpc_method_handlers)
+    server.add_registered_method_handlers('orchestrator.OrchestratorService', rpc_method_handlers)
 
 
  # This class is part of an EXPERIMENTAL API.
-class SuggestionsService(object):
+class OrchestratorService(object):
     """Missing associated documentation comment in .proto file."""
 
     @staticmethod
-    def initOrder(request,
+    def fraudDone(request,
             target,
             options=(),
             channel_credentials=None,
@@ -101,8 +116,8 @@ class SuggestionsService(object):
         return grpc.experimental.unary_unary(
             request,
             target,
-            '/suggestions.SuggestionsService/initOrder',
-            suggestions__pb2.InitRequest.SerializeToString,
+            '/orchestrator.OrchestratorService/fraudDone',
+            orchestrator__pb2.fraudDoneRequest.SerializeToString,
             google_dot_protobuf_dot_empty__pb2.Empty.FromString,
             options,
             channel_credentials,
@@ -115,7 +130,7 @@ class SuggestionsService(object):
             _registered_method=True)
 
     @staticmethod
-    def getSuggestions(request,
+    def verificationDone(request,
             target,
             options=(),
             channel_credentials=None,
@@ -128,8 +143,35 @@ class SuggestionsService(object):
         return grpc.experimental.unary_unary(
             request,
             target,
-            '/suggestions.SuggestionsService/getSuggestions',
-            suggestions__pb2.getSuggestionsRequest.SerializeToString,
+            '/orchestrator.OrchestratorService/verificationDone',
+            orchestrator__pb2.verificationDoneRequest.SerializeToString,
+            google_dot_protobuf_dot_empty__pb2.Empty.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def suggestionsDone(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/orchestrator.OrchestratorService/suggestionsDone',
+            orchestrator__pb2.suggestionsDoneRequest.SerializeToString,
             google_dot_protobuf_dot_empty__pb2.Empty.FromString,
             options,
             channel_credentials,

@@ -62,7 +62,8 @@ class FraudDetectionServiceServicer(object):
         raise NotImplementedError('Method not implemented!')
 
     def bookCheck(self, request, context):
-        """Missing associated documentation comment in .proto file."""
+        """called by orchestrator
+        """
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
