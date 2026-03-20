@@ -2,8 +2,14 @@ syntax = "proto3";
 
 package fraud_detection;
 
+import "google/protobuf/empty.proto";
+
 service FraudDetectionService {
     rpc checkFraud (FraudRequest) returns (FraudResponse);
+    rpc initOrder (initRequest) returns (google.protobuf.Empty);
+    rpc bookCheck (bookCheckRequest) returns (google.protobuf.Empty);
+    rpc userCheck (userCheckRequest) returns (fraudResult);
+
 }
 
 message FraudRequest {
@@ -13,4 +19,23 @@ message FraudRequest {
 
 message FraudResponse {
     bool is_fraud = 1;
+}
+
+message initRequest {
+    int64 order_id = 1;
+    string card_nr = 2;
+    float order_ammount = 3;
+}
+
+message bookCheckRequest {
+    int64 order_id = 1;
+}
+
+message userCheckRequest {
+    int64 order_id = 1;
+}
+
+message fraudResult {
+    int64 order_id = 1;
+    bool is_fraud = 2;
 }

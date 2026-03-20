@@ -109,9 +109,16 @@ def checkout():
 
     quantity = sum([item["quantity"] for item in request_data["items"]])
 
+    order_data = [
+        order_id, request_data["creditCard"]["number"], quantity,
+    ]
+
     is_fraud = detect_fraud(request_data["creditCard"]["number"], quantity)
     suggested_books = get_suggested_books([i["name"] for i in request_data["items"]])
     logger.info(f"Got suggested books.")
+    verified = verify_transaction(request_data["creditCard"]["number"], order_id, quantity)
+    if not verified:
+        is_fraud = True
 
     # Convert the gRPC response to a dictionary
     suggested_books_dicts = []
@@ -124,9 +131,6 @@ def checkout():
 
     # Generate order_id
 
-    verified = verify_transaction(request_data["creditCard"]["number"], order_id, quantity)
-    if not verified:
-        is_fraud = True
 
     # Dummy response following the provided YAML specification for the bookstore
     order_status_response = {
