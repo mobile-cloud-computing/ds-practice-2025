@@ -1,15 +1,12 @@
 syntax = "proto3";
 
-package fraud;
+package suggestions;
 
-service FraudDetectionService {
+service SuggestionsService {
     rpc InitOrder (InitOrderRequest) returns (InitOrderResponse);
 
-    // transaction service notifies fraud service that mandatory user data validation completed
-    rpc NotifyMandatoryUserDataValidated (DependencyNotificationRequest) returns (Ack);
-
-    // transaction service notifies fraud service that credit card format validation completed
-    rpc NotifyCreditCardFormatValidated (DependencyNotificationRequest) returns (Ack);
+    // fraud service notifies suggestions service that card fraud check completed
+    rpc NotifyCardFraudCheckCompleted (DependencyNotificationRequest) returns (Ack);
 
     // orchestrator broadcasts final cleanup after checkout flow ends
     rpc CleanupOrder (CleanupOrderRequest) returns (CleanupOrderResponse);

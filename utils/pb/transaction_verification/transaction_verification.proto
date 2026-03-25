@@ -1,15 +1,15 @@
 syntax = "proto3";
 
-package fraud;
+package transaction;
 
-service FraudDetectionService {
+service TransactionVerificationService {
     rpc InitOrder (InitOrderRequest) returns (InitOrderResponse);
 
-    // transaction service notifies fraud service that mandatory user data validation completed
-    rpc NotifyMandatoryUserDataValidated (DependencyNotificationRequest) returns (Ack);
+    // Orchestrator starts the whole workflow here
+    rpc StartCheckoutFlow (StartCheckoutFlowRequest) returns (StartCheckoutFlowResponse);
 
-    // transaction service notifies fraud service that credit card format validation completed
-    rpc NotifyCreditCardFormatValidated (DependencyNotificationRequest) returns (Ack);
+    // Final result is reported back here
+    rpc FinalizeOrder (FinalizeOrderRequest) returns (Ack);
 
     // orchestrator broadcasts final cleanup after checkout flow ends
     rpc CleanupOrder (CleanupOrderRequest) returns (CleanupOrderResponse);
@@ -29,10 +29,28 @@ message Ack {
     bool ok = 1;
 }
 
-message DependencyNotificationRequest {
+message StartCheckoutFlowRequest {
     string order_id = 1;
-    string event_name = 2;
+}
+
+message BookSuggestion {
+    string title = 1;
+    string author = 2;
+}
+
+message StartCheckoutFlowResponse {
+    bool success = 1;
+    string message = 2;
     repeated int32 vector_clock = 3;
+    repeated BookSuggestion suggestions = 4;
+}
+
+message FinalizeOrderRequest {
+    string order_id = 1;
+    bool success = 2;
+    string message = 3;
+    repeated int32 vector_clock = 4;
+    repeated BookSuggestion suggestions = 5;
 }
 
 message CleanupOrderRequest {
