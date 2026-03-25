@@ -66,7 +66,7 @@ class VectorClockManager:
                 order["cond"].wait()
         return order
 
-vc = VectorClockManager(my_index=0) # 0 = Fraud, 1 = Verification, 2 = Suggestions
+vc = VectorClockManager(my_index=1)
 
 class FraudDetectionService(fraud_detection_grpc.FraudDetectionServiceServicer):
     def InitOrder(self, request, context):

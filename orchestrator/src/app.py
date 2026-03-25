@@ -278,7 +278,7 @@ def checkout():
             executor.submit(init_suggestions_service, order_id, request_data)
 
         logging.info(f"[{order_id}] Orchestrator waiting for background chain to complete...")
-        success = results_manager[order_id]["event"].wait(timeout=20.0)
+        success = results_manager[order_id]["event"].wait(timeout=20.0) # timeout for the workflow to finish for each service
 
         if not success:
                 return {"error": "Timeout waiting for services"}, 504
