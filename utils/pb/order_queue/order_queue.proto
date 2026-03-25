@@ -1,0 +1,38 @@
+syntax = "proto3";
+
+package order_queue;
+
+service OrderQueueService {
+  rpc Enqueue (EnqueueRequest) returns (QueueResponse);
+  rpc Dequeue (DequeueRequest) returns (DequeueResponse);
+}
+
+message OrderData {
+  string order_id = 1;
+  string user_name = 2;
+  string user_contact = 3;
+  string card_number = 4;
+  string expiration_date = 5;
+  string cvv = 6;
+  int32 item_count = 7;
+  bool terms_accepted = 8;
+}
+
+message EnqueueRequest {
+  OrderData order = 1;
+}
+
+message DequeueRequest {
+  string executor_id = 1;
+}
+
+message QueueResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+message DequeueResponse {
+  bool success = 1;
+  string message = 2;
+  OrderData order = 3;
+}

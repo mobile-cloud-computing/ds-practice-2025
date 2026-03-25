@@ -1,4 +1,4 @@
-version: '3'
+
 services:
   frontend:
     build:
@@ -36,6 +36,11 @@ services:
       - ./utils:/app/utils
       # Mount the orchestrator/src directory in the current directory to the /app/orchestrator/src directory in the container
       - ./orchestrator/src:/app/orchestrator/src
+    depends_on:
+      - fraud_detection
+      - transaction_verification
+      - suggestions
+      - order_queue
 
   fraud_detection:
     build:
@@ -63,6 +68,7 @@ services:
   transaction_verification:
     build:
       # Use the current directory as the build context
+      # This allows us to access the files in the current directory inside the Dockerfile
       context: ./
       # Use the Dockerfile in the transaction_verification directory
       dockerfile: ./transaction_verification/Dockerfile
@@ -92,3 +98,52 @@ services:
     volumes:
       - ./utils:/app/utils
       - ./suggestions/src:/app/suggestions/src
+
+  order_queue:
+    build:
+      context: ./
+      dockerfile: ./order_queue/Dockerfile
+    ports:
+      - 50054:50054
+    environment:
+      - PYTHONUNBUFFERED=TRUE
+      - PYTHONFILE=/app/order_queue/src/app.py
+    volumes:
+      - ./utils:/app/utils
+      - ./order_queue/src:/app/order_queue/src
+
+  order_executor_1:
+    build:
+      context: ./
+      dockerfile: ./order_executor/Dockerfile
+    ports:
+      - 50055:50055
+    environment:
+      - PYTHONUNBUFFERED=TRUE
+      - PYTHONFILE=/app/order_executor/src/app.py
+      - EXECUTOR_ID=1
+      - EXECUTOR_PORT=50055
+      - PEERS=1@order_executor_1:50055,2@order_executor_2:50055
+    volumes:
+      - ./utils:/app/utils
+      - ./order_executor/src:/app/order_executor/src
+    depends_on:
+      - order_queue
+
+  order_executor_2:
+    build:
+      context: ./
+      dockerfile: ./order_executor/Dockerfile
+    ports:
+      - 50056:50055
+    environment:
+      - PYTHONUNBUFFERED=TRUE
+      - PYTHONFILE=/app/order_executor/src/app.py
+      - EXECUTOR_ID=2
+      - EXECUTOR_PORT=50055
+      - PEERS=1@order_executor_1:50055,2@order_executor_2:50055
+    volumes:
+      - ./utils:/app/utils
+      - ./order_executor/src:/app/order_executor/src
+    depends_on:
+      - order_queue

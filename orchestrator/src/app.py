@@ -31,6 +31,13 @@ sys.path.insert(0, suggestions_grpc_path)
 import suggestions_pb2 as suggestions
 import suggestions_pb2_grpc as suggestions_grpc
 
+order_queue_grpc_path = os.path.abspath(
+    os.path.join(FILE, "../../../utils/pb/order_queue")
+)
+sys.path.insert(0, order_queue_grpc_path)
+import order_queue_pb2 as order_queue
+import order_queue_pb2_grpc as order_queue_grpc
+
 
 app = Flask(__name__)
 CORS(app, resources={r"/*": {"origins": "*"}})
@@ -50,7 +57,9 @@ def merge_vcs(*vectors):
     return result
 
 
-def build_order_kwargs(user_name, user_contact, card_number, expiration_date, cvv, item_count, terms_accepted):
+def build_order_kwargs(
+    user_name, user_contact, card_number, expiration_date, cvv, item_count, terms_accepted
+):
     return {
         "user_name": user_name,
         "user_contact": user_contact,
@@ -87,6 +96,24 @@ def init_suggestions_service(order_id, order_kwargs):
             order=suggestions.OrderData(order_id=order_id, **order_kwargs)
         )
         return stub.InitOrder(request, timeout=5.0)
+
+
+def enqueue_order(order_id, order_kwargs):
+    with grpc.insecure_channel("order_queue:50054") as channel:
+        stub = order_queue_grpc.OrderQueueServiceStub(channel)
+        request = order_queue.EnqueueRequest(
+            order=order_queue.OrderData(
+                order_id=order_id,
+                user_name=order_kwargs["user_name"],
+                user_contact=order_kwargs["user_contact"],
+                card_number=order_kwargs["card_number"],
+                expiration_date=order_kwargs["expiration_date"],
+                cvv=order_kwargs["cvv"],
+                item_count=order_kwargs["item_count"],
+                terms_accepted=order_kwargs["terms_accepted"],
+            )
+        )
+        return stub.Enqueue(request, timeout=5.0)
 
 
 def tv_validate_items(order_id, vc):
@@ -189,6 +216,16 @@ def clear_suggestions_service(order_id, final_vc):
         return stub.ClearOrder(request, timeout=5.0)
 
 
+def broadcast_clear(order_id, final_vc):
+    try:
+        clear_transaction_service(order_id, final_vc)
+        clear_fraud_service(order_id, final_vc)
+        clear_suggestions_service(order_id, final_vc)
+        print(f"[ORCH] order={order_id} clear_broadcast_sent final_vc={final_vc}")
+    except Exception as e:
+        print(f"[ORCH] order={order_id} clear_broadcast_warning={e}")
+
+
 @app.route("/", methods=["GET"])
 def index():
     return {"message": "Orchestrator is running."}, 200
@@ -201,7 +238,7 @@ def checkout():
         return {
             "error": {
                 "code": "BAD_REQUEST",
-                "message": "Request body must be valid JSON."
+                "message": "Request body must be valid JSON.",
             }
         }, 400
 
@@ -221,7 +258,7 @@ def checkout():
         return {
             "error": {
                 "code": "BAD_REQUEST",
-                "message": "User name is required."
+                "message": "User name is required.",
             }
         }, 400
 
@@ -229,7 +266,7 @@ def checkout():
         return {
             "error": {
                 "code": "BAD_REQUEST",
-                "message": "User contact is required."
+                "message": "User contact is required.",
             }
         }, 400
 
@@ -261,7 +298,7 @@ def checkout():
         return {
             "error": {
                 "code": "INTERNAL_ERROR",
-                "message": "Failed to initialize backend services."
+                "message": "Failed to initialize backend services.",
             }
         }, 500
 
@@ -271,7 +308,9 @@ def checkout():
         ("InitSuggestions", init_sug),
     ]:
         if not response.success:
-            print(f"[ORCH] order={order_id} step={name} success=False message={response.message}")
+            print(
+                f"[ORCH] order={order_id} step={name} success=False message={response.message}"
+            )
             return {
                 "orderId": order_id,
                 "status": "Order Rejected",
@@ -298,7 +337,7 @@ def checkout():
         "event_vcs": {},
         "final_vc": [0, 0, 0],
         "books": [],
-        "failure_kind": None,   # "event_failure" or "internal_error"
+        "failure_kind": None,  # "event_failure" or "internal_error"
         "failed_step": None,
         "failure_message": None,
     }
@@ -375,11 +414,13 @@ def checkout():
             if response.success:
                 books = []
                 for book in response.books:
-                    books.append({
-                        "bookId": book.bookId,
-                        "title": book.title,
-                        "author": book.author,
-                    })
+                    books.append(
+                        {
+                            "bookId": book.bookId,
+                            "title": book.title,
+                            "author": book.author,
+                        }
+                    )
                 with lock:
                     state["books"] = books
             else:
@@ -417,16 +458,8 @@ def checkout():
 
     final_vc = state["final_vc"]
 
-    # Bonus cleanup / useful for repeat testing
-    try:
-        clear_transaction_service(order_id, final_vc)
-        clear_fraud_service(order_id, final_vc)
-        clear_suggestions_service(order_id, final_vc)
-        print(f"[ORCH] order={order_id} clear_broadcast_sent final_vc={final_vc}")
-    except Exception as e:
-        print(f"[ORCH] order={order_id} clear_broadcast_warning={e}")
-
     if state["failure_kind"] == "internal_error":
+        broadcast_clear(order_id, final_vc)
         return {
             "error": {
                 "code": "INTERNAL_ERROR",
@@ -435,6 +468,7 @@ def checkout():
         }, 500
 
     if state["failure_kind"] == "event_failure":
+        broadcast_clear(order_id, final_vc)
         return {
             "orderId": order_id,
             "status": "Order Rejected",
@@ -442,6 +476,28 @@ def checkout():
             "reason": state["failure_message"],
         }, 200
 
+    try:
+        enqueue_response = enqueue_order(order_id, order_kwargs)
+    except Exception as e:
+        print(f"[ORCH] order={order_id} enqueue_error={e}")
+        return {
+            "error": {
+                "code": "INTERNAL_ERROR",
+                "message": "Order was approved but could not be queued.",
+            }
+        }, 500
+
+    if not enqueue_response.success:
+        print(f"[ORCH] order={order_id} enqueue_failed message={enqueue_response.message}")
+        return {
+            "error": {
+                "code": "INTERNAL_ERROR",
+                "message": enqueue_response.message,
+            }
+        }, 500
+
+    print(f"[ORCH] order={order_id} enqueue_success")
+    broadcast_clear(order_id, final_vc)
     print(f"[ORCH] order={order_id} final_status=APPROVED final_vc={final_vc}")
 
     return {
