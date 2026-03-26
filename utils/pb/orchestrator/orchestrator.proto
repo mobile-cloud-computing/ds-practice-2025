@@ -1,0 +1,28 @@
+syntax = "proto3";
+
+package orchestrator;
+
+import "google/protobuf/empty.proto";
+
+service OrchestratorService {
+    rpc fraudDone (fraudDoneRequest) returns (google.protobuf.Empty);
+    rpc verificationDone (verificationDoneRequest) returns (google.protobuf.Empty);
+    rpc suggestionsDone (suggestionsDoneRequest) returns (google.protobuf.Empty);
+}
+
+message VectorClock {
+    map<string, uint64> values = 1;
+}
+
+message fraudDoneRequest {
+    int64 order_id = 1;
+    bool is_fraud = 2;
+}
+message verificationDoneRequest {
+    int64 order_id = 1;
+    bool payment_completed = 2;
+}
+message suggestionsDoneRequest {
+    int64 order_id = 1;
+    repeated string suggestions = 2;
+}

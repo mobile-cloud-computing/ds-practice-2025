@@ -20,6 +20,10 @@ sys.path.insert(0, suggestions_grpc_path)
 import suggestions_pb2 as suggestions
 import suggestions_pb2_grpc as suggestions_grpc
 
+sys.path.insert(0, orchestrator_grpc_path)
+import orchestrator_pb2 as orchestrator
+import orchestrator_pb2_grpc as orchestrator_grpc
+
 import grpc
 import logging
 
@@ -151,6 +155,9 @@ def checkout():
         "suggestedBooks": suggestions_list
     })
 
+suggestion_channel.close()
+verification_channel.close()
+fraud_channel.close()
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0')

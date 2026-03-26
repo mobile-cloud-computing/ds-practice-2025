@@ -22,19 +22,30 @@ _runtime_version.ValidateProtobufRuntimeVersion(
 _sym_db = _symbol_database.Default()
 
 
+from google.protobuf import empty_pb2 as google_dot_protobuf_dot_empty__pb2
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x15\x66raud_detection.proto\x12\x05hello\"6\n\x0c\x46raudRequest\x12\x0f\n\x07\x63\x61rd_nr\x18\x01 \x01(\t\x12\x15\n\rorder_ammount\x18\x02 \x01(\x02\"!\n\rFraudResponse\x12\x10\n\x08is_fraud\x18\x01 \x01(\x08\x32P\n\x15\x46raudDetectionService\x12\x37\n\ncheckFraud\x12\x13.hello.FraudRequest\x1a\x14.hello.FraudResponseb\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x15\x66raud_detection.proto\x12\x0f\x66raud_detection\x1a\x1bgoogle/protobuf/empty.proto\"3\n\tOdrerData\x12\x0f\n\x07\x63\x61rd_nr\x18\x01 \x01(\t\x12\x15\n\rorder_ammount\x18\x02 \x01(\x02\"v\n\x0bVectorClock\x12\x38\n\x06values\x18\x01 \x03(\x0b\x32(.fraud_detection.VectorClock.ValuesEntry\x1a-\n\x0bValuesEntry\x12\x0b\n\x03key\x18\x01 \x01(\t\x12\r\n\x05value\x18\x02 \x01(\x04:\x02\x38\x01\"N\n\x0bInitRequest\x12\x10\n\x08order_id\x18\x01 \x01(\x03\x12-\n\torderData\x18\x02 \x01(\x0b\x32\x1a.fraud_detection.OdrerData\"$\n\x10\x42ookCheckRequest\x12\x10\n\x08order_id\x18\x01 \x01(\x03\"Q\n\x10UserCheckRequest\x12\x10\n\x08order_id\x18\x01 \x01(\x03\x12+\n\x05\x63lock\x18\x02 \x01(\x0b\x32\x1c.fraud_detection.VectorClock2\xea\x01\n\x15\x46raudDetectionService\x12\x41\n\tinitOrder\x12\x1c.fraud_detection.InitRequest\x1a\x16.google.protobuf.Empty\x12\x46\n\tbookCheck\x12!.fraud_detection.BookCheckRequest\x1a\x16.google.protobuf.Empty\x12\x46\n\tuserCheck\x12!.fraud_detection.UserCheckRequest\x1a\x16.google.protobuf.Emptyb\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
 _builder.BuildTopDescriptorsAndMessages(DESCRIPTOR, 'fraud_detection_pb2', _globals)
 if not _descriptor._USE_C_DESCRIPTORS:
   DESCRIPTOR._loaded_options = None
-  _globals['_FRAUDREQUEST']._serialized_start=32
-  _globals['_FRAUDREQUEST']._serialized_end=86
-  _globals['_FRAUDRESPONSE']._serialized_start=88
-  _globals['_FRAUDRESPONSE']._serialized_end=121
-  _globals['_FRAUDDETECTIONSERVICE']._serialized_start=123
-  _globals['_FRAUDDETECTIONSERVICE']._serialized_end=203
+  _globals['_VECTORCLOCK_VALUESENTRY']._loaded_options = None
+  _globals['_VECTORCLOCK_VALUESENTRY']._serialized_options = b'8\001'
+  _globals['_ODRERDATA']._serialized_start=71
+  _globals['_ODRERDATA']._serialized_end=122
+  _globals['_VECTORCLOCK']._serialized_start=124
+  _globals['_VECTORCLOCK']._serialized_end=242
+  _globals['_VECTORCLOCK_VALUESENTRY']._serialized_start=197
+  _globals['_VECTORCLOCK_VALUESENTRY']._serialized_end=242
+  _globals['_INITREQUEST']._serialized_start=244
+  _globals['_INITREQUEST']._serialized_end=322
+  _globals['_BOOKCHECKREQUEST']._serialized_start=324
+  _globals['_BOOKCHECKREQUEST']._serialized_end=360
+  _globals['_USERCHECKREQUEST']._serialized_start=362
+  _globals['_USERCHECKREQUEST']._serialized_end=443
+  _globals['_FRAUDDETECTIONSERVICE']._serialized_start=446
+  _globals['_FRAUDDETECTIONSERVICE']._serialized_end=680
 # @@protoc_insertion_point(module_scope)

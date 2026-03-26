@@ -2,17 +2,40 @@ syntax = "proto3";
 
 package transaction_verification;
 
+import "google/protobuf/empty.proto";
+
 service transactionService {
-    rpc verifyTransaction (PayRequest) returns (PayResponse);
+    rpc initOrder (InitRequest) returns (google.protobuf.Empty);
+    rpc checkCard (CheckCardRequest) returns (google.protobuf.Empty); // called by orchestrator
+    rpc checkMoney (CheckMoneyRequest) returns (google.protobuf.Empty); // called by orchestrator and 
+    rpc startPayment (StartPaymentRequest) returns (google.protobuf.Empty); // calls orchestrator when called
 }
 
-message PayRequest {
+message VectorClock {
+    map<string, uint64> values = 1;
+}
+
+message OdrerData { // duplicated across all proto files
     string card_nr = 1;
-    int64 order_id = 2;
-    float money = 3;
+    float order_ammount = 2;
 }
 
-message PayResponse {
-    bool verified = 1;
-    int64 order_id = 2;
+message InitRequest {
+    int64 order_id = 1;
+    OdrerData orderData = 2;
+}
+
+message CheckCardRequest {
+    int64 order_id = 1;
+    VectorClock clock = 2;
+}
+
+message CheckMoneyRequest {
+    int64 order_id = 1;
+    VectorClock clock = 2;
+}
+
+message StartPaymentRequest {
+    int64 order_id = 1;
+    VectorClock clock = 2;
 }

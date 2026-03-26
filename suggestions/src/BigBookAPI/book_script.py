@@ -46,7 +46,7 @@ def get_book_suggestions(book_ordered_by_customer, number_of_books = 5):
 
     # Get similar book
     payload = {
-        'api-key': 'c59ecdfb8fa34bab97dac34162e9a098',
+        'api-key': os.environ["api_key"],
         "id": book_id,
         "number": number_of_books,
     }
