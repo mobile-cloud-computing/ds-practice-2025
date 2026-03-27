@@ -50,7 +50,9 @@ class BaseServiceWrapper:
         self.vector_clock[self.service_id] += 1
 
     def _send_request_to_service(self, stub_class, connection_string, method_name, message):
-        # message.vector_clock = self.vector_clock
+        # message.vector_clock.CopyFrom(self.vector_clock)
+        for i in range(self.n_services):
+            message.vector_clock[i] = self.vector_clock[i]
         with grpc.insecure_channel(connection_string) as channel:
             stub = stub_class(channel)
             method = getattr(stub, method_name)

@@ -186,7 +186,7 @@ class TransactionVerificationService(BaseServiceWrapper, transaction_verificatio
         status = order_details.StatusMessage(
             success=True,
             order_id=request.order_id,
-            # vector_clock=self.vector_clock
+            vector_clock=self.vector_clock
         )
 
         try:
@@ -205,7 +205,6 @@ class TransactionVerificationService(BaseServiceWrapper, transaction_verificatio
                 )
             else:
                 result = order_details.OrderResponce()
-                # result.status = status
                 result.status.CopyFrom(status)
                 return result
 
@@ -215,7 +214,6 @@ class TransactionVerificationService(BaseServiceWrapper, transaction_verificatio
             status.error_message = f"Failed to do items verification: {str(e)}"
 
             result = order_details.OrderResponce()
-            # result.status = status
             result.status.CopyFrom(status)
             return result
 
@@ -245,13 +243,6 @@ class TransactionVerificationService(BaseServiceWrapper, transaction_verificatio
         )
     
     def VerifyBillingAddress(self, request, context):
-        # return self._method_template(
-        #     request=request,
-        #     verify_functions=[lambda data: validate_location(data.billing_address)],
-        #     stub_class=fraud_detection_grpc.FraudDetectionServiceStub,
-        #     connection_string="fraud_detection:50051",
-        #     method_name="CheckFraud"
-        # )
         return self._method_template(
             request=request,
             verify_functions=[lambda data: validate_location(data.billing_address)],
@@ -264,11 +255,10 @@ class TransactionVerificationService(BaseServiceWrapper, transaction_verificatio
         status = order_details.StatusMessage(
             success=True,
             order_id=request.order_id,
-            # vector_clock=self.vector_clock
+            vector_clock=self.vector_clock
         )
 
         result = order_details.OrderResponce()
-        # result.status = status
         result.status.CopyFrom(status)
         return result
     
