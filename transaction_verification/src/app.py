@@ -1,5 +1,6 @@
 import sys
 import os
+import threading
 
 FILE = __file__ if '__file__' in globals() else os.getenv("PYTHONFILE", "")
 utils_path = os.path.abspath(os.path.join(FILE, '../../../utils/'))
@@ -133,41 +134,6 @@ def validate_order_list(orders):
     return True
 
 
-def verify_transaction(input_data):
-    if not validate_credit_card(input_data.credit_card.number):
-        return transaction_verification.TransactionVerficationResponse(
-            transaction_valid=False, 
-            error_message=f"Luhn's Algorithm failed, wrong card number {input_data.credit_card.number}"
-        )
-    if not validate_credit_card_vendor(input_data.credit_card.number):
-        return transaction_verification.TransactionVerficationResponse(
-            transaction_valid=False, 
-            error_message=f"Unrecognised credit card vendor of {input_data.credit_card.number}, supports only MasterCard or Visa"
-        )
-    if not validate_expiration_date(input_data.credit_card.expiration_date):
-        return transaction_verification.TransactionVerficationResponse(
-            transaction_valid=False, 
-            error_message=f"Credit card expired {input_data.credit_card.expiration_date}"
-        )
-    if not validate_cvv(input_data.credit_card.cvv):
-        return transaction_verification.TransactionVerficationResponse(
-            transaction_valid=False, 
-            error_message=f"Invalid CVV {input_data.credit_card.cvv}"
-        )
-    if not validate_location(input_data.billing_address):
-        return transaction_verification.TransactionVerficationResponse(
-            transaction_valid=False, 
-            error_message=f"Invalid address {input_data.billing_address.street} {input_data.billing_address.city} {input_data.billing_address.state} {input_data.billing_address.country}"
-        )
-    if not validate_order_list(input_data.items):
-        return transaction_verification.TransactionVerficationResponse(
-            transaction_valid=False, 
-            error_message=f"Invalid order list {input_data.items}"
-        )
-    return transaction_verification.TransactionVerficationResponse(transaction_valid=True)
-    
-
-
 class TransactionVerificationService(BaseServiceWrapper, transaction_verification_grpc.TransactionVerificationService):
     def _do_verification(self, request, verify_function):
         data = self.order_details.get(request.order_id, None)
@@ -217,18 +183,63 @@ class TransactionVerificationService(BaseServiceWrapper, transaction_verificatio
             result.status.CopyFrom(status)
             return result
 
+    def _method_template_threaded(self, request, verify_functions, stub_class, connection_string, method_name, result_container, index):
+        result_container[index] = self._method_template(
+            request=request,
+            verify_functions=verify_functions,
+            stub_class=stub_class,
+            connection_string=connection_string,
+            method_name=method_name
+        )
 
     def VerifyItems(self, request, context):
-        return self._method_template(
-            request=request,
-            verify_functions=[lambda data: validate_order_list(data.items)],
-            stub_class=transaction_verification_grpc.TransactionVerificationServiceStub,
-            connection_string="transaction_verification:50052",
-            method_name="VerifyCreditCard"
+        logger.info(f"Verifying items for order id {request.order_id} with vector clock {self.vector_clock}")
+
+        result_container = [None, None]
+        event1 = threading.Thread(target=self._method_template_threaded, kwargs={
+            "request": request,
+            "verify_functions": [lambda data: validate_order_list(data.items)],
+            "stub_class": transaction_verification_grpc.TransactionVerificationServiceStub,
+            "connection_string": "transaction_verification:50052",
+            "method_name": "VerifyCreditCard",
+            "result_container": result_container,
+            "index": 0
+        })
+
+        event2 = threading.Thread(target=self._method_template_threaded, kwargs={
+            "request": request,
+            "verify_functions": [],
+            "stub_class": transaction_verification_grpc.TransactionVerificationServiceStub,
+            "connection_string": "transaction_verification:50052",
+            "method_name": "VerifyBillingAddress",
+            "result_container": result_container,
+            "index": 1
+        })
+
+        event1.start()
+        event2.start()
+
+        event1.join()
+        event2.join()
+
+        status = order_details.StatusMessage(
+            success=all(result.status.success for result in result_container if result),
+            order_id=request.order_id,
+            vector_clock=self.vector_clock,
+            error_message="; ".join(result.status.error_message for result in result_container if result and not result.status.success)
         )
+
+        result = order_details.OrderResponce()
+        result.status.CopyFrom(status)
+        for i in range(len(result_container)):
+            if len(result_container[i].recommended_books):
+                result.recommended_books.extend(result_container[i].recommended_books)
+                break
+        return result
 
 
     def VerifyCreditCard(self, request, context):
+        logger.info(f"Verifying credit card for order id {request.order_id} with vector clock {self.vector_clock}")
         return self._method_template(
             request=request,
             verify_functions=[
@@ -239,10 +250,11 @@ class TransactionVerificationService(BaseServiceWrapper, transaction_verificatio
             ],
             stub_class=transaction_verification_grpc.TransactionVerificationServiceStub,
             connection_string="transaction_verification:50052",
-            method_name="VerifyBillingAddress"
+            method_name="SuccessfullVerify"
         )
     
     def VerifyBillingAddress(self, request, context):
+        logger.info(f"Verifying billing address for order id {request.order_id} with vector clock {self.vector_clock}")
         return self._method_template(
             request=request,
             verify_functions=[lambda data: validate_location(data.billing_address)],
