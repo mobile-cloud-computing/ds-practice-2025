@@ -1,37 +1,23 @@
 import sys
 import os
-import grpc
-from concurrent import futures
-import logging
-import threading
-from google.protobuf import empty_pb2
 
-# --- Path setups for gRPC imports ---
+
+# This set of lines are needed to import the gRPC stubs.
+# The path of the stubs is relative to the current file, or absolute inside the container.
+# Change these lines only if strictly needed.
 FILE = __file__ if '__file__' in globals() else os.getenv("PYTHONFILE", "")
-fraud_detection_grpc_path = os.path.abspath(os.path.join(FILE, '../../../utils/pb/fraud_detection'))
-transaction_verification_grpc_path = os.path.abspath(os.path.join(FILE, '../../../utils/pb/transaction_verification'))
 suggestions_grpc_path = os.path.abspath(os.path.join(FILE, '../../../utils/pb/suggestions'))
-orchestrator_grpc_path = os.path.abspath(os.path.join(FILE, '../../../utils/pb/orchestrator'))
-
-sys.path.insert(0, fraud_detection_grpc_path)
-import fraud_detection_pb2 as fraud_detection
-import fraud_detection_pb2_grpc as fraud_detection_grpc
-
-sys.path.insert(0, transaction_verification_grpc_path)
-import transaction_verification_pb2 as transaction_verification
-import transaction_verification_pb2_grpc as transaction_verification_grpc
-
 sys.path.insert(0, suggestions_grpc_path)
 import suggestions_pb2 as suggestions
 import suggestions_pb2_grpc as suggestions_grpc
 
-sys.path.insert(0, orchestrator_grpc_path)
-import orchestrator_pb2 as orchestrator
-import orchestrator_pb2_grpc as orchestrator_grpc
+import grpc
+from concurrent import futures
+import logging
+from BigBookAPI import book_script
 
-# --- Logger configuration ---
 logging.basicConfig(
-    filename="/logs/fraud_detection_logs.txt",
+    filename="/logs/suggestions_logs.txt",
     filemode="a",
     format="%(asctime)s [%(levelname)s] [%(name)s] %(message)s",
     level=logging.INFO,
@@ -39,108 +25,52 @@ logging.basicConfig(
 
 logger = logging.getLogger(__name__)
 
-class FraudDetectionService(fraud_detection_grpc.FraudDetectionServiceServicer):
-    def __init__(self):
-        # Lock to ensure thread safety since gRPC handles requests concurrently
-        self.lock = threading.Lock()
-        
-        # State management for distributed event ordering
-        self.orders_data = {}        # Caches order data until verification is ready
-        self.vector_clocks = {}      # Tracks causal history (Vector Clocks) per order_id
-        self.user_check_triggers = {} # Tracks the number of arrived events (synchronization barrier)
+# Create a class to define the server functions, derived from
+# fraud_detection_pb2_grpc.HelloServiceServicer
+class SuggestionsService(suggestions_grpc.SuggestionsServiceServicer):
+    # Create an RPC function to say hello
+    def suggest(self, request, context):
 
-    def _increment_clock(self, order_id):
-        """Helper to increment the local vector clock for this service."""
-        if order_id not in self.vector_clocks:
-            self.vector_clocks[order_id] = {"FraudDetection": 0}
-        self.vector_clocks[order_id]["FraudDetection"] += 1
+        # Create a HelloResponse object
+        response = suggestions.SuggestResponse()
 
-    def _merge_clocks(self, order_id, incoming_clock_map):
-        """Helper to merge an incoming vector clock with the local one by taking the max values."""
-        if order_id not in self.vector_clocks:
-            self.vector_clocks[order_id] = {"FraudDetection": 0}
-        for node, value in incoming_clock_map.items():
-            current_val = self.vector_clocks[order_id].get(node, 0)
-            self.vector_clocks[order_id][node] = max(current_val, value)
+        books_data = []
+        for book in request.ordered_books:
+            logger.info("Fetching suggestions for: %s", book)
+            books_data = books_data + book_script.get_book_suggestions(book)
 
-    def initOrder(self, request, context):
-        """
-        RPC called by the Orchestrator.
-        Initializes the caching process and sets the base vector clock.
-        Does NOT process the fraud check immediately.
-        """
-        with self.lock:
-            self.orders_data[request.order_id] = request.orderData
-            self.vector_clocks[request.order_id] = {"FraudDetection": 0}
-            self.user_check_triggers[request.order_id] = 0
-            
-            logger.info(f"[initOrder] Order {request.order_id} cached. Clock: {self.vector_clocks[request.order_id]}")
-        return empty_pb2.Empty()
+        # in case API service doesn't work
+        # books_data = [
+        #     {'bookId': '123', 'title': 'The Best Book', 'author': 'Author 1'},
+        #     {'bookId': '456', 'title': 'The Second Best Book', 'author': 'Author 2'}
+        # ]
 
-    def bookCheck(self, request, context):
-        """
-        RPC called by the Orchestrator.
-        Acts as the first trigger for the synchronization barrier.
-        """
-        with self.lock:
-            self._increment_clock(request.order_id)
-            logger.info(f"[bookCheck] Executed for {request.order_id}. Clock: {self.vector_clocks[request.order_id]}")
-            
-            # Register that the first required event has arrived
-            self.user_check_triggers[request.order_id] += 1
-            self._execute_fraud_check_if_ready(request.order_id)
+        if len(books_data) > 0:
+            for b in books_data:
+                book = response.suggested_books.add()  # Use .add() to create a new Book
+                book.bookId = str(b['bookId'])
+                book.title = b['title']
+                book.author = b['author']
 
-        return empty_pb2.Empty()
-
-    def userCheck(self, request, context):
-        """
-        RPC called by the Transaction Verification service.
-        Acts as the second trigger and carries the incoming vector clock to merge.
-        """
-        with self.lock:
-            # Merge causal history from Transaction Verification
-            self._merge_clocks(request.order_id, request.clock.values)
-            self._increment_clock(request.order_id)
-            
-            logger.info(f"[userCheck] Triggered by TV for {request.order_id}. Clock merged: {self.vector_clocks[request.order_id]}")
-            
-            # Register that the second required event has arrived
-            self.user_check_triggers[request.order_id] = self.user_check_triggers.get(request.order_id, 0) + 1
-            self._execute_fraud_check_if_ready(request.order_id)
-
-        return empty_pb2.Empty()
-
-    def _execute_fraud_check_if_ready(self, order_id):
-        """
-        Synchronization barrier: executes the actual business logic ONLY when 
-        both preceding events (bookCheck and userCheck) have arrived.
-        """
-        # Check if both triggers have been received
-        if self.user_check_triggers.get(order_id, 0) == 2:
-            self._increment_clock(order_id) 
-            
-            order = self.orders_data.get(order_id)
-            is_fraud = False
-            
-            # Execute original fraud detection logic using cached data
-            if order:
-                if "999" in order.card_nr or order.order_ammount > 1000:
-                    is_fraud = True
-                    
-            logger.info(f"[Fraud Check Finalized] Order: {order_id} | is_fraud: {is_fraud} | Final Clock: {self.vector_clocks[order_id]}")
-
+        return response
 
 def serve():
-    # Setup gRPC server with a thread pool for concurrent request handling
-    server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
+    # Create a gRPC server
+    server = grpc.server(futures.ThreadPoolExecutor())
 
-    fraud_detection_grpc.add_FraudDetectionServiceServicer_to_server(FraudDetectionService(), server)
-    port = "50051"
+    # Add HelloService
+    suggestions_grpc.add_SuggestionsServiceServicer_to_server(SuggestionsService(), server)
+
+    # Listen on port 50053
+    port = "50053"
     server.add_insecure_port("[::]:" + port)
+
+    # Start the server
     server.start()
-    logger.info("Server started. Listening on port 50051.")
-    
-    # Keep the server thread alive
+    # print(f"Server started. Listening on port {port}.")
+    logger.info(f"Server started. Listening on port {port}.")
+
+    # Keep thread alive
     server.wait_for_termination()
 
 if __name__ == '__main__':
