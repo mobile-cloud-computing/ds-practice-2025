@@ -2,14 +2,21 @@ import sys
 import os
 
 FILE = __file__ if '__file__' in globals() else os.getenv("PYTHONFILE", "")
-transaction_verification_grpc_path = os.path.abspath(os.path.join(FILE, '../../../utils/pb/transaction_verification'))
-sys.path.insert(0, transaction_verification_grpc_path)
-import transaction_verification_pb2 as transaction_verification
-import transaction_verification_pb2_grpc as transaction_verification_grpc
-
 utils_path = os.path.abspath(os.path.join(FILE, '../../../utils/'))
 sys.path.insert(0, utils_path)
 from log_utils.logger import setup_logger
+
+from service_wrappers.base_service_wrapper import BaseServiceWrapper, init_grpc_pathes
+init_grpc_pathes()
+
+
+import pb.services.order_details_pb2 as order_details
+
+import pb.services.transaction_verification_pb2 as transaction_verification
+import pb.services.transaction_verification_pb2_grpc as transaction_verification_grpc
+
+import pb.services.fraud_detection_pb2_grpc as fraud_detection_grpc
+import pb.services.recommendation_system_pb2_grpc as recommendation_system_grpc
 
 import grpc
 from concurrent import futures
@@ -161,23 +168,103 @@ def verify_transaction(input_data):
     
 
 
-class TransactionVerificationService(transaction_verification_grpc.TransactionVerificationService):
-    def VerifyTransaction(self, request, context):
-        try:
-            result = verify_transaction(request)
-            if not result.transaction_valid:
-                logger.error(f"Transaction is invalid: {result.error_message}")
-            return result
-        except Exception as e:
-            logger.error(f"Failed to do transaction verification: {str(e)}")
-            return transaction_verification.TransactionVerficationResponse(
-                transaction_valid=False, 
-                error_message=f"Failed to do transaction verification: {str(e)}"
-            )
+class TransactionVerificationService(BaseServiceWrapper, transaction_verification_grpc.TransactionVerificationService):
+    def _do_verification(self, request, verify_function):
+        data = self.order_details.get(request.order_id, None)
 
+        if data is None:
+            logger.error(f"Order id {request.order_id} is not found")
+            return False, f"Order id {request.order_id} is not found"
+
+        for fn in verify_function:
+            result = fn(data)
+            if not result:
+                return result, f"Verification failed for function {fn.__name__}"
+        return True, ""
+    
+    def _method_template(self, request, verify_functions, stub_class, connection_string, method_name):
+        status = order_details.StatusMessage(
+            success=True,
+            order_id=request.order_id,
+            vector_clock=self.vector_clock
+        )
+
+        try:
+            self._update_vector_clock(request.vector_clock)
+
+            res, err_message = self._do_verification(request, verify_functions)
+            status.success = res
+            status.error_message = err_message
+
+            if status.success:
+                return self._send_request_to_service(
+                    stub_class=stub_class,
+                    connection_string=connection_string,
+                    method_name=method_name,
+                    message=request
+                )
+            else:
+                result = order_details.OrderResponce()
+                result.status.CopyFrom(status)
+                return result
+
+        except Exception as e:
+            logger.error(f"Failed to do items verification: {str(e)}")
+            status.success = False
+            status.error_message = f"Failed to do items verification: {str(e)}"
+
+            result = order_details.OrderResponce()
+            result.status.CopyFrom(status)
+            return result
+
+
+    def VerifyItems(self, request, context):
+        return self._method_template(
+            request=request,
+            verify_functions=[lambda data: validate_order_list(data.items)],
+            stub_class=transaction_verification_grpc.TransactionVerificationServiceStub,
+            connection_string="transaction_verification:50052",
+            method_name="VerifyCreditCard"
+        )
+
+
+    def VerifyCreditCard(self, request, context):
+        return self._method_template(
+            request=request,
+            verify_functions=[
+                lambda data: validate_credit_card(data.credit_card.number),
+                lambda data: validate_credit_card_vendor(data.credit_card.number),
+                lambda data: validate_expiration_date(data.credit_card.expiration_date),
+                lambda data: validate_cvv(data.credit_card.cvv)
+            ],
+            stub_class=transaction_verification_grpc.TransactionVerificationServiceStub,
+            connection_string="transaction_verification:50052",
+            method_name="VerifyBillingAddress"
+        )
+    
+    def VerifyBillingAddress(self, request, context):
+        return self._method_template(
+            request=request,
+            verify_functions=[lambda data: validate_location(data.billing_address)],
+            stub_class=transaction_verification_grpc.TransactionVerificationServiceStub,
+            connection_string="transaction_verification:50052",
+            method_name="SuccessfullVerify"
+        )
+    
+    def SuccessfullVerify(self, request, context):
+        status = order_details.StatusMessage(
+            success=True,
+            order_id=request.order_id,
+            vector_clock=self.vector_clock
+        )
+
+        result = order_details.OrderResponce()
+        result.status.CopyFrom(status)
+        return result
+    
 def serve():
     server = grpc.server(futures.ThreadPoolExecutor())
-    transaction_verification_grpc.add_TransactionVerificationServiceServicer_to_server(TransactionVerificationService(), server)
+    transaction_verification_grpc.add_TransactionVerificationServiceServicer_to_server(TransactionVerificationService(0, 3), server)
     port = "50052"
     server.add_insecure_port("[::]:" + port)
     server.start()

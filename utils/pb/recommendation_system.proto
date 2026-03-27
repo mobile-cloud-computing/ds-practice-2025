@@ -1,31 +1,11 @@
 syntax = "proto3";
 
-package recommendation_system;
+package bookstore;
+
+import "order_details.proto";
 
 service RecommendationService {
-    rpc GetRecommendations (RecommendationRequest) returns (RecommendationResponse);
-}
-
-message OrderItem {
-    string name = 1;
-    int32 quantity = 2;
-}
-
-message RecommendationRequest {
-    string user_comment = 1;
-    repeated OrderItem items = 2;
-    int32 top_k = 3;
-}
-
-message RecommendedBook {
-    string book_id = 1;
-    string title = 2;
-    string author = 3;
-    string reason = 4;
-    string description = 5;
-}
-
-message RecommendationResponse {
-    repeated RecommendedBook suggested_books = 1;
-    optional string error_message = 2;
+    rpc InitTransaction (InputOrderDetails) returns (StatusMessage);
+    rpc GetRecommendations (OperationalMessage) returns (OrderResponce);
+    rpc ClearTransaction (OperationalMessage) returns (StatusMessage);
 }

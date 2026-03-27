@@ -1,37 +1,14 @@
 syntax = "proto3";
 
-package transaction_verification;
+package bookstore;
+
+import "order_details.proto";
 
 service TransactionVerificationService {
-    rpc VerifyTransaction (TransactionVerficationRequest) returns (TransactionVerficationResponse);
-}
-
-message CreditCard {
-    string number = 1;
-    string expiration_date = 2;
-    string cvv = 3;
-}
-
-message OrderItem {
-    string name = 1;
-    int32 quantity = 2;
-}
-
-message BillingAddress {
-    string street = 1;
-    string city = 2;
-    string state = 3;
-    string zip = 4;
-    string country = 5;
-}
-
-message TransactionVerficationRequest {
-    CreditCard credit_card = 1;
-    repeated OrderItem items = 2;
-    BillingAddress billing_address = 3;
-}
-
-message TransactionVerficationResponse {
-    bool transaction_valid = 1;
-    optional string error_message = 2;
+    rpc InitTransaction (InputOrderDetails) returns (StatusMessage);
+    rpc VerifyItems (OperationalMessage) returns (OrderResponce);
+    rpc VerifyCreditCard (OperationalMessage) returns (OrderResponce);
+    rpc VerifyBillingAddress (OperationalMessage) returns (OrderResponce);
+    rpc SuccessfullVerify (OperationalMessage) returns (OrderResponce);
+    rpc ClearTransaction (OperationalMessage) returns (StatusMessage);
 }

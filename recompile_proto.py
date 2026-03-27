@@ -14,34 +14,52 @@ def get_services():
     ]
 
 
-def ensure_output_directory(service: str):
-    output_dir = PROTO_DIR / service
+def ensure_output_directory():
+    output_dir = PROTO_DIR / "services"
     if not output_dir.exists():
         output_dir.mkdir(parents=True, exist_ok=True)
     elif not output_dir.is_dir():
         raise RuntimeError(f"{output_dir} is not a directory.")
+    
+
+def append_service_pathes(service_file):
+    with open(service_file, "r") as f:
+        lines = f.readlines()
+
+    lines = [
+        'import sys\n',
+        'import os\n',
+        'FILE = __file__ if "__file__" in globals() else os.getenv("PYTHONFILE", "")\n',
+        'utils_path = os.path.abspath(os.path.join(FILE, "../"))\n',
+        'sys.path.insert(0, utils_path)\n',
+    ] + lines
+
+    with open(service_file, "w") as f:
+        for line in lines:
+            f.write(line)
 
 
 def proto_command_local(service: str):
-    ensure_output_directory(service)
+    ensure_output_directory()
     subprocess.run(
         [
             sys.executable,
             "-m",
             "grpc_tools.protoc",
             "-I.",
-            f"--python_out=./{service}",
-            f"--pyi_out=./{service}",
-            f"--grpc_python_out=./{service}",
+            "--python_out=./services",
+            "--pyi_out=./services",
+            "--grpc_python_out=./services",
             f"{service}.proto",
         ],
         check=True,
         cwd=PROTO_DIR,
     )
+    append_service_pathes(PROTO_DIR / "services" / f"{service}_pb2.py")
 
 
 def proto_command_docker(service: str):
-    ensure_output_directory(service)
+    ensure_output_directory()
     subprocess.run(
         [
             "docker",
@@ -78,7 +96,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--mode",
         choices=["docker", "local"],
-        default="docker",
+        default="local",
         help=(
             "Compile inside Docker by default to match container protobuf runtime "
             "(prevents gencode/runtime version mismatches)."
