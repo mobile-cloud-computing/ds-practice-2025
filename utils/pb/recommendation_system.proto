@@ -6,6 +6,10 @@ import "order_details.proto";
 
 service RecommendationService {
     rpc InitTransaction (InputOrderDetails) returns (StatusMessage);
+    rpc ExtractCartSignals (OperationalMessage) returns (StatusMessage);
+    rpc ExtractCommentSignals (OperationalMessage) returns (StatusMessage);
+    rpc GenerateRecommendations (OperationalMessage) returns (StatusMessage);
+    rpc ValidateRecommendations (OperationalMessage) returns (StatusMessage);
     rpc GetRecommendations (OperationalMessage) returns (OrderResponce);
     rpc ClearTransaction (OperationalMessage) returns (StatusMessage);
 }

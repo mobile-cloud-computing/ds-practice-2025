@@ -37,21 +37,21 @@ services:
       # Mount the orchestrator/src directory in the current directory to the /app/orchestrator/src directory in the container
       - ./orchestrator/src:/app/orchestrator/src
       - ./logs:/app/logs
-  # recomendation_sys:
-  #   build:
-  #     context: ./
-  #     dockerfile: ./recomendation_sys/Dockerfile
-  #   ports:
-  #     - 50053:50053
-  #   environment:
-  #     - PYTHONUNBUFFERED=TRUE
-  #     - PYTHONFILE=/app/recomendation_sys/src/app.py
-  #     - OPENAI_API_KEY=${OPENAI_API_KEY:-}
-  #     - OPENAI_MODEL=${OPENAI_MODEL:-gpt-5.2}
-  #   volumes:
-  #     - ./utils:/app/utils
-  #     - ./recomendation_sys/src:/app/recomendation_sys/src
-  #     - ./logs:/app/logs
+  recomendation_sys:
+     build:
+       context: ./
+       dockerfile: ./recomendation_sys/Dockerfile
+     ports:
+       - 50053:50053
+     environment:
+       - PYTHONUNBUFFERED=TRUE
+       - PYTHONFILE=/app/recomendation_sys/src/app.py
+       - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+       - OPENAI_MODEL=${OPENAI_MODEL:-gpt-5.2}
+     volumes:
+       - ./utils:/app/utils
+       - ./recomendation_sys/src:/app/recomendation_sys/src
+       - ./logs:/app/logs
   # fraud_detection:
   #   build:
   #     # Use the current directory as the build context
