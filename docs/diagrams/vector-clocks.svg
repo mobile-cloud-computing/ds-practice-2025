@@ -1,0 +1,131 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 980" role="img" aria-labelledby="title desc">
+  <title id="title">Vector clocks diagram for a successful checkout</title>
+  <desc id="desc">Sequence-style diagram showing one successful run across orchestrator, transaction verification, fraud detection, and suggestions, with vector clock values in the order [TV, FD, SUG].</desc>
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L10,3 L0,6 z" fill="#38598b" />
+    </marker>
+    <style>
+      .bg { fill: #f8fbff; }
+      .title { font: 700 30px 'Segoe UI', Arial, sans-serif; fill: #1f2937; }
+      .subtitle { font: 16px 'Segoe UI', Arial, sans-serif; fill: #475569; }
+      .lane-head { fill: #dbeafe; stroke: #60a5fa; stroke-width: 2; rx: 14; }
+      .lane-title { font: 700 18px 'Segoe UI', Arial, sans-serif; fill: #1e3a8a; text-anchor: middle; }
+      .lane-line { stroke: #bfd7ff; stroke-width: 4; }
+      .box-orch { fill: #fff7ed; stroke: #f59e0b; stroke-width: 2; rx: 12; }
+      .box-tv { fill: #eef6ff; stroke: #3b82f6; stroke-width: 2; rx: 12; }
+      .box-fd { fill: #effcf6; stroke: #10b981; stroke-width: 2; rx: 12; }
+      .box-sug { fill: #fff7fb; stroke: #ec4899; stroke-width: 2; rx: 12; }
+      .box-clear { fill: #f8fafc; stroke: #64748b; stroke-width: 2; rx: 12; }
+      .event-title { font: 700 16px 'Segoe UI', Arial, sans-serif; fill: #111827; text-anchor: middle; }
+      .event-sub { font: 14px 'Segoe UI', Arial, sans-serif; fill: #334155; text-anchor: middle; }
+      .label { font: 13px 'Segoe UI', Arial, sans-serif; fill: #1f2937; }
+      .small { font: 12px 'Segoe UI', Arial, sans-serif; fill: #475569; }
+      .arrow { stroke: #38598b; stroke-width: 3; fill: none; marker-end: url(#arrow); }
+      .arrow-soft { stroke: #64748b; stroke-width: 2.5; fill: none; marker-end: url(#arrow); }
+      .note { fill: #fefce8; stroke: #facc15; stroke-width: 2; rx: 12; }
+      .note-text { font: 13px 'Segoe UI', Arial, sans-serif; fill: #713f12; }
+    </style>
+  </defs>
+
+  <rect class="bg" x="0" y="0" width="1200" height="980" />
+
+  <text class="title" x="60" y="48">Vector clocks for one successful checkout</text>
+  <text class="subtitle" x="60" y="78">Vector order is [TV, FD, SUG]. The diagram shows one real successful run observed from this repository's logs.</text>
+
+  <rect class="lane-head" x="50" y="110" width="200" height="48" />
+  <rect class="lane-head" x="330" y="110" width="200" height="48" />
+  <rect class="lane-head" x="610" y="110" width="200" height="48" />
+  <rect class="lane-head" x="890" y="110" width="200" height="48" />
+
+  <text class="lane-title" x="150" y="141">Orchestrator</text>
+  <text class="lane-title" x="430" y="141">Transaction Verification</text>
+  <text class="lane-title" x="710" y="141">Fraud Detection</text>
+  <text class="lane-title" x="990" y="141">Suggestions</text>
+
+  <line class="lane-line" x1="150" y1="160" x2="150" y2="930" />
+  <line class="lane-line" x1="430" y1="160" x2="430" y2="930" />
+  <line class="lane-line" x1="710" y1="160" x2="710" y2="930" />
+  <line class="lane-line" x1="990" y1="160" x2="990" y2="930" />
+
+  <rect class="box-orch" x="50" y="190" width="200" height="64" />
+  <text class="event-title" x="150" y="216">Create order and init services</text>
+  <text class="event-sub" x="150" y="238">`InitOrder` sent to TV, FD, SUG</text>
+
+  <rect class="box-tv" x="330" y="190" width="200" height="64" />
+  <text class="event-title" x="430" y="216">InitOrder</text>
+  <text class="event-sub" x="430" y="238">vc = [0, 0, 0]</text>
+
+  <rect class="box-fd" x="610" y="190" width="200" height="64" />
+  <text class="event-title" x="710" y="216">InitOrder</text>
+  <text class="event-sub" x="710" y="238">vc = [0, 0, 0]</text>
+
+  <rect class="box-sug" x="890" y="190" width="200" height="64" />
+  <text class="event-title" x="990" y="216">InitOrder</text>
+  <text class="event-sub" x="990" y="238">vc = [0, 0, 0]</text>
+
+  <path class="arrow-soft" d="M250 222 L330 222" />
+  <path class="arrow-soft" d="M250 222 L610 222" />
+  <path class="arrow-soft" d="M250 222 L890 222" />
+
+  <rect class="box-tv" x="330" y="280" width="200" height="64" />
+  <text class="event-title" x="430" y="306">ValidateUserData</text>
+  <text class="event-sub" x="430" y="328">vc = [1, 0, 0]</text>
+
+  <rect class="box-tv" x="330" y="365" width="200" height="64" />
+  <text class="event-title" x="430" y="391">ValidateItems</text>
+  <text class="event-sub" x="430" y="413">vc = [2, 0, 0]</text>
+
+  <rect class="box-fd" x="610" y="330" width="200" height="64" />
+  <text class="event-title" x="710" y="356">CheckUserFraud</text>
+  <text class="event-sub" x="710" y="378">vc = [1, 1, 0]</text>
+
+  <rect class="box-sug" x="890" y="420" width="200" height="64" />
+  <text class="event-title" x="990" y="446">PrecomputeSuggestions</text>
+  <text class="event-sub" x="990" y="468">vc = [2, 0, 1]</text>
+
+  <rect class="box-tv" x="330" y="510" width="200" height="64" />
+  <text class="event-title" x="430" y="536">ValidateCardFormat</text>
+  <text class="event-sub" x="430" y="558">vc = [3, 0, 0]</text>
+
+  <rect class="box-fd" x="610" y="605" width="200" height="64" />
+  <text class="event-title" x="710" y="631">CheckCardFraud</text>
+  <text class="event-sub" x="710" y="653">vc = [3, 2, 0]</text>
+
+  <rect class="box-sug" x="890" y="700" width="200" height="64" />
+  <text class="event-title" x="990" y="726">FinalizeSuggestions</text>
+  <text class="event-sub" x="990" y="748">vc = [3, 2, 2]</text>
+
+  <rect class="box-orch" x="50" y="785" width="200" height="74" />
+  <text class="event-title" x="150" y="812">Merge all event clocks</text>
+  <text class="event-sub" x="150" y="834">final_vc = [3, 2, 2]</text>
+
+  <rect class="box-clear" x="330" y="870" width="200" height="58" />
+  <text class="event-title" x="430" y="894">ClearOrder OK</text>
+  <text class="event-sub" x="430" y="914">local_vc [3, 0, 0] &lt;= final_vc</text>
+
+  <rect class="box-clear" x="610" y="870" width="200" height="58" />
+  <text class="event-title" x="710" y="894">ClearOrder OK</text>
+  <text class="event-sub" x="710" y="914">local_vc [3, 2, 0] &lt;= final_vc</text>
+
+  <rect class="box-clear" x="890" y="870" width="200" height="58" />
+  <text class="event-title" x="990" y="894">ClearOrder OK</text>
+  <text class="event-sub" x="990" y="914">local_vc [3, 2, 2] &lt;= final_vc</text>
+
+  <path class="arrow" d="M250 310 L330 310" />
+  <path class="arrow" d="M250 395 L330 395" />
+  <path class="arrow" d="M530 312 L610 360" />
+  <path class="arrow" d="M530 397 L890 452" />
+  <path class="arrow" d="M430 429 L430 510" />
+  <path class="arrow" d="M530 542 L610 637" />
+  <path class="arrow" d="M710 394 L710 605" />
+  <path class="arrow" d="M810 637 L890 732" />
+  <path class="arrow" d="M990 484 L990 700" />
+  <path class="arrow-soft" d="M890 732 L250 822" />
+  <path class="arrow-soft" d="M250 822 L330 899" />
+  <path class="arrow-soft" d="M250 822 L610 899" />
+  <path class="arrow-soft" d="M250 822 L890 899" />
+
+  <rect class="note" x="50" y="900" width="210" height="48" />
+  <text class="note-text" x="65" y="929">Bonus clear step: orchestrator broadcasts one merged final_vc.</text>
+</svg>

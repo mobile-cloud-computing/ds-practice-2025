@@ -1,3 +1,7 @@
 # Documentation
 
-This folder should contain your documentation, explaining the structure and content of your project. It should also contain your diagrams, explaining the architecture. The recommended writing format is Markdown.
+This folder contains the Checkpoint 2 documentation assets referenced from the repository root `README.md`.
+
+- [Vector clocks diagram](./diagrams/vector-clocks.svg)
+- [Leader election diagram](./diagrams/leader-election.svg)
+- [Main Checkpoint 2 write-up](../README.md)
