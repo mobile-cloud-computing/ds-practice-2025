@@ -218,12 +218,29 @@ def clear_suggestions_service(order_id, final_vc):
 
 def broadcast_clear(order_id, final_vc):
     try:
-        clear_transaction_service(order_id, final_vc)
-        clear_fraud_service(order_id, final_vc)
-        clear_suggestions_service(order_id, final_vc)
+        clear_results = [
+            ("transaction_verification", clear_transaction_service(order_id, final_vc)),
+            ("fraud_detection", clear_fraud_service(order_id, final_vc)),
+            ("suggestions", clear_suggestions_service(order_id, final_vc)),
+        ]
+        failed_services = [
+            f"{service}: {response.message}"
+            for service, response in clear_results
+            if not response.success
+        ]
+
+        if failed_services:
+            print(
+                f"[ORCH] order={order_id} clear_broadcast_warning="
+                f"{'; '.join(failed_services)} final_vc={final_vc}"
+            )
+            return False
+
         print(f"[ORCH] order={order_id} clear_broadcast_sent final_vc={final_vc}")
+        return True
     except Exception as e:
         print(f"[ORCH] order={order_id} clear_broadcast_warning={e}")
+        return False
 
 
 @app.route("/", methods=["GET"])
@@ -347,7 +364,7 @@ def checkout():
         vc = list(response.vc.values)
         with lock:
             state["event_vcs"][step] = vc
-            state["final_vc"] = vc
+            state["final_vc"] = merge_vcs(state["final_vc"], vc)
 
     def merged_from(*steps):
         with lock:
@@ -362,7 +379,9 @@ def checkout():
                 state["failure_kind"] = "event_failure"
                 state["failed_step"] = step
                 state["failure_message"] = response.message
-                state["final_vc"] = list(response.vc.values)
+                state["final_vc"] = merge_vcs(
+                    state["final_vc"], list(response.vc.values)
+                )
         cancelled.set()
         print(f"[ORCH] order={order_id} step={step} success=False message={response.message}")
 
@@ -372,7 +391,7 @@ def checkout():
                 state["failure_kind"] = "internal_error"
                 state["failed_step"] = step
                 state["failure_message"] = message
-                state["final_vc"] = fallback_vc
+                state["final_vc"] = merge_vcs(state["final_vc"], fallback_vc)
         cancelled.set()
         print(f"[ORCH] order={order_id} step={step} internal_error={message}")
 
@@ -456,7 +475,9 @@ def checkout():
 
     print(f"[ORCH] order={order_id} all_worker_threads_finished")
 
-    final_vc = state["final_vc"]
+    with lock:
+        final_vc = merge_vcs(state["final_vc"], *state["event_vcs"].values())
+        state["final_vc"] = final_vc
 
     if state["failure_kind"] == "internal_error":
         broadcast_clear(order_id, final_vc)
