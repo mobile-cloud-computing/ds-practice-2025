@@ -491,11 +491,11 @@ def checkout():
     if state["failure_kind"] == "event_failure":
         broadcast_clear(order_id, final_vc)
         return {
-            "orderId": order_id,
-            "status": "Order Rejected",
-            "suggestedBooks": [],
-            "reason": state["failure_message"],
-        }, 200
+            "error": {
+                "code": "ORDER_REJECTED",
+                "message": state["failure_message"],
+            }
+        }, 400
 
     try:
         enqueue_response = enqueue_order(order_id, order_kwargs)
