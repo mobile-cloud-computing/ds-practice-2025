@@ -3,59 +3,50 @@ syntax = "proto3";
 package fraud_detection;
 
 service FraudDetectionService {
+  // Required for Seminar 5:
+  // Orchestrator sends the order once, service stores it locally and
+  // initializes its per-order vector clock.
+  rpc InitOrder (InitOrderRequest) returns (EventResponse);
 
-  rpc CheckFraud (FraudCheckRequest) returns (FraudCheckResponse);
-  rpc TriggerFraudCheck (TriggerRequest) returns (FraudCheckResponse);
-  rpc GetVectorClock (VectorClockRequest) returns (VectorClockResponse);
-  rpc ClearOrder (ClearOrderRequest) returns (ClearOrderResponse);
+  // Example Seminar 5 fraud-related events:
+  rpc CheckUserFraud (EventRequest) returns (EventResponse);
+  rpc CheckCardFraud (EventRequest) returns (EventResponse);
+
+  // Optional bonus event from Seminar 5:
+  rpc ClearOrder (ClearOrderRequest) returns (EventResponse);
 }
 
-message FraudCheckRequest {
+message VectorClock {
+  repeated int32 values = 1;
+}
+
+message OrderData {
   string order_id = 1;
   string user_name = 2;
-  string card_number = 3;
-  int32 item_count = 4;
+  string user_contact = 3;
+  string card_number = 4;
+  string expiration_date = 5;
+  string cvv = 6;
+  int32 item_count = 7;
+  bool terms_accepted = 8;
 }
 
-message FraudCheckResponse {
-  bool is_fraud = 1;
+message InitOrderRequest {
+  OrderData order = 1;
+}
+
+message EventRequest {
+  string order_id = 1;
+  VectorClock vc = 2;
+}
+
+message EventResponse {
+  bool success = 1;
   string message = 2;
-  bool failed = 3;
-}
-
-message TriggerRequest {
-  string order_id = 1;
-  string event_type = 2;
-}
-
-message VectorClockRequest {
-  string order_id = 1;
-}
-
-message VectorClockResponse {
-  int32 fraud_detection = 1;
-  int32 fd_event_d = 2;
-  int32 fd_event_e = 3;
-  int32 transaction_verification = 4;
-  int32 tv_event_a = 5;
-  int32 tv_event_b = 6;
-  int32 tv_event_c = 7;
-  int32 suggestions = 8;
+  VectorClock vc = 3;
 }
 
 message ClearOrderRequest {
   string order_id = 1;
-  int32 final_vc_fraud_detection = 2;
-  int32 final_vc_fd_event_d = 3;
-  int32 final_vc_fd_event_e = 4;
-  int32 final_vc_transaction_verification = 5;
-  int32 final_vc_tv_event_a = 6;
-  int32 final_vc_tv_event_b = 7;
-  int32 final_vc_tv_event_c = 8;
-  int32 final_vc_suggestions = 9;
-}
-
-message ClearOrderResponse {
-  bool success = 1;
-  string message = 2;
+  VectorClock final_vc = 2;
 }

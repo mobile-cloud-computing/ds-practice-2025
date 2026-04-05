@@ -1,11 +1,13 @@
-import sys
 import os
+import sys
 import threading
 import uuid
 
-# This set of lines are needed to import the gRPC stubs.
-# The path of the stubs is relative to the current file, or absolute inside the container.
-# Change these lines only if strictly needed.
+import grpc
+from flask import Flask, request
+from flask_cors import CORS
+
+# Import gRPC stubs
 FILE = __file__ if "__file__" in globals() else os.getenv("PYTHONFILE", "")
 
 fraud_detection_grpc_path = os.path.abspath(
@@ -29,235 +31,226 @@ sys.path.insert(0, suggestions_grpc_path)
 import suggestions_pb2 as suggestions
 import suggestions_pb2_grpc as suggestions_grpc
 
-import grpc
-
-from flask import Flask, request
-from flask_cors import CORS
-
-
-def greet(name="you"):
-    with grpc.insecure_channel("fraud_detection:50051") as channel:
-        stub = fraud_detection_grpc.HelloServiceStub(channel)
-        response = stub.SayHello(fraud_detection.HelloRequest(name=name))
-    return response.greeting
-
-
-def detect_fraud(order_id, user_name, card_number, item_count):
-    with grpc.insecure_channel("fraud_detection:50051") as channel:
-        stub = fraud_detection_grpc.FraudDetectionServiceStub(channel)
-        response = stub.CheckFraud(
-            fraud_detection.FraudCheckRequest(
-                order_id=order_id,
-                user_name=user_name or "",
-                card_number=card_number or "",
-                item_count=item_count,
-            ),
-            timeout=5.0,
-        )
-    return response
-
-
-def trigger_fraud_check(order_id, event_type="all"):
-    with grpc.insecure_channel("fraud_detection:50051") as channel:
-        stub = fraud_detection_grpc.FraudDetectionServiceStub(channel)
-        response = stub.TriggerFraudCheck(
-            fraud_detection.TriggerRequest(order_id=order_id, event_type=event_type),
-            timeout=5.0,
-        )
-    return response
-
-
-def get_fraud_vector_clock(order_id):
-    with grpc.insecure_channel("fraud_detection:50051") as channel:
-        stub = fraud_detection_grpc.FraudDetectionServiceStub(channel)
-        response = stub.GetVectorClock(
-            fraud_detection.VectorClockRequest(order_id=order_id),
-            timeout=5.0,
-        )
-    return response
-
-
-def trigger_verification(order_id, event_type="all"):
-    with grpc.insecure_channel("transaction_verification:50052") as channel:
-        stub = transaction_verification_grpc.TransactionVerificationServiceStub(channel)
-        response = stub.TriggerVerification(
-            transaction_verification.TriggerRequest(
-                order_id=order_id, event_type=event_type
-            ),
-            timeout=5.0,
-        )
-    return response
-
-
-def get_verification_vector_clock(order_id):
-    with grpc.insecure_channel("transaction_verification:50052") as channel:
-        stub = transaction_verification_grpc.TransactionVerificationServiceStub(channel)
-        response = stub.GetVectorClock(
-            transaction_verification.VectorClockRequest(order_id=order_id),
-            timeout=5.0,
-        )
-    return response
-
-
-def trigger_suggestions(order_id, event_type="all"):
-    with grpc.insecure_channel("suggestions:50053") as channel:
-        stub = suggestions_grpc.SuggestionsServiceStub(channel)
-        response = stub.TriggerSuggestions(
-            suggestions.TriggerRequest(order_id=order_id, event_type=event_type),
-            timeout=5.0,
-        )
-    return response
-
-
-def get_suggestions_vector_clock(order_id):
-    with grpc.insecure_channel("suggestions:50053") as channel:
-        stub = suggestions_grpc.SuggestionsServiceStub(channel)
-        response = stub.GetVectorClock(
-            suggestions.VectorClockRequest(order_id=order_id),
-            timeout=5.0,
-        )
-    return response
-
-
-def broadcast_clear_order(order_id, final_vc):
-    broadcast_results = {}
-
-    try:
-        with grpc.insecure_channel("fraud_detection:50051") as channel:
-            stub = fraud_detection_grpc.FraudDetectionServiceStub(channel)
-            response = stub.ClearOrder(
-                fraud_detection.ClearOrderRequest(
-                    order_id=order_id,
-                    final_vc_fraud_detection=final_vc.get("fraud_detection", 0),
-                    final_vc_fd_event_d=final_vc.get("fd_event_d", 0),
-                    final_vc_fd_event_e=final_vc.get("fd_event_e", 0),
-                    final_vc_transaction_verification=final_vc.get(
-                        "transaction_verification", 0
-                    ),
-                    final_vc_tv_event_a=final_vc.get("tv_event_a", 0),
-                    final_vc_tv_event_b=final_vc.get("tv_event_b", 0),
-                    final_vc_tv_event_c=final_vc.get("tv_event_c", 0),
-                    final_vc_suggestions=final_vc.get("suggestions", 0),
-                ),
-                timeout=5.0,
-            )
-            broadcast_results["fraud_detection"] = {
-                "success": response.success,
-                "message": response.message,
-            }
-    except Exception as e:
-        broadcast_results["fraud_detection"] = {"success": False, "message": str(e)}
-
-    try:
-        with grpc.insecure_channel("transaction_verification:50052") as channel:
-            stub = transaction_verification_grpc.TransactionVerificationServiceStub(
-                channel
-            )
-            response = stub.ClearOrder(
-                transaction_verification.ClearOrderRequest(
-                    order_id=order_id,
-                    final_vc_transaction_verification=final_vc.get(
-                        "transaction_verification", 0
-                    ),
-                    final_vc_tv_event_a=final_vc.get("tv_event_a", 0),
-                    final_vc_tv_event_b=final_vc.get("tv_event_b", 0),
-                    final_vc_tv_event_c=final_vc.get("tv_event_c", 0),
-                    final_vc_fraud_detection=final_vc.get("fraud_detection", 0),
-                    final_vc_suggestions=final_vc.get("suggestions", 0),
-                ),
-                timeout=5.0,
-            )
-            broadcast_results["transaction_verification"] = {
-                "success": response.success,
-                "message": response.message,
-            }
-    except Exception as e:
-        broadcast_results["transaction_verification"] = {
-            "success": False,
-            "message": str(e),
-        }
-
-    try:
-        with grpc.insecure_channel("suggestions:50053") as channel:
-            stub = suggestions_grpc.SuggestionsServiceStub(channel)
-            response = stub.ClearOrder(
-                suggestions.ClearOrderRequest(
-                    order_id=order_id,
-                    final_vc_suggestions=final_vc.get("suggestions", 0),
-                    final_vc_fraud_detection=final_vc.get("fraud_detection", 0),
-                    final_vc_fd_event_d=final_vc.get("fd_event_d", 0),
-                    final_vc_fd_event_e=final_vc.get("fd_event_e", 0),
-                    final_vc_transaction_verification=final_vc.get(
-                        "transaction_verification", 0
-                    ),
-                    final_vc_tv_event_a=final_vc.get("tv_event_a", 0),
-                    final_vc_tv_event_b=final_vc.get("tv_event_b", 0),
-                    final_vc_tv_event_c=final_vc.get("tv_event_c", 0),
-                ),
-                timeout=5.0,
-            )
-            broadcast_results["suggestions"] = {
-                "success": response.success,
-                "message": response.message,
-            }
-    except Exception as e:
-        broadcast_results["suggestions"] = {"success": False, "message": str(e)}
-
-    return broadcast_results
-
-
-def verify_transaction(
-    order_id,
-    user_name,
-    user_contact,
-    card_number,
-    expiration_date,
-    cvv,
-    item_count,
-    terms_accepted,
-):
-    with grpc.insecure_channel("transaction_verification:50052") as channel:
-        stub = transaction_verification_grpc.TransactionVerificationServiceStub(channel)
-        response = stub.VerifyTransaction(
-            transaction_verification.TransactionVerificationRequest(
-                order_id=order_id,
-                user_name=user_name or "",
-                user_contact=user_contact or "",
-                card_number=card_number or "",
-                expiration_date=expiration_date or "",
-                cvv=cvv or "",
-                item_count=item_count,
-                terms_accepted=terms_accepted,
-            )
-        )
-    return response
-
-
-def get_suggestions(order_id, user_name, item_count):
-    with grpc.insecure_channel("suggestions:50053") as channel:
-        stub = suggestions_grpc.SuggestionsServiceStub(channel)
-        response = stub.GetSuggestions(
-            suggestions.SuggestionsRequest(
-                order_id=order_id, user_name=user_name or "", item_count=item_count
-            )
-        )
-    return response
+order_queue_grpc_path = os.path.abspath(
+    os.path.join(FILE, "../../../utils/pb/order_queue")
+)
+sys.path.insert(0, order_queue_grpc_path)
+import order_queue_pb2 as order_queue
+import order_queue_pb2_grpc as order_queue_grpc
 
 
 app = Flask(__name__)
 CORS(app, resources={r"/*": {"origins": "*"}})
 
 
+def mask_fixed(card: str) -> str:
+    digits = "".join(c for c in str(card) if c.isdigit())
+    masked = "*" * 12 + digits[-4:].rjust(4, "*")
+    return " ".join(masked[i:i + 4] for i in range(0, 16, 4))
+
+
+def merge_vcs(*vectors):
+    result = [0, 0, 0]
+    for vc in vectors:
+        for i in range(3):
+            result[i] = max(result[i], vc[i])
+    return result
+
+
+def build_order_kwargs(
+    user_name, user_contact, card_number, expiration_date, cvv, item_count, terms_accepted
+):
+    return {
+        "user_name": user_name,
+        "user_contact": user_contact,
+        "card_number": card_number,
+        "expiration_date": expiration_date,
+        "cvv": cvv,
+        "item_count": item_count,
+        "terms_accepted": terms_accepted,
+    }
+
+
+def init_fraud_service(order_id, order_kwargs):
+    with grpc.insecure_channel("fraud_detection:50051") as channel:
+        stub = fraud_detection_grpc.FraudDetectionServiceStub(channel)
+        request = fraud_detection.InitOrderRequest(
+            order=fraud_detection.OrderData(order_id=order_id, **order_kwargs)
+        )
+        return stub.InitOrder(request, timeout=5.0)
+
+
+def init_transaction_service(order_id, order_kwargs):
+    with grpc.insecure_channel("transaction_verification:50052") as channel:
+        stub = transaction_verification_grpc.TransactionVerificationServiceStub(channel)
+        request = transaction_verification.InitOrderRequest(
+            order=transaction_verification.OrderData(order_id=order_id, **order_kwargs)
+        )
+        return stub.InitOrder(request, timeout=5.0)
+
+
+def init_suggestions_service(order_id, order_kwargs):
+    with grpc.insecure_channel("suggestions:50053") as channel:
+        stub = suggestions_grpc.SuggestionsServiceStub(channel)
+        request = suggestions.InitOrderRequest(
+            order=suggestions.OrderData(order_id=order_id, **order_kwargs)
+        )
+        return stub.InitOrder(request, timeout=5.0)
+
+
+def enqueue_order(order_id, order_kwargs):
+    with grpc.insecure_channel("order_queue:50054") as channel:
+        stub = order_queue_grpc.OrderQueueServiceStub(channel)
+        request = order_queue.EnqueueRequest(
+            order=order_queue.OrderData(
+                order_id=order_id,
+                user_name=order_kwargs["user_name"],
+                user_contact=order_kwargs["user_contact"],
+                card_number=order_kwargs["card_number"],
+                expiration_date=order_kwargs["expiration_date"],
+                cvv=order_kwargs["cvv"],
+                item_count=order_kwargs["item_count"],
+                terms_accepted=order_kwargs["terms_accepted"],
+            )
+        )
+        return stub.Enqueue(request, timeout=5.0)
+
+
+def tv_validate_items(order_id, vc):
+    with grpc.insecure_channel("transaction_verification:50052") as channel:
+        stub = transaction_verification_grpc.TransactionVerificationServiceStub(channel)
+        request = transaction_verification.EventRequest(
+            order_id=order_id,
+            vc=transaction_verification.VectorClock(values=vc),
+        )
+        return stub.ValidateItems(request, timeout=5.0)
+
+
+def tv_validate_user_data(order_id, vc):
+    with grpc.insecure_channel("transaction_verification:50052") as channel:
+        stub = transaction_verification_grpc.TransactionVerificationServiceStub(channel)
+        request = transaction_verification.EventRequest(
+            order_id=order_id,
+            vc=transaction_verification.VectorClock(values=vc),
+        )
+        return stub.ValidateUserData(request, timeout=5.0)
+
+
+def tv_validate_card_format(order_id, vc):
+    with grpc.insecure_channel("transaction_verification:50052") as channel:
+        stub = transaction_verification_grpc.TransactionVerificationServiceStub(channel)
+        request = transaction_verification.EventRequest(
+            order_id=order_id,
+            vc=transaction_verification.VectorClock(values=vc),
+        )
+        return stub.ValidateCardFormat(request, timeout=5.0)
+
+
+def fd_check_user_fraud(order_id, vc):
+    with grpc.insecure_channel("fraud_detection:50051") as channel:
+        stub = fraud_detection_grpc.FraudDetectionServiceStub(channel)
+        request = fraud_detection.EventRequest(
+            order_id=order_id,
+            vc=fraud_detection.VectorClock(values=vc),
+        )
+        return stub.CheckUserFraud(request, timeout=5.0)
+
+
+def fd_check_card_fraud(order_id, vc):
+    with grpc.insecure_channel("fraud_detection:50051") as channel:
+        stub = fraud_detection_grpc.FraudDetectionServiceStub(channel)
+        request = fraud_detection.EventRequest(
+            order_id=order_id,
+            vc=fraud_detection.VectorClock(values=vc),
+        )
+        return stub.CheckCardFraud(request, timeout=5.0)
+
+
+def sug_precompute(order_id, vc):
+    with grpc.insecure_channel("suggestions:50053") as channel:
+        stub = suggestions_grpc.SuggestionsServiceStub(channel)
+        request = suggestions.EventRequest(
+            order_id=order_id,
+            vc=suggestions.VectorClock(values=vc),
+        )
+        return stub.PrecomputeSuggestions(request, timeout=5.0)
+
+
+def sug_finalize(order_id, vc):
+    with grpc.insecure_channel("suggestions:50053") as channel:
+        stub = suggestions_grpc.SuggestionsServiceStub(channel)
+        request = suggestions.EventRequest(
+            order_id=order_id,
+            vc=suggestions.VectorClock(values=vc),
+        )
+        return stub.FinalizeSuggestions(request, timeout=5.0)
+
+
+def clear_fraud_service(order_id, final_vc):
+    with grpc.insecure_channel("fraud_detection:50051") as channel:
+        stub = fraud_detection_grpc.FraudDetectionServiceStub(channel)
+        request = fraud_detection.ClearOrderRequest(
+            order_id=order_id,
+            final_vc=fraud_detection.VectorClock(values=final_vc),
+        )
+        return stub.ClearOrder(request, timeout=5.0)
+
+
+def clear_transaction_service(order_id, final_vc):
+    with grpc.insecure_channel("transaction_verification:50052") as channel:
+        stub = transaction_verification_grpc.TransactionVerificationServiceStub(channel)
+        request = transaction_verification.ClearOrderRequest(
+            order_id=order_id,
+            final_vc=transaction_verification.VectorClock(values=final_vc),
+        )
+        return stub.ClearOrder(request, timeout=5.0)
+
+
+def clear_suggestions_service(order_id, final_vc):
+    with grpc.insecure_channel("suggestions:50053") as channel:
+        stub = suggestions_grpc.SuggestionsServiceStub(channel)
+        request = suggestions.ClearOrderRequest(
+            order_id=order_id,
+            final_vc=suggestions.VectorClock(values=final_vc),
+        )
+        return stub.ClearOrder(request, timeout=5.0)
+
+
+def broadcast_clear(order_id, final_vc):
+    try:
+        clear_results = [
+            ("transaction_verification", clear_transaction_service(order_id, final_vc)),
+            ("fraud_detection", clear_fraud_service(order_id, final_vc)),
+            ("suggestions", clear_suggestions_service(order_id, final_vc)),
+        ]
+        failed_services = [
+            f"{service}: {response.message}"
+            for service, response in clear_results
+            if not response.success
+        ]
+
+        if failed_services:
+            print(
+                f"[ORCH] order={order_id} clear_broadcast_warning="
+                f"{'; '.join(failed_services)} final_vc={final_vc}"
+            )
+            return False
+
+        print(f"[ORCH] order={order_id} clear_broadcast_sent final_vc={final_vc}")
+        return True
+    except Exception as e:
+        print(f"[ORCH] order={order_id} clear_broadcast_warning={e}")
+        return False
+
+
 @app.route("/", methods=["GET"])
 def index():
-    response = greet(name="orchestrator")
-    return response
+    return {"message": "Orchestrator is running."}, 200
 
 
 @app.route("/checkout", methods=["POST"])
 def checkout():
     request_data = request.get_json(silent=True)
-
     if request_data is None:
         return {
             "error": {
@@ -266,420 +259,273 @@ def checkout():
             }
         }, 400
 
-    user = request_data.get("user", {})
-    items = request_data.get("items", [])
-    shipping_method = request_data.get("shippingMethod")
-    terms_accepted = request_data.get("termsAndConditionsAccepted", False)
+    user = request_data.get("user", {}) or {}
+    items = request_data.get("items", []) or []
+    terms_accepted = bool(request_data.get("termsAndConditionsAccepted", False))
 
-    # Normalize user fields and enforce that user_name is not empty or just spaces
     user_name = (user.get("name") or "").strip()
     user_contact = (user.get("contact") or "").strip()
-    user_comment = user.get("userComment", "")
 
-    credit_card = user.get("creditCard", {})
-    card_number = credit_card.get("number").strip()
-    masked_card_number = mask_fixed(card_number)
-    expiration_date = credit_card.get("expirationDate").strip()
-    cvv = credit_card.get("cvv").strip()
-    print(
-        "Received a request for checkout of user : {} for card number : {}".format(
-            user_name, masked_card_number
-        )
-    )
+    credit_card = (user.get("creditCard") or {})
+    card_number = (credit_card.get("number") or "").strip()
+    expiration_date = (credit_card.get("expirationDate") or "").strip()
+    cvv = (credit_card.get("cvv") or "").strip()
 
-    # Keep these simple bad-request checks locally
-    # user_name must not be empty or contain spaces
-    if not user_name or "" == user_name:
+    if not user_name:
         return {
             "error": {
                 "code": "BAD_REQUEST",
-                "message": "User name is required and must not contain spaces.",
+                "message": "User name is required.",
             }
         }, 400
 
-    if not user_contact or "" == user_contact:
+    if not user_contact:
         return {
             "error": {
                 "code": "BAD_REQUEST",
-                "message": "User contact is required and must not contain spaces.",
+                "message": "User contact is required.",
             }
         }, 400
 
     item_count = len(items)
     order_id = str(uuid.uuid4())
 
-    results = {"fraud": None, "verification": None, "suggestions": None, "errors": []}
+    print(
+        f"[ORCH] order={order_id} received_checkout "
+        f"user={user_name} card={mask_fixed(card_number)} item_count={item_count}"
+    )
 
-    def fraud_worker():
-        try:
-            print(f"Calling fraud_detection service to cache order {order_id}...")
-            detect_fraud(
-                order_id=order_id,
-                user_name=user_name,
-                card_number=card_number,
-                item_count=item_count,
-            )
-            print(f"Order {order_id} cached in fraud_detection")
-        except Exception as e:
-            print(f"fraud_detection caching failed: {e}")
-            results["errors"].append("fraud_detection service unavailable")
+    order_kwargs = build_order_kwargs(
+        user_name=user_name,
+        user_contact=user_contact,
+        card_number=card_number,
+        expiration_date=expiration_date,
+        cvv=cvv,
+        item_count=item_count,
+        terms_accepted=terms_accepted,
+    )
 
-    def verification_worker():
-        try:
-            print(
-                f"Calling transaction_verification service to cache order {order_id}..."
-            )
-            verify_transaction(
-                order_id=order_id,
-                user_name=user_name,
-                user_contact=user_contact,
-                card_number=card_number,
-                expiration_date=expiration_date,
-                cvv=cvv,
-                item_count=item_count,
-                terms_accepted=terms_accepted,
-            )
-            print(f"Order {order_id} cached in transaction_verification")
-        except Exception as e:
-            error_msg = f"transaction_verification caching failed: {e}"
-            print(error_msg)
-            results["errors"].append(error_msg)
-
-    def suggestions_worker():
-        try:
-            print(f"Calling suggestions service to cache order {order_id}...")
-            get_suggestions(
-                order_id=order_id, user_name=user_name, item_count=item_count
-            )
-            print(f"Order {order_id} cached in suggestions")
-        except Exception as e:
-            error_msg = f"suggestions caching failed: {e}"
-            print(error_msg)
-            results["errors"].append(error_msg)
-
-    fraud_thread = threading.Thread(target=fraud_worker)
-    verification_thread = threading.Thread(target=verification_worker)
-    suggestions_thread = threading.Thread(target=suggestions_worker)
-
-    print("Starting worker threads to cache orders...")
-    fraud_thread.start()
-    verification_thread.start()
-    suggestions_thread.start()
-
-    # The requirement says: "some of the threads created by the orchestrator may finish right away,
-    # and only one thread may wait for the end of the execution flow".
-    # We will let fraud and suggestions threads finish initialization quickly.
-    # Verification thread will be the one we join to ensure basic caching is done before triggers.
-    # Actually, to be safe, we join all to ensure all services have the data before we start triggering.
-    # But for the task, let's just join them as before, they are "initialization" threads.
-    fraud_thread.join()
-    verification_thread.join()
-    suggestions_thread.join()
-    print("All caching threads finished. Starting event-based execution...")
-
-    event_results = {
-        "event_a": None,
-        "event_b": None,
-        "event_c": None,
-        "event_d": None,
-        "event_e": None,
-        "event_f": None,
-    }
-    failed = False
-    failure_message = ""
-
-    def trigger_event_a():
-        try:
-            print(
-                f"Triggering event_a (verify_items_not_empty) for order {order_id}..."
-            )
-            event_results["event_a"] = trigger_verification(order_id, "event_a")
-            vc = get_verification_vector_clock(order_id)
-            print(
-                f"event_a result: {event_results['event_a'].is_valid}, {event_results['event_a'].message}, VC: a={vc.tv_event_a}"
-            )
-            if not event_results["event_a"].is_valid:
-                return True, event_results["event_a"].message
-        except Exception as e:
-            print(f"event_a failed: {e}")
-            return True, str(e)
-        return False, ""
-
-    def trigger_event_b():
-        try:
-            print(f"Triggering event_b (verify_user_data) for order {order_id}...")
-            event_results["event_b"] = trigger_verification(order_id, "event_b")
-            vc = get_verification_vector_clock(order_id)
-            print(
-                f"event_b result: {event_results['event_b'].is_valid}, {event_results['event_b'].message}, VC: b={vc.tv_event_b}"
-            )
-            if not event_results["event_b"].is_valid:
-                return True, event_results["event_b"].message
-        except Exception as e:
-            print(f"event_b failed: {e}")
-            return True, str(e)
-        return False, ""
-
-    thread_a = threading.Thread(target=lambda: None)
-    thread_b = threading.Thread(target=lambda: None)
-
-    def run_a():
-        nonlocal failed, failure_message
-        f, m = trigger_event_a()
-        if f:
-            failed = True
-            failure_message = m
-
-    def run_b():
-        nonlocal failed, failure_message
-        f, m = trigger_event_b()
-        if f:
-            failed = True
-            failure_message = m
-
-    thread_a = threading.Thread(target=run_a)
-    thread_b = threading.Thread(target=run_b)
-
-    thread_a.start()
-    thread_b.start()
-    thread_a.join()
-    thread_b.join()
-
-    if failed:
-        print(f"Early failure detected in events a/b: {failure_message}")
-        vc_fraud = get_fraud_vector_clock(order_id)
-        vc_verif = get_verification_vector_clock(order_id)
-        final_vc = {
-            "fraud_detection": vc_fraud.fraud_detection,
-            "fd_event_d": vc_fraud.fd_event_d,
-            "fd_event_e": vc_fraud.fd_event_e,
-            "transaction_verification": vc_verif.transaction_verification,
-            "tv_event_a": vc_verif.tv_event_a,
-            "tv_event_b": vc_verif.tv_event_b,
-            "tv_event_c": vc_verif.tv_event_c,
-            "suggestions": 0,
-        }
-        print(f"Broadcasting clear order with final VC: {final_vc}")
-        broadcast_results = broadcast_clear_order(order_id, final_vc)
-        print(f"Broadcast results: {broadcast_results}")
+    # Initialization phase
+    try:
+        init_tv = init_transaction_service(order_id, order_kwargs)
+        init_fd = init_fraud_service(order_id, order_kwargs)
+        init_sug = init_suggestions_service(order_id, order_kwargs)
+    except Exception as e:
+        print(f"[ORCH] order={order_id} initialization_error={e}")
         return {
-            "orderId": order_id,
-            "status": "Order Rejected",
-            "suggestedBooks": [],
-            "failure": failure_message,
-        }, 200
-
-    print("Events a and b completed. Vector clocks updated.")
-
-    def trigger_event_c():
-        try:
-            print(f"Triggering event_c (verify_card_format) for order {order_id}...")
-            event_results["event_c"] = trigger_verification(order_id, "event_c")
-            vc = get_verification_vector_clock(order_id)
-            print(
-                f"event_c result: {event_results['event_c'].is_valid}, {event_results['event_c'].message}, VC: c={vc.tv_event_c}"
-            )
-            if not event_results["event_c"].is_valid:
-                return True, event_results["event_c"].message
-        except Exception as e:
-            print(f"event_c failed: {e}")
-            return True, str(e)
-        return False, ""
-
-    def trigger_event_d():
-        try:
-            print(f"Triggering event_d (check_user_fraud) for order {order_id}...")
-            event_results["event_d"] = trigger_fraud_check(order_id, "event_d")
-            vc = get_fraud_vector_clock(order_id)
-            print(
-                f"event_d result: {event_results['event_d'].is_fraud}, {event_results['event_d'].message}, VC: d={vc.fd_event_d}"
-            )
-            if event_results["event_d"].is_fraud:
-                return True, event_results["event_d"].message
-        except Exception as e:
-            print(f"event_d failed: {e}")
-            return True, str(e)
-        return False, ""
-
-    thread_c = threading.Thread(target=lambda: None)
-    thread_d = threading.Thread(target=lambda: None)
-
-    def run_c():
-        nonlocal failed, failure_message
-        f, m = trigger_event_c()
-        if f:
-            failed = True
-            failure_message = m
-
-    def run_d():
-        nonlocal failed, failure_message
-        f, m = trigger_event_d()
-        if f:
-            failed = True
-            failure_message = m
-
-    thread_c = threading.Thread(target=run_c)
-    thread_d = threading.Thread(target=run_d)
-
-    thread_c.start()
-    thread_d.start()
-    thread_c.join()
-    thread_d.join()
-
-    if failed:
-        print(f"Early failure detected in events c/d: {failure_message}")
-        vc_fraud = get_fraud_vector_clock(order_id)
-        vc_verif = get_verification_vector_clock(order_id)
-        final_vc = {
-            "fraud_detection": vc_fraud.fraud_detection,
-            "fd_event_d": vc_fraud.fd_event_d,
-            "fd_event_e": vc_fraud.fd_event_e,
-            "transaction_verification": vc_verif.transaction_verification,
-            "tv_event_a": vc_verif.tv_event_a,
-            "tv_event_b": vc_verif.tv_event_b,
-            "tv_event_c": vc_verif.tv_event_c,
-            "suggestions": 0,
-        }
-        print(f"Broadcasting clear order with final VC: {final_vc}")
-        broadcast_results = broadcast_clear_order(order_id, final_vc)
-        print(f"Broadcast results: {broadcast_results}")
-        return {
-            "orderId": order_id,
-            "status": "Order Rejected",
-            "suggestedBooks": [],
-            "failure": failure_message,
-        }, 200
-
-    print("Events c and d completed.")
-
-    def trigger_event_e():
-        try:
-            print(f"Triggering event_e (check_card_fraud) for order {order_id}...")
-            event_results["event_e"] = trigger_fraud_check(order_id, "event_e")
-            vc = get_fraud_vector_clock(order_id)
-            print(
-                f"event_e result: {event_results['event_e'].is_fraud}, {event_results['event_e'].message}, VC: e={vc.fd_event_e}"
-            )
-            if event_results["event_e"].is_fraud:
-                return True, event_results["event_e"].message
-        except Exception as e:
-            print(f"event_e failed: {e}")
-            return True, str(e)
-        return False, ""
-
-    thread_e = threading.Thread(target=lambda: None)
-
-    def run_e():
-        nonlocal failed, failure_message
-        f, m = trigger_event_e()
-        if f:
-            failed = True
-            failure_message = m
-
-    thread_e = threading.Thread(target=run_e)
-    thread_e.start()
-    thread_e.join()
-
-    if failed:
-        print(f"Early failure detected in event e: {failure_message}")
-        vc_fraud = get_fraud_vector_clock(order_id)
-        vc_verif = get_verification_vector_clock(order_id)
-        final_vc = {
-            "fraud_detection": vc_fraud.fraud_detection,
-            "fd_event_d": vc_fraud.fd_event_d,
-            "fd_event_e": vc_fraud.fd_event_e,
-            "transaction_verification": vc_verif.transaction_verification,
-            "tv_event_a": vc_verif.tv_event_a,
-            "tv_event_b": vc_verif.tv_event_b,
-            "tv_event_c": vc_verif.tv_event_c,
-            "suggestions": 0,
-        }
-        print(f"Broadcasting clear order with final VC: {final_vc}")
-        broadcast_results = broadcast_clear_order(order_id, final_vc)
-        print(f"Broadcast results: {broadcast_results}")
-        return {
-            "orderId": order_id,
-            "status": "Order Rejected",
-            "suggestedBooks": [],
-            "failure": failure_message,
-        }, 200
-
-    print("Event e completed.")
-
-    def trigger_event_f():
-        try:
-            print(f"Triggering event_f (generate_suggestions) for order {order_id}...")
-            event_results["event_f"] = trigger_suggestions(order_id, "event_f")
-            print(f"event_f returned {len(event_results['event_f'].books)} books")
-        except Exception as e:
-            print(f"event_f failed: {e}")
-
-    thread_f = threading.Thread(target=trigger_event_f)
-    thread_f.start()
-    thread_f.join()
-    print("Event f completed. All events finished.")
-
-    results["fraud"] = event_results["event_e"]
-    results["verification"] = event_results["event_c"]
-    results["suggestions"] = event_results["event_f"]
-
-    vc_fraud = get_fraud_vector_clock(order_id)
-    vc_verif = get_verification_vector_clock(order_id)
-    vc_suggestions = get_suggestions_vector_clock(order_id)
-
-    final_vc = {
-        "fraud_detection": vc_fraud.fraud_detection,
-        "fd_event_d": vc_fraud.fd_event_d,
-        "fd_event_e": vc_fraud.fd_event_e,
-        "transaction_verification": vc_verif.transaction_verification,
-        "tv_event_a": vc_verif.tv_event_a,
-        "tv_event_b": vc_verif.tv_event_b,
-        "tv_event_c": vc_verif.tv_event_c,
-        "suggestions": vc_suggestions.suggestions,
-    }
-    print(f"Final vector clock: {final_vc}")
-
-    print(f"Broadcasting clear order with final VC: {final_vc}")
-    broadcast_results = broadcast_clear_order(order_id, final_vc)
-    print(f"Broadcast results: {broadcast_results}")
-
-    if results["errors"]:
-        return {
-            "error": {"code": "INTERNAL_ERROR", "message": "; ".join(results["errors"])}
+            "error": {
+                "code": "INTERNAL_ERROR",
+                "message": "Failed to initialize backend services.",
+            }
         }, 500
 
-    if results["fraud"] and results["fraud"].is_fraud:
-        return {
-            "orderId": order_id,
-            "status": "Order Rejected",
-            "suggestedBooks": [],
-        }, 200
-
-    if results["verification"] and not results["verification"].is_valid:
-        return {
-            "orderId": order_id,
-            "status": "Order Rejected",
-            "suggestedBooks": [],
-        }, 200
-
-    suggested_books = []
-    if results["suggestions"]:
-        for book in results["suggestions"].books:
-            suggested_books.append(
-                {"bookId": book.bookId, "title": book.title, "author": book.author}
+    for name, response in [
+        ("InitTransactionVerification", init_tv),
+        ("InitFraudDetection", init_fd),
+        ("InitSuggestions", init_sug),
+    ]:
+        if not response.success:
+            print(
+                f"[ORCH] order={order_id} step={name} success=False message={response.message}"
             )
+            return {
+                "orderId": order_id,
+                "status": "Order Rejected",
+                "suggestedBooks": [],
+                "reason": response.message,
+            }, 200
+
+    print(f"[ORCH] order={order_id} initialization_complete")
+
+    # Event-flow state
+    cancelled = threading.Event()
+
+    done = {
+        "a": threading.Event(),  # ValidateItems
+        "b": threading.Event(),  # ValidateUserData
+        "c": threading.Event(),  # ValidateCardFormat
+        "d": threading.Event(),  # CheckUserFraud
+        "e": threading.Event(),  # CheckCardFraud
+        "f": threading.Event(),  # PrecomputeSuggestions
+        "g": threading.Event(),  # FinalizeSuggestions
+    }
+
+    state = {
+        "event_vcs": {},
+        "final_vc": [0, 0, 0],
+        "books": [],
+        "failure_kind": None,  # "event_failure" or "internal_error"
+        "failed_step": None,
+        "failure_message": None,
+    }
+    lock = threading.Lock()
+
+    def store_event_result(step, response):
+        vc = list(response.vc.values)
+        with lock:
+            state["event_vcs"][step] = vc
+            state["final_vc"] = merge_vcs(state["final_vc"], vc)
+
+    def merged_from(*steps):
+        with lock:
+            vcs = [state["event_vcs"][step] for step in steps if step in state["event_vcs"]]
+        if not vcs:
+            return [0, 0, 0]
+        return merge_vcs(*vcs)
+
+    def record_event_failure(step, response):
+        with lock:
+            if state["failure_kind"] is None:
+                state["failure_kind"] = "event_failure"
+                state["failed_step"] = step
+                state["failure_message"] = response.message
+                state["final_vc"] = merge_vcs(
+                    state["final_vc"], list(response.vc.values)
+                )
+        cancelled.set()
+        print(f"[ORCH] order={order_id} step={step} success=False message={response.message}")
+
+    def record_internal_failure(step, message, fallback_vc):
+        with lock:
+            if state["failure_kind"] is None:
+                state["failure_kind"] = "internal_error"
+                state["failed_step"] = step
+                state["failure_message"] = message
+                state["final_vc"] = merge_vcs(state["final_vc"], fallback_vc)
+        cancelled.set()
+        print(f"[ORCH] order={order_id} step={step} internal_error={message}")
+
+    def run_event(step, prereqs, input_steps, rpc_func):
+        for prereq in prereqs:
+            done[prereq].wait()
+
+        if cancelled.is_set():
+            done[step].set()
+            return
+
+        request_vc = merged_from(*input_steps)
+
+        try:
+            response = rpc_func(order_id, request_vc)
+            store_event_result(step, response)
+
+            if not response.success:
+                record_event_failure(step, response)
+        except Exception as e:
+            record_internal_failure(step, str(e), request_vc)
+        finally:
+            done[step].set()
+
+    def run_finalize():
+        for prereq in ["e", "f"]:
+            done[prereq].wait()
+
+        if cancelled.is_set():
+            done["g"].set()
+            return
+
+        request_vc = merged_from("e", "f")
+
+        try:
+            response = sug_finalize(order_id, request_vc)
+            store_event_result("g", response)
+
+            if response.success:
+                books = []
+                for book in response.books:
+                    books.append(
+                        {
+                            "bookId": book.bookId,
+                            "title": book.title,
+                            "author": book.author,
+                        }
+                    )
+                with lock:
+                    state["books"] = books
+            else:
+                record_event_failure("g", response)
+        except Exception as e:
+            record_internal_failure("g", str(e), request_vc)
+        finally:
+            done["g"].set()
+
+    # Example partial order:
+    # a || b
+    # c after a
+    # d after b
+    # e after c and d
+    # f after a
+    # g after e and f
+    workers = [
+        threading.Thread(target=run_event, args=("a", [], [], tv_validate_items)),
+        threading.Thread(target=run_event, args=("b", [], [], tv_validate_user_data)),
+        threading.Thread(target=run_event, args=("c", ["a"], ["a"], tv_validate_card_format)),
+        threading.Thread(target=run_event, args=("d", ["b"], ["b"], fd_check_user_fraud)),
+        threading.Thread(target=run_event, args=("e", ["c", "d"], ["c", "d"], fd_check_card_fraud)),
+        threading.Thread(target=run_event, args=("f", ["a"], ["a"], sug_precompute)),
+        threading.Thread(target=run_finalize),
+    ]
+
+    print(f"[ORCH] order={order_id} starting_event_flow")
+    for worker in workers:
+        worker.start()
+
+    for worker in workers:
+        worker.join()
+
+    print(f"[ORCH] order={order_id} all_worker_threads_finished")
+
+    with lock:
+        final_vc = merge_vcs(state["final_vc"], *state["event_vcs"].values())
+        state["final_vc"] = final_vc
+
+    if state["failure_kind"] == "internal_error":
+        broadcast_clear(order_id, final_vc)
+        return {
+            "error": {
+                "code": "INTERNAL_ERROR",
+                "message": state["failure_message"],
+            }
+        }, 500
+
+    if state["failure_kind"] == "event_failure":
+        broadcast_clear(order_id, final_vc)
+        return {
+            "orderId": order_id,
+            "status": "Order Rejected",
+            "suggestedBooks": [],
+            "reason": state["failure_message"],
+        }, 200
+
+    try:
+        enqueue_response = enqueue_order(order_id, order_kwargs)
+    except Exception as e:
+        print(f"[ORCH] order={order_id} enqueue_error={e}")
+        return {
+            "error": {
+                "code": "INTERNAL_ERROR",
+                "message": "Order was approved but could not be queued.",
+            }
+        }, 500
+
+    if not enqueue_response.success:
+        print(f"[ORCH] order={order_id} enqueue_failed message={enqueue_response.message}")
+        return {
+            "error": {
+                "code": "INTERNAL_ERROR",
+                "message": enqueue_response.message,
+            }
+        }, 500
+
+    print(f"[ORCH] order={order_id} enqueue_success")
+    broadcast_clear(order_id, final_vc)
+    print(f"[ORCH] order={order_id} final_status=APPROVED final_vc={final_vc}")
 
     return {
         "orderId": order_id,
         "status": "Order Approved",
-        "suggestedBooks": suggested_books,
+        "suggestedBooks": state["books"],
     }, 200
-
-
-def mask_fixed(card: str) -> str:
-    digits = "".join(c for c in str(card) if c.isdigit())
-    masked = "*" * 12 + digits[-4:].rjust(4, "*")
-    return " ".join(masked[i : i + 4] for i in range(0, 16, 4))
 
 
 if __name__ == "__main__":

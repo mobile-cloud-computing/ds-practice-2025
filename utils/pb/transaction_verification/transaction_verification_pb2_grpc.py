@@ -3,9 +3,9 @@
 import grpc
 import warnings
 
-from utils.pb.transaction_verification import transaction_verification_pb2 as utils_dot_pb_dot_transaction__verification_dot_transaction__verification__pb2
+import transaction_verification_pb2 as transaction__verification__pb2
 
-GRPC_GENERATED_VERSION = '1.78.0'
+GRPC_GENERATED_VERSION = '1.70.0'
 GRPC_VERSION = grpc.__version__
 _version_not_supported = False
 
@@ -18,7 +18,7 @@ except ImportError:
 if _version_not_supported:
     raise RuntimeError(
         f'The grpc package installed is at version {GRPC_VERSION},'
-        + ' but the generated code in utils/pb/transaction_verification/transaction_verification_pb2_grpc.py depends on'
+        + f' but the generated code in transaction_verification_pb2_grpc.py depends on'
         + f' grpcio>={GRPC_GENERATED_VERSION}.'
         + f' Please upgrade your grpc module to grpcio>={GRPC_GENERATED_VERSION}'
         + f' or downgrade your generated code using grpcio-tools<={GRPC_VERSION}.'
@@ -34,44 +34,55 @@ class TransactionVerificationServiceStub(object):
         Args:
             channel: A grpc.Channel.
         """
-        self.VerifyTransaction = channel.unary_unary(
-                '/transaction_verification.TransactionVerificationService/VerifyTransaction',
-                request_serializer=utils_dot_pb_dot_transaction__verification_dot_transaction__verification__pb2.TransactionVerificationRequest.SerializeToString,
-                response_deserializer=utils_dot_pb_dot_transaction__verification_dot_transaction__verification__pb2.TransactionVerificationResponse.FromString,
+        self.InitOrder = channel.unary_unary(
+                '/transaction_verification.TransactionVerificationService/InitOrder',
+                request_serializer=transaction__verification__pb2.InitOrderRequest.SerializeToString,
+                response_deserializer=transaction__verification__pb2.EventResponse.FromString,
                 _registered_method=True)
-        self.TriggerVerification = channel.unary_unary(
-                '/transaction_verification.TransactionVerificationService/TriggerVerification',
-                request_serializer=utils_dot_pb_dot_transaction__verification_dot_transaction__verification__pb2.TriggerRequest.SerializeToString,
-                response_deserializer=utils_dot_pb_dot_transaction__verification_dot_transaction__verification__pb2.TransactionVerificationResponse.FromString,
+        self.ValidateItems = channel.unary_unary(
+                '/transaction_verification.TransactionVerificationService/ValidateItems',
+                request_serializer=transaction__verification__pb2.EventRequest.SerializeToString,
+                response_deserializer=transaction__verification__pb2.EventResponse.FromString,
                 _registered_method=True)
-        self.GetVectorClock = channel.unary_unary(
-                '/transaction_verification.TransactionVerificationService/GetVectorClock',
-                request_serializer=utils_dot_pb_dot_transaction__verification_dot_transaction__verification__pb2.VectorClockRequest.SerializeToString,
-                response_deserializer=utils_dot_pb_dot_transaction__verification_dot_transaction__verification__pb2.VectorClockResponse.FromString,
+        self.ValidateUserData = channel.unary_unary(
+                '/transaction_verification.TransactionVerificationService/ValidateUserData',
+                request_serializer=transaction__verification__pb2.EventRequest.SerializeToString,
+                response_deserializer=transaction__verification__pb2.EventResponse.FromString,
+                _registered_method=True)
+        self.ValidateCardFormat = channel.unary_unary(
+                '/transaction_verification.TransactionVerificationService/ValidateCardFormat',
+                request_serializer=transaction__verification__pb2.EventRequest.SerializeToString,
+                response_deserializer=transaction__verification__pb2.EventResponse.FromString,
                 _registered_method=True)
         self.ClearOrder = channel.unary_unary(
                 '/transaction_verification.TransactionVerificationService/ClearOrder',
-                request_serializer=utils_dot_pb_dot_transaction__verification_dot_transaction__verification__pb2.ClearOrderRequest.SerializeToString,
-                response_deserializer=utils_dot_pb_dot_transaction__verification_dot_transaction__verification__pb2.ClearOrderResponse.FromString,
+                request_serializer=transaction__verification__pb2.ClearOrderRequest.SerializeToString,
+                response_deserializer=transaction__verification__pb2.EventResponse.FromString,
                 _registered_method=True)
 
 
 class TransactionVerificationServiceServicer(object):
     """Missing associated documentation comment in .proto file."""
 
-    def VerifyTransaction(self, request, context):
+    def InitOrder(self, request, context):
         """Missing associated documentation comment in .proto file."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
-    def TriggerVerification(self, request, context):
+    def ValidateItems(self, request, context):
         """Missing associated documentation comment in .proto file."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
-    def GetVectorClock(self, request, context):
+    def ValidateUserData(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def ValidateCardFormat(self, request, context):
         """Missing associated documentation comment in .proto file."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
@@ -86,25 +97,30 @@ class TransactionVerificationServiceServicer(object):
 
 def add_TransactionVerificationServiceServicer_to_server(servicer, server):
     rpc_method_handlers = {
-            'VerifyTransaction': grpc.unary_unary_rpc_method_handler(
-                    servicer.VerifyTransaction,
-                    request_deserializer=utils_dot_pb_dot_transaction__verification_dot_transaction__verification__pb2.TransactionVerificationRequest.FromString,
-                    response_serializer=utils_dot_pb_dot_transaction__verification_dot_transaction__verification__pb2.TransactionVerificationResponse.SerializeToString,
+            'InitOrder': grpc.unary_unary_rpc_method_handler(
+                    servicer.InitOrder,
+                    request_deserializer=transaction__verification__pb2.InitOrderRequest.FromString,
+                    response_serializer=transaction__verification__pb2.EventResponse.SerializeToString,
             ),
-            'TriggerVerification': grpc.unary_unary_rpc_method_handler(
-                    servicer.TriggerVerification,
-                    request_deserializer=utils_dot_pb_dot_transaction__verification_dot_transaction__verification__pb2.TriggerRequest.FromString,
-                    response_serializer=utils_dot_pb_dot_transaction__verification_dot_transaction__verification__pb2.TransactionVerificationResponse.SerializeToString,
+            'ValidateItems': grpc.unary_unary_rpc_method_handler(
+                    servicer.ValidateItems,
+                    request_deserializer=transaction__verification__pb2.EventRequest.FromString,
+                    response_serializer=transaction__verification__pb2.EventResponse.SerializeToString,
             ),
-            'GetVectorClock': grpc.unary_unary_rpc_method_handler(
-                    servicer.GetVectorClock,
-                    request_deserializer=utils_dot_pb_dot_transaction__verification_dot_transaction__verification__pb2.VectorClockRequest.FromString,
-                    response_serializer=utils_dot_pb_dot_transaction__verification_dot_transaction__verification__pb2.VectorClockResponse.SerializeToString,
+            'ValidateUserData': grpc.unary_unary_rpc_method_handler(
+                    servicer.ValidateUserData,
+                    request_deserializer=transaction__verification__pb2.EventRequest.FromString,
+                    response_serializer=transaction__verification__pb2.EventResponse.SerializeToString,
+            ),
+            'ValidateCardFormat': grpc.unary_unary_rpc_method_handler(
+                    servicer.ValidateCardFormat,
+                    request_deserializer=transaction__verification__pb2.EventRequest.FromString,
+                    response_serializer=transaction__verification__pb2.EventResponse.SerializeToString,
             ),
             'ClearOrder': grpc.unary_unary_rpc_method_handler(
                     servicer.ClearOrder,
-                    request_deserializer=utils_dot_pb_dot_transaction__verification_dot_transaction__verification__pb2.ClearOrderRequest.FromString,
-                    response_serializer=utils_dot_pb_dot_transaction__verification_dot_transaction__verification__pb2.ClearOrderResponse.SerializeToString,
+                    request_deserializer=transaction__verification__pb2.ClearOrderRequest.FromString,
+                    response_serializer=transaction__verification__pb2.EventResponse.SerializeToString,
             ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
@@ -118,7 +134,7 @@ class TransactionVerificationService(object):
     """Missing associated documentation comment in .proto file."""
 
     @staticmethod
-    def VerifyTransaction(request,
+    def InitOrder(request,
             target,
             options=(),
             channel_credentials=None,
@@ -131,9 +147,9 @@ class TransactionVerificationService(object):
         return grpc.experimental.unary_unary(
             request,
             target,
-            '/transaction_verification.TransactionVerificationService/VerifyTransaction',
-            utils_dot_pb_dot_transaction__verification_dot_transaction__verification__pb2.TransactionVerificationRequest.SerializeToString,
-            utils_dot_pb_dot_transaction__verification_dot_transaction__verification__pb2.TransactionVerificationResponse.FromString,
+            '/transaction_verification.TransactionVerificationService/InitOrder',
+            transaction__verification__pb2.InitOrderRequest.SerializeToString,
+            transaction__verification__pb2.EventResponse.FromString,
             options,
             channel_credentials,
             insecure,
@@ -145,7 +161,7 @@ class TransactionVerificationService(object):
             _registered_method=True)
 
     @staticmethod
-    def TriggerVerification(request,
+    def ValidateItems(request,
             target,
             options=(),
             channel_credentials=None,
@@ -158,9 +174,9 @@ class TransactionVerificationService(object):
         return grpc.experimental.unary_unary(
             request,
             target,
-            '/transaction_verification.TransactionVerificationService/TriggerVerification',
-            utils_dot_pb_dot_transaction__verification_dot_transaction__verification__pb2.TriggerRequest.SerializeToString,
-            utils_dot_pb_dot_transaction__verification_dot_transaction__verification__pb2.TransactionVerificationResponse.FromString,
+            '/transaction_verification.TransactionVerificationService/ValidateItems',
+            transaction__verification__pb2.EventRequest.SerializeToString,
+            transaction__verification__pb2.EventResponse.FromString,
             options,
             channel_credentials,
             insecure,
@@ -172,7 +188,7 @@ class TransactionVerificationService(object):
             _registered_method=True)
 
     @staticmethod
-    def GetVectorClock(request,
+    def ValidateUserData(request,
             target,
             options=(),
             channel_credentials=None,
@@ -185,9 +201,36 @@ class TransactionVerificationService(object):
         return grpc.experimental.unary_unary(
             request,
             target,
-            '/transaction_verification.TransactionVerificationService/GetVectorClock',
-            utils_dot_pb_dot_transaction__verification_dot_transaction__verification__pb2.VectorClockRequest.SerializeToString,
-            utils_dot_pb_dot_transaction__verification_dot_transaction__verification__pb2.VectorClockResponse.FromString,
+            '/transaction_verification.TransactionVerificationService/ValidateUserData',
+            transaction__verification__pb2.EventRequest.SerializeToString,
+            transaction__verification__pb2.EventResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def ValidateCardFormat(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/transaction_verification.TransactionVerificationService/ValidateCardFormat',
+            transaction__verification__pb2.EventRequest.SerializeToString,
+            transaction__verification__pb2.EventResponse.FromString,
             options,
             channel_credentials,
             insecure,
@@ -213,8 +256,8 @@ class TransactionVerificationService(object):
             request,
             target,
             '/transaction_verification.TransactionVerificationService/ClearOrder',
-            utils_dot_pb_dot_transaction__verification_dot_transaction__verification__pb2.ClearOrderRequest.SerializeToString,
-            utils_dot_pb_dot_transaction__verification_dot_transaction__verification__pb2.ClearOrderResponse.FromString,
+            transaction__verification__pb2.ClearOrderRequest.SerializeToString,
+            transaction__verification__pb2.EventResponse.FromString,
             options,
             channel_credentials,
             insecure,

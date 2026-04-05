@@ -1,5 +1,5 @@
-import sys
 import os
+import sys
 import threading
 from concurrent import futures
 
@@ -13,191 +13,190 @@ import grpc
 import suggestions_pb2 as suggestions
 import suggestions_pb2_grpc as suggestions_grpc
 
-order_cache = {}
-vector_clocks = {}
-cache_lock = threading.Lock()
 
+SERVICE_INDEX = 2  # [transaction_verification, fraud_detection, suggestions]
 
-def initialize_vector_clock(order_id):
-    return {
-        "fraud_detection": 0,
-        "transaction_verification": 0,
-        "suggestions": 0,
-        "tv_event_a": 0,
-        "tv_event_b": 0,
-        "tv_event_c": 0,
-        "fd_event_d": 0,
-        "fd_event_e": 0,
-    }
+orders = {}
+orders_lock = threading.Lock()
 
-
-def check_event_dependencies(vc, required_events):
-    for event in required_events:
-        if vc.get(event, 0) == 0:
-            return False, f"Required event {event} not completed"
-    return True, "OK"
-
-
-static_books = [
-    {"bookId": "101", "title": "Distributed Systems Basics", "author": "A. Author"},
+STATIC_BOOKS = [
+    {
+        "bookId": "101",
+        "title": "Distributed Systems Basics",
+        "author": "A. Author",
+    },
     {
         "bookId": "102",
         "title": "Designing Data-Intensive Applications",
         "author": "Martin Kleppmann",
     },
-    {"bookId": "103", "title": "Clean Code", "author": "Robert C. Martin"},
-    {"bookId": "104", "title": "The Pragmatic Programmer", "author": "Andrew Hunt"},
+    {
+        "bookId": "103",
+        "title": "Clean Code",
+        "author": "Robert C. Martin",
+    },
+    {
+        "bookId": "104",
+        "title": "The Pragmatic Programmer",
+        "author": "Andrew Hunt",
+    },
 ]
 
 
-def execute_event_f(order_id):
-    order_data = order_cache.get(order_id)
-    if not order_data:
-        return None
-
-    with cache_lock:
-        vector_clocks[order_id]["suggestions"] += 1
-
-    item_count = order_data.get("item_count", 0)
-    chosen = static_books[:2] if item_count > 0 else []
-
-    print(f"Event f (generate_suggestions) for order {order_id}: {len(chosen)} books")
-    return {"books": chosen}
+def merge_vc(local_vc, incoming_vc):
+    return [max(a, b) for a, b in zip(local_vc, incoming_vc)]
 
 
-def process_order(order_id):
-    order_data = order_cache.get(order_id)
-    if not order_data:
-        return None
+def tick(vc, idx):
+    vc[idx] += 1
+    return vc
 
-    with cache_lock:
-        vector_clocks[order_id]["suggestions"] += 1
 
-    chosen = static_books[:2] if order_data["item_count"] > 0 else []
-
-    result = {"books": chosen, "vector_clock": vector_clocks[order_id].copy()}
-
-    print(f"Suggestions processed for order {order_id}: {len(chosen)} books")
-    return result
+def get_order_state(order_id: str):
+    with orders_lock:
+        return orders.get(order_id)
 
 
 class SuggestionsService(suggestions_grpc.SuggestionsServiceServicer):
-    def GetSuggestions(self, request, context):
-        order_id = request.order_id if hasattr(request, "order_id") else ""
-        print(f"Received suggestions request for order: {order_id}")
+    def InitOrder(self, request, context):
+        order = request.order
 
-        with cache_lock:
-            order_cache[order_id] = {
-                "user_name": request.user_name,
-                "item_count": request.item_count,
+        with orders_lock:
+            orders[order.order_id] = {
+                "order": order,
+                "vc": [0, 0, 0],
+                "books": [],
             }
-            if order_id not in vector_clocks:
-                vector_clocks[order_id] = initialize_vector_clock(order_id)
-            vector_clocks[order_id]["suggestions"] = 0
 
-        print(
-            f"Order {order_id} cached in suggestions. Vector clock: {vector_clocks.get(order_id)}"
+        print(f"[SUG] order={order.order_id} event=InitOrder vc={[0, 0, 0]} success=True")
+
+        return suggestions.EventResponse(
+            success=True,
+            message="Suggestions service initialized order.",
+            vc=suggestions.VectorClock(values=[0, 0, 0]),
         )
 
-        response = suggestions.SuggestionsResponse()
-        return response
-
-    def TriggerSuggestions(self, request, context):
-        order_id = request.order_id
-        event_type = request.event_type if hasattr(request, "event_type") else "all"
-        print(f"Triggering suggestions for order {order_id}, event: {event_type}")
-
-        with cache_lock:
-            if order_id not in vector_clocks:
-                vector_clocks[order_id] = initialize_vector_clock(order_id)
-            vc = vector_clocks.get(order_id, {})
-
-        if event_type == "all":
-            result = process_order(order_id)
-            response = suggestions.SuggestionsResponse()
-            if result:
-                with cache_lock:
-                    if order_id in order_cache:
-                        del order_cache[order_id]
-                for book in result["books"]:
-                    b = response.books.add()
-                    b.bookId = book["bookId"]
-                    b.title = book["title"]
-                    b.author = book["author"]
-            print(
-                f"[VC] Suggestions for order {order_id}: VC={vector_clocks.get(order_id, {})}"
+    def PrecomputeSuggestions(self, request, context):
+        state = get_order_state(request.order_id)
+        if state is None:
+            return suggestions.EventResponse(
+                success=False,
+                message="Order not found in suggestions service.",
+                vc=suggestions.VectorClock(values=[0, 0, 0]),
             )
-            return response
-        elif event_type == "event_f":
-            # Event F depends on Event E (check_card_fraud)
-            can_proceed, msg = check_event_dependencies(vc, ["fd_event_e"])
-            if not can_proceed:
-                response = suggestions.SuggestionsResponse()
-                response.failed = True
-                return response
-            result = execute_event_f(order_id)
-            response = suggestions.SuggestionsResponse()
-            if result:
-                with cache_lock:
-                    if order_id in order_cache:
-                        del order_cache[order_id]
-                for book in result["books"]:
-                    b = response.books.add()
-                    b.bookId = book["bookId"]
-                    b.title = book["title"]
-                    b.author = book["author"]
-            print(
-                f"[VC] Event f for order {order_id}: VC suggestions={vector_clocks.get(order_id, {}).get('suggestions', 0)}"
+
+        incoming_vc = list(request.vc.values)
+        local_vc = state["vc"]
+        vc = merge_vc(local_vc, incoming_vc)
+        vc = tick(vc, SERVICE_INDEX)
+        state["vc"] = vc
+
+        item_count = state["order"].item_count
+
+        if item_count > 0:
+            state["books"] = STATIC_BOOKS[:2]
+            success = True
+            message = "Suggestions prepared."
+        else:
+            state["books"] = []
+            success = False
+            message = "Cannot prepare suggestions for empty order."
+
+        print(
+            f"[SUG] order={request.order_id} event=PrecomputeSuggestions "
+            f"vc={vc} success={success} prepared_books={len(state['books'])}"
+        )
+
+        return suggestions.EventResponse(
+            success=success,
+            message=message,
+            vc=suggestions.VectorClock(values=vc),
+        )
+
+    def FinalizeSuggestions(self, request, context):
+        state = get_order_state(request.order_id)
+        if state is None:
+            return suggestions.SuggestionsEventResponse(
+                success=False,
+                message="Order not found in suggestions service.",
+                vc=suggestions.VectorClock(values=[0, 0, 0]),
+                books=[],
             )
-            return response
 
-    def GetVectorClock(self, request, context):
-        order_id = request.order_id
-        with cache_lock:
-            vc = vector_clocks.get(order_id, {})
+        incoming_vc = list(request.vc.values)
+        local_vc = state["vc"]
+        vc = merge_vc(local_vc, incoming_vc)
+        vc = tick(vc, SERVICE_INDEX)
+        state["vc"] = vc
 
-        response = suggestions.VectorClockResponse()
-        response.suggestions = vc.get("suggestions", 0)
-        response.fraud_detection = vc.get("fraud_detection", 0)
-        response.fd_event_d = vc.get("fd_event_d", 0)
-        response.fd_event_e = vc.get("fd_event_e", 0)
-        response.transaction_verification = vc.get("transaction_verification", 0)
-        response.tv_event_a = vc.get("tv_event_a", 0)
-        response.tv_event_b = vc.get("tv_event_b", 0)
-        response.tv_event_c = vc.get("tv_event_c", 0)
+        prepared_books = state["books"]
+        success = len(prepared_books) > 0
+        message = (
+            "Suggestions finalized."
+            if success
+            else "No prepared suggestions available."
+        )
+
+        response = suggestions.SuggestionsEventResponse(
+            success=success,
+            message=message,
+            vc=suggestions.VectorClock(values=vc),
+        )
+
+        for book in prepared_books:
+            b = response.books.add()
+            b.bookId = book["bookId"]
+            b.title = book["title"]
+            b.author = book["author"]
+
+        print(
+            f"[SUG] order={request.order_id} event=FinalizeSuggestions "
+            f"vc={vc} success={success} returned_books={len(prepared_books)}"
+        )
+
         return response
 
     def ClearOrder(self, request, context):
         order_id = request.order_id
-        print(f"Received ClearOrder request for order: {order_id}")
+        final_vc = list(request.final_vc.values)
 
-        with cache_lock:
-            vc = vector_clocks.get(order_id, {})
+        with orders_lock:
+            state = orders.get(order_id)
 
-            local_vc_s = vc.get("suggestions", 0)
+            if state is None:
+                return suggestions.EventResponse(
+                    success=False,
+                    message="Order not found in suggestions service.",
+                    vc=suggestions.VectorClock(values=[0, 0, 0]),
+                )
 
-            expected_vc_s = request.final_vc_suggestions
+            local_vc = state["vc"]
+            can_clear = all(a <= b for a, b in zip(local_vc, final_vc))
 
-            if local_vc_s <= expected_vc_s:
-                if order_id in order_cache:
-                    del order_cache[order_id]
-                if order_id in vector_clocks:
-                    del vector_clocks[order_id]
-                print(f"Order {order_id} cleared successfully in suggestions")
-                response = suggestions.ClearOrderResponse()
-                response.success = True
-                response.message = "Order cleared successfully"
-                return response
-            else:
-                print(f"Vector clock mismatch for order {order_id}. Local VC: {vc}")
-                response = suggestions.ClearOrderResponse()
-                response.success = False
-                response.message = f"Vector clock mismatch. Local: s={local_vc_s}. Expected: s={expected_vc_s}"
-                return response
+            if can_clear:
+                del orders[order_id]
+
+        success = can_clear
+        message = (
+            "Order cleared from suggestions service."
+            if success
+            else "Cannot clear order: local VC is ahead of final VC."
+        )
+
+        print(
+            f"[SUG] order={order_id} event=ClearOrder "
+            f"local_vc={local_vc} final_vc={final_vc} success={success}"
+        )
+
+        return suggestions.EventResponse(
+            success=success,
+            message=message,
+            vc=suggestions.VectorClock(values=final_vc),
+        )
 
 
 def serve():
-    server = grpc.server(futures.ThreadPoolExecutor())
+    server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
     suggestions_grpc.add_SuggestionsServiceServicer_to_server(
         SuggestionsService(), server
     )
@@ -205,7 +204,7 @@ def serve():
     port = "50053"
     server.add_insecure_port("[::]:" + port)
     server.start()
-    print("Suggestions server started. Listening on port 50053.")
+    print(f"Suggestions server started. Listening on port {port}.")
     server.wait_for_termination()
 
 

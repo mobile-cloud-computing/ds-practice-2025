@@ -3,9 +3,9 @@
 import grpc
 import warnings
 
-from utils.pb.suggestions import suggestions_pb2 as utils_dot_pb_dot_suggestions_dot_suggestions__pb2
+import suggestions_pb2 as suggestions__pb2
 
-GRPC_GENERATED_VERSION = '1.78.0'
+GRPC_GENERATED_VERSION = '1.70.0'
 GRPC_VERSION = grpc.__version__
 _version_not_supported = False
 
@@ -18,7 +18,7 @@ except ImportError:
 if _version_not_supported:
     raise RuntimeError(
         f'The grpc package installed is at version {GRPC_VERSION},'
-        + ' but the generated code in utils/pb/suggestions/suggestions_pb2_grpc.py depends on'
+        + f' but the generated code in suggestions_pb2_grpc.py depends on'
         + f' grpcio>={GRPC_GENERATED_VERSION}.'
         + f' Please upgrade your grpc module to grpcio>={GRPC_GENERATED_VERSION}'
         + f' or downgrade your generated code using grpcio-tools<={GRPC_VERSION}.'
@@ -34,44 +34,44 @@ class SuggestionsServiceStub(object):
         Args:
             channel: A grpc.Channel.
         """
-        self.GetSuggestions = channel.unary_unary(
-                '/suggestions.SuggestionsService/GetSuggestions',
-                request_serializer=utils_dot_pb_dot_suggestions_dot_suggestions__pb2.SuggestionsRequest.SerializeToString,
-                response_deserializer=utils_dot_pb_dot_suggestions_dot_suggestions__pb2.SuggestionsResponse.FromString,
+        self.InitOrder = channel.unary_unary(
+                '/suggestions.SuggestionsService/InitOrder',
+                request_serializer=suggestions__pb2.InitOrderRequest.SerializeToString,
+                response_deserializer=suggestions__pb2.EventResponse.FromString,
                 _registered_method=True)
-        self.TriggerSuggestions = channel.unary_unary(
-                '/suggestions.SuggestionsService/TriggerSuggestions',
-                request_serializer=utils_dot_pb_dot_suggestions_dot_suggestions__pb2.TriggerRequest.SerializeToString,
-                response_deserializer=utils_dot_pb_dot_suggestions_dot_suggestions__pb2.SuggestionsResponse.FromString,
+        self.PrecomputeSuggestions = channel.unary_unary(
+                '/suggestions.SuggestionsService/PrecomputeSuggestions',
+                request_serializer=suggestions__pb2.EventRequest.SerializeToString,
+                response_deserializer=suggestions__pb2.EventResponse.FromString,
                 _registered_method=True)
-        self.GetVectorClock = channel.unary_unary(
-                '/suggestions.SuggestionsService/GetVectorClock',
-                request_serializer=utils_dot_pb_dot_suggestions_dot_suggestions__pb2.VectorClockRequest.SerializeToString,
-                response_deserializer=utils_dot_pb_dot_suggestions_dot_suggestions__pb2.VectorClockResponse.FromString,
+        self.FinalizeSuggestions = channel.unary_unary(
+                '/suggestions.SuggestionsService/FinalizeSuggestions',
+                request_serializer=suggestions__pb2.EventRequest.SerializeToString,
+                response_deserializer=suggestions__pb2.SuggestionsEventResponse.FromString,
                 _registered_method=True)
         self.ClearOrder = channel.unary_unary(
                 '/suggestions.SuggestionsService/ClearOrder',
-                request_serializer=utils_dot_pb_dot_suggestions_dot_suggestions__pb2.ClearOrderRequest.SerializeToString,
-                response_deserializer=utils_dot_pb_dot_suggestions_dot_suggestions__pb2.ClearOrderResponse.FromString,
+                request_serializer=suggestions__pb2.ClearOrderRequest.SerializeToString,
+                response_deserializer=suggestions__pb2.EventResponse.FromString,
                 _registered_method=True)
 
 
 class SuggestionsServiceServicer(object):
     """Missing associated documentation comment in .proto file."""
 
-    def GetSuggestions(self, request, context):
+    def InitOrder(self, request, context):
         """Missing associated documentation comment in .proto file."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
-    def TriggerSuggestions(self, request, context):
+    def PrecomputeSuggestions(self, request, context):
         """Missing associated documentation comment in .proto file."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
-    def GetVectorClock(self, request, context):
+    def FinalizeSuggestions(self, request, context):
         """Missing associated documentation comment in .proto file."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
@@ -86,25 +86,25 @@ class SuggestionsServiceServicer(object):
 
 def add_SuggestionsServiceServicer_to_server(servicer, server):
     rpc_method_handlers = {
-            'GetSuggestions': grpc.unary_unary_rpc_method_handler(
-                    servicer.GetSuggestions,
-                    request_deserializer=utils_dot_pb_dot_suggestions_dot_suggestions__pb2.SuggestionsRequest.FromString,
-                    response_serializer=utils_dot_pb_dot_suggestions_dot_suggestions__pb2.SuggestionsResponse.SerializeToString,
+            'InitOrder': grpc.unary_unary_rpc_method_handler(
+                    servicer.InitOrder,
+                    request_deserializer=suggestions__pb2.InitOrderRequest.FromString,
+                    response_serializer=suggestions__pb2.EventResponse.SerializeToString,
             ),
-            'TriggerSuggestions': grpc.unary_unary_rpc_method_handler(
-                    servicer.TriggerSuggestions,
-                    request_deserializer=utils_dot_pb_dot_suggestions_dot_suggestions__pb2.TriggerRequest.FromString,
-                    response_serializer=utils_dot_pb_dot_suggestions_dot_suggestions__pb2.SuggestionsResponse.SerializeToString,
+            'PrecomputeSuggestions': grpc.unary_unary_rpc_method_handler(
+                    servicer.PrecomputeSuggestions,
+                    request_deserializer=suggestions__pb2.EventRequest.FromString,
+                    response_serializer=suggestions__pb2.EventResponse.SerializeToString,
             ),
-            'GetVectorClock': grpc.unary_unary_rpc_method_handler(
-                    servicer.GetVectorClock,
-                    request_deserializer=utils_dot_pb_dot_suggestions_dot_suggestions__pb2.VectorClockRequest.FromString,
-                    response_serializer=utils_dot_pb_dot_suggestions_dot_suggestions__pb2.VectorClockResponse.SerializeToString,
+            'FinalizeSuggestions': grpc.unary_unary_rpc_method_handler(
+                    servicer.FinalizeSuggestions,
+                    request_deserializer=suggestions__pb2.EventRequest.FromString,
+                    response_serializer=suggestions__pb2.SuggestionsEventResponse.SerializeToString,
             ),
             'ClearOrder': grpc.unary_unary_rpc_method_handler(
                     servicer.ClearOrder,
-                    request_deserializer=utils_dot_pb_dot_suggestions_dot_suggestions__pb2.ClearOrderRequest.FromString,
-                    response_serializer=utils_dot_pb_dot_suggestions_dot_suggestions__pb2.ClearOrderResponse.SerializeToString,
+                    request_deserializer=suggestions__pb2.ClearOrderRequest.FromString,
+                    response_serializer=suggestions__pb2.EventResponse.SerializeToString,
             ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
@@ -118,7 +118,7 @@ class SuggestionsService(object):
     """Missing associated documentation comment in .proto file."""
 
     @staticmethod
-    def GetSuggestions(request,
+    def InitOrder(request,
             target,
             options=(),
             channel_credentials=None,
@@ -131,9 +131,9 @@ class SuggestionsService(object):
         return grpc.experimental.unary_unary(
             request,
             target,
-            '/suggestions.SuggestionsService/GetSuggestions',
-            utils_dot_pb_dot_suggestions_dot_suggestions__pb2.SuggestionsRequest.SerializeToString,
-            utils_dot_pb_dot_suggestions_dot_suggestions__pb2.SuggestionsResponse.FromString,
+            '/suggestions.SuggestionsService/InitOrder',
+            suggestions__pb2.InitOrderRequest.SerializeToString,
+            suggestions__pb2.EventResponse.FromString,
             options,
             channel_credentials,
             insecure,
@@ -145,7 +145,7 @@ class SuggestionsService(object):
             _registered_method=True)
 
     @staticmethod
-    def TriggerSuggestions(request,
+    def PrecomputeSuggestions(request,
             target,
             options=(),
             channel_credentials=None,
@@ -158,9 +158,9 @@ class SuggestionsService(object):
         return grpc.experimental.unary_unary(
             request,
             target,
-            '/suggestions.SuggestionsService/TriggerSuggestions',
-            utils_dot_pb_dot_suggestions_dot_suggestions__pb2.TriggerRequest.SerializeToString,
-            utils_dot_pb_dot_suggestions_dot_suggestions__pb2.SuggestionsResponse.FromString,
+            '/suggestions.SuggestionsService/PrecomputeSuggestions',
+            suggestions__pb2.EventRequest.SerializeToString,
+            suggestions__pb2.EventResponse.FromString,
             options,
             channel_credentials,
             insecure,
@@ -172,7 +172,7 @@ class SuggestionsService(object):
             _registered_method=True)
 
     @staticmethod
-    def GetVectorClock(request,
+    def FinalizeSuggestions(request,
             target,
             options=(),
             channel_credentials=None,
@@ -185,9 +185,9 @@ class SuggestionsService(object):
         return grpc.experimental.unary_unary(
             request,
             target,
-            '/suggestions.SuggestionsService/GetVectorClock',
-            utils_dot_pb_dot_suggestions_dot_suggestions__pb2.VectorClockRequest.SerializeToString,
-            utils_dot_pb_dot_suggestions_dot_suggestions__pb2.VectorClockResponse.FromString,
+            '/suggestions.SuggestionsService/FinalizeSuggestions',
+            suggestions__pb2.EventRequest.SerializeToString,
+            suggestions__pb2.SuggestionsEventResponse.FromString,
             options,
             channel_credentials,
             insecure,
@@ -213,8 +213,8 @@ class SuggestionsService(object):
             request,
             target,
             '/suggestions.SuggestionsService/ClearOrder',
-            utils_dot_pb_dot_suggestions_dot_suggestions__pb2.ClearOrderRequest.SerializeToString,
-            utils_dot_pb_dot_suggestions_dot_suggestions__pb2.ClearOrderResponse.FromString,
+            suggestions__pb2.ClearOrderRequest.SerializeToString,
+            suggestions__pb2.EventResponse.FromString,
             options,
             channel_credentials,
             insecure,
