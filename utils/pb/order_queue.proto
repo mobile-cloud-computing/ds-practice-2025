@@ -1,0 +1,12 @@
+syntax = "proto3";
+
+package bookstore;
+
+import "order_details.proto";
+
+message DequeueRequest {}
+
+service OrderQueueService {
+    rpc Enqueue (InputOrderDetails) returns (StatusMessage);
+    rpc Dequeue (DequeueRequest) returns (InputOrderDetails);
+}

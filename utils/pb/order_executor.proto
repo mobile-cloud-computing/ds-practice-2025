@@ -1,0 +1,30 @@
+syntax = "proto3";
+
+package bookstore;
+
+
+message ElectionRequest {
+  int32 candidate_id = 1;
+}
+
+message ElectionReply {
+  bool ok = 1;
+  int32 responder_id = 2;
+}
+
+message CoordinatorMessage {
+  int32 leader_id = 1;
+}
+message CoordinatorReply {}
+
+message HeartbeatRequest {}
+message HeartbeatReply {
+  bool alive = 1;
+  int32 executor_id = 2;
+}
+
+service OrderExecutorService {
+  rpc Election(ElectionRequest) returns (ElectionReply);
+  rpc AnnounceLeader(CoordinatorMessage) returns (CoordinatorReply);
+  rpc Heartbeat(HeartbeatRequest) returns (HeartbeatReply);
+}

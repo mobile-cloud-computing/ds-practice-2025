@@ -1,5 +1,6 @@
 import sys
 import os
+import threading
 
 # This set of lines are needed to import the gRPC stubs.
 # The path of the stubs is relative to the current file, or absolute inside the container.
@@ -8,11 +9,15 @@ FILE = __file__ if '__file__' in globals() else os.getenv("PYTHONFILE", "")
 utils_path = os.path.abspath(os.path.join(FILE, '../../../utils/'))
 sys.path.insert(0, utils_path)
 
-import pb.fraud_detection_pb2 as fraud_detection
-import pb.fraud_detection_pb2_grpc as fraud_detection_grpc
+from service_wrappers.base_service_wrapper import BaseServiceWrapper
 
-import pb.transaction_verification_pb2_grpc as transaction_verification_grpc
-import pb.recommendation_system_pb2_grpc as recommendation_system_grpc
+import pb.services.order_details_pb2 as order_details_pb2
+
+import pb.services.fraud_detection_pb2 as fraud_detection
+import pb.services.fraud_detection_pb2_grpc as fraud_detection_grpc
+
+import pb.services.transaction_verification_pb2_grpc as transaction_verification_grpc
+import pb.services.recommendation_system_pb2_grpc as recommendation_system_grpc
 
 import grpc
 from concurrent import futures
@@ -125,23 +130,150 @@ def ai_check(request):
 
 # Create a class to define the server functions, derived from
 # fraud_detection_pb2_grpc.HelloServiceServicer
-class FraudDetectionService(fraud_detection_grpc.FraudDetectionService):
-    # Create an RPC function to say hello
-    def CheckFraud(self, request, context):
+class FraudDetectionService(BaseServiceWrapper, fraud_detection_grpc.FraudDetectionService):
+
+    def __init__(self, service_id: int = 0, n_services: int = 3):
+        super().__init__(service_id, n_services)
+        self._lock = threading.RLock()
+
+    def InitTransaction(self, request, context):
+        with self._lock:
+            self.order_details[request.order_id] = {
+                "order_id": request.order_id,
+                "order": request,
+                "vector_clock": [0] * self.n_services,
+                "service_id": self.service_id,
+            }
+        return order_details_pb2.StatusMessage(
+            success = True,
+            order_id = request.order_id
+        )
+    
+    def ClearTransaction(self, request, context):
+        with self._lock:
+            if request.order_id in self.order_details:
+                del self.order_details[request.order_id]
+        return order_details_pb2.StatusMessage(
+            success = True,
+            order_id = request.order_id
+        )
+    
+    def _get_order_details(self, order_id):
+        order_details = self.order_details.get(order_id)
+        if not order_details:
+            raise ValueError(f"Order ID {order_id} not found")
+        return order_details
+    
+    @staticmethod
+    def _ensure_vector_clock_size(clock1, clock2):
+        if not clock1:
+            clock1 = []
+        if not clock2:
+            clock2 = []
+        clock1 = list(clock1)
+        clock2 = list(clock2)
+        max_len = max(len(clock1), len(clock2))
+        clock1 += [0] * (max_len - len(clock1))
+        clock2 += [0] * (max_len - len(clock2))
+        return clock1, clock2
+    
+    @classmethod
+    def merge_vector_clocks(cls, clock1, clock2):
+        clock1, clock2 = cls._ensure_vector_clock_size(clock1, clock2)
+        merged = [max(c1, c2) for c1, c2 in zip(clock1, clock2)]
+        return merged
+    
+    def increment_vector_clock(self, request):
+        order_id = request.order_id
+        incoming_vector_clock = request.vector_clock
+        order_details = self._get_order_details(order_id)
+        service_id = order_details["service_id"]
+        existing_vector_clock = order_details["vector_clock"]
+        merged_clock = self.merge_vector_clocks(existing_vector_clock, incoming_vector_clock)
+        merged_clock[service_id] += 1
+        order_details["vector_clock"] = merged_clock
+        return merged_clock
+    
+    def CheckKnownFraudUsers(self, request, context):
+        known_fraud_users = {"Farid", "Kevin", "Reo"}
+        with self._lock:
+            order_details = self._get_order_details(request.order_id)
+            order = order_details["order"]
+            if order.user.name in known_fraud_users:
+                is_fraud = True
+                error_message = "User is in known fraud list"
+            else:
+                is_fraud = False
+                error_message = None
+            merged_clock = self.increment_vector_clock(request)
+            logger.info(f"CheckKnownFraudUsers - Order ID: {request.order_id}, User: {order.user.name}, Is Fraud: {is_fraud}, Merged Vector Clock: {merged_clock}")
+        return order_details_pb2.OrderResponce(
+            status=order_details_pb2.StatusMessage(
+                success = not is_fraud,
+                order_id = request.order_id,
+                error_message = error_message,
+                vector_clock = merged_clock
+            ),
+            recommended_books = []
+        )
+    
+    def CheckKnownFraudLocations(self, request, context):
+        known_fraud_locations = {"123 Fraud St"}
+        with self._lock:
+            order_details = self._get_order_details(request.order_id)
+            order = order_details["order"]
+            if order.billing_address.street in known_fraud_locations:
+                is_fraud = True
+                error_message = "Billing address is in known fraud locations"
+            else:
+                is_fraud = False
+                error_message = None
+            merged_clock = self.increment_vector_clock(request)
+            logger.info(f"CheckKnownFraudLocations - Order ID: {request.order_id}, Billing Street: {order.billing_address.street}, Is Fraud: {is_fraud}, Merged Vector Clock: {merged_clock}")
+        return order_details_pb2.OrderResponce(
+            status=order_details_pb2.StatusMessage(
+                success = not is_fraud,
+                order_id = request.order_id,
+                error_message = error_message,
+                vector_clock = merged_clock
+            ),
+            recommended_books = []
+        )
+
+
+    def CheckGeneralFraud(self, request, context):
         try:
-            return fraud_detection.FraudResponse(**ai_check(request))
+            with self._lock:
+                order_details = self._get_order_details(request.order_id)
+                result = ai_check(order_details["order"])
+                merged_clock = self.increment_vector_clock(request)
+                logger.info(f"CheckGeneralFraud - Order ID: {request.order_id}, AI Result: (is_fraud={result['is_fraud']}, error_message={result['error_message']}), Merged Vector Clock: {merged_clock}")
+            return order_details_pb2.OrderResponce(
+                status=order_details_pb2.StatusMessage(
+                    success = result["is_fraud"] == False,
+                    order_id = request.order_id,
+                    error_message = result["error_message"],
+                    vector_clock = merged_clock
+                ),
+                recommended_books = []
+            )
         except Exception as e:
             logger.error(f"Error during AI check: {str(e)}")
-            return fraud_detection.FraudResponse(
-                is_fraud=True, 
-                error_message="AI Check Failed: suspected prompt injection or malformed response."
+            return order_details_pb2.OrderResponce(
+                status=order_details_pb2.StatusMessage(
+                    success = False,
+                    order_id = request.order_id,
+                    error_message = "AI Check Failed: " + str(e),
+                    vector_clock = request.vector_clock
+                ),
+                recommended_books = []
             )
 
 def serve():
     # Create a gRPC server
     server = grpc.server(futures.ThreadPoolExecutor())
     # Add HelloService
-    fraud_detection_grpc.add_FraudDetectionServiceServicer_to_server(FraudDetectionService(), server)
+    fraud_detection_grpc.add_FraudDetectionServiceServicer_to_server(FraudDetectionService(1, 3), server)
     # Listen on port 50051
     port = "50051"
     server.add_insecure_port("[::]:" + port)

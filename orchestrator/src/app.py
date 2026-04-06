@@ -10,10 +10,7 @@ import json
 import asyncio
 import sys
 import os
-
-# from fraud_detection import check_fraud
-# from transaction_verification import verify_transaction
-# from recommendation import get_recommendations
+import uuid
 
 FILE = __file__ if '__file__' in globals() else os.getenv("PYTHONFILE", "")
 utils_path = os.path.abspath(os.path.join(FILE, '../../../utils/'))
@@ -28,6 +25,12 @@ logger.addHandler(default_handler)
 
 import pb.services.transaction_verification_pb2 as transaction_verification
 import pb.services.transaction_verification_pb2_grpc as transaction_verification_grpc
+import pb.services.fraud_detection_pb2 as fraud_detection
+import pb.services.fraud_detection_pb2_grpc as fraud_detection_grpc
+import pb.services.recommendation_system_pb2 as recommendation_system
+import pb.services.recommendation_system_pb2_grpc as recommendation_system_grpc
+import pb.services.order_queue_pb2 as order_queue
+import pb.services.order_queue_pb2_grpc as order_queue_grpc
 import pb.services.order_details_pb2 as order_details
 
 import grpc
@@ -50,39 +53,51 @@ def index():
     # return response
     return "hello from orchestrator"
 
-def transform_results(results: list[dict]):
-    return {
-        result["service"]: result["data"]
-        for result in results
-    }
+def create_input_order_details(request_data, order_id):
+    user_info = order_details.User(**request_data["user"])
+    credit_card_info = order_details.CreditCard(
+        number=request_data["creditCard"]["number"],
+        expiration_date=request_data["creditCard"]["expirationDate"],
+        cvv=request_data["creditCard"]["cvv"]
+    )
+    items = [order_details.OrderItem(**item) for item in request_data["items"]]
+    billing_address_info = order_details.BillingAddress(**request_data["billingAddress"])
+    return order_details.InputOrderDetails(
+        order_id=order_id,
+        user=user_info,
+        credit_card=credit_card_info,
+        user_comment=request_data["userComment"] or "",
+        items=items,
+        billing_address=billing_address_info,
+        shipping_method=request_data["shippingMethod"],
+        gift_wrapping=request_data["giftWrapping"],
+        terms_accepted=request_data["termsAccepted"]
+    )
 
+async def add_to_order_queue(order_details):
+    async with grpc.aio.insecure_channel('order_queue:50054') as channel:
+        stub = order_queue_grpc.OrderQueueServiceStub(channel)
+        response = await stub.Enqueue(order_details)
+    logger.info(f"Added order with ID: {order_details.order_id} to the queue")
+    return response
 
 async def init_transaction(request_data, order_id, connection_string, stub_class):
     async with grpc.aio.insecure_channel(connection_string) as channel:
         stub = stub_class(channel)
-        user_info = order_details.User(**request_data["user"])
-        credit_card_info = order_details.CreditCard(
-            number=request_data["creditCard"]["number"],
-            expiration_date=request_data["creditCard"]["expirationDate"],
-            cvv=request_data["creditCard"]["cvv"]
-        )
-        items = [order_details.OrderItem(**item) for item in request_data["items"]]
-        billing_address_info = order_details.BillingAddress(**request_data["billingAddress"])
-        fraud_request = order_details.InputOrderDetails(
-            order_id=order_id,
-            user=user_info,
-            credit_card=credit_card_info,
-            user_comment=request_data["userComment"] or "",
-            items=items,
-            billing_address=billing_address_info,
-            shipping_method=request_data["shippingMethod"],
-            gift_wrapping=request_data["giftWrapping"],
-            terms_accepted=request_data["termsAccepted"]
-        )
-        response = await stub.InitTransaction(fraud_request)
-    
+        input_order_details = create_input_order_details(request_data, order_id)
+        response = await stub.InitTransaction(input_order_details)
+    logger.info(f"InitTransaction - Order ID: {order_id}, Service: {connection_string}, Done")
     return response
 
+async def clear_transaction(order_id, connection_string, stub_class):
+    async with grpc.aio.insecure_channel(connection_string) as channel:
+        stub = stub_class(channel)
+        request = order_details.OperationalMessage(
+            order_id=order_id,
+        )
+        response = await stub.ClearTransaction(request)
+    logger.info(f"ClearTransaction - Order ID: {order_id}, Service: {connection_string}, Done")
+    return response
 
 async def call_action(order_id, connection_string, stub_class, method_name, vector_clock=[0,0,0]):
     async with grpc.aio.insecure_channel(connection_string) as channel:
@@ -96,62 +111,85 @@ async def call_action(order_id, connection_string, stub_class, method_name, vect
 
     return response
 
+def merge_into_general_vector_clock(general_vector_clock, *results):
+    for result in results:
+        general_vector_clock = [max(general_vector_clock[i], result.status.vector_clock[i]) for i in range(len(general_vector_clock))]
+    logger.info(f"Vector clock after operations: {general_vector_clock}")
+    return general_vector_clock
 
+async def call_parallel_services(general_vector_clock, *services):
+    results = await asyncio.gather(*services)
+    all_success = all(result.status.success for result in results)
+    if not all_success:
+        error_messages = [result.status.error_message for result in results if not result.status.success]
+        return general_vector_clock, "; ".join(error_messages)
+    general_vector_clock = merge_into_general_vector_clock(general_vector_clock, *results)
+    return general_vector_clock, ""
+
+async def clear_parallel_services(order_id):
+    return await asyncio.gather(
+        clear_transaction(order_id, "transaction_verification:50052", transaction_verification_grpc.TransactionVerificationServiceStub),
+        clear_transaction(order_id, "fraud_detection:50051", fraud_detection_grpc.FraudDetectionServiceStub),
+        #clear_transaction(order_id, "recommendation_system:50053", recommendation_system_grpc.RecommendationServiceStub),
+    )
 
 @app.route('/checkout', methods=['POST'])
 async def checkout():
     """
     Responds with a JSON object containing the order ID, status, and suggested books.
     """
-    # Get request object data to json
     request_data = json.loads(request.data)
-    # Print request object data
     logger.info(f"Request Data: {request_data.get('items')}")
 
-    order_id = '12345'
+    general_vector_clock = [0, 0, 0]
+    order_id = str(uuid.uuid4())
     suggested_books = []
-
-    # parallel_results = await asyncio.gather(
-    #     check_fraud(request_data),
-    #     verify_transaction(request_data),
-    # )
-    # results = transform_results(parallel_results)
-
-    statuses = await asyncio.gather(
-        init_transaction(request_data, order_id, "transaction_verification:50052", transaction_verification_grpc.TransactionVerificationServiceStub)
-    )
-
-
     order_response = {
         'orderId': order_id,
         'suggestedBooks': suggested_books
     }
 
-    # Call the action with the appropriate parameters.
-    results = await asyncio.gather(
-        call_action(order_id, "transaction_verification:50052", transaction_verification_grpc.TransactionVerificationServiceStub, "VerifyItems", vector_clock=[0,0,0])
+    _ = await asyncio.gather(
+        init_transaction(request_data, order_id, "transaction_verification:50052", transaction_verification_grpc.TransactionVerificationServiceStub),
+        init_transaction(request_data, order_id, "fraud_detection:50051", fraud_detection_grpc.FraudDetectionServiceStub),
+        #init_transaction(request_data, order_id, "recommendation_system:50053", recommendation_system_grpc.RecommendationServiceStub),
     )
-    result = results[0]
-
-    if not result.status.success:
-        order_response["status"] = "Order Denied"
-        order_response["errorMessage"] = result.status.error_message
-    else:
-        order_response["status"] = "Order Approved"
-
-    # if results["fraud_detection"]["is_fraud"]:
-    #     order_response["status"] = "Order Denied"
-    #     order_response["errorMessage"] = results['fraud_detection']['error_message']
-    # elif not results["transaction_verification"]["transaction_valid"]:
-    #     order_response["status"] = "Order Denied"
-    #     order_response["errorMessage"] = results['transaction_verification']['error_message']
-    # else:
-    #     order_response["status"] = "Order Approved"
-    #     recommendation_result = await get_recommendations(request_data)
-    #     order_response["suggestedBooks"] = recommendation_result["data"]["suggested_books"]
-
-
     
+    general_vector_clock, error_message = await call_parallel_services(
+        general_vector_clock,
+        call_action(order_id, "transaction_verification:50052", transaction_verification_grpc.TransactionVerificationServiceStub, "VerifyItems", vector_clock=general_vector_clock),
+        call_action(order_id, "fraud_detection:50051", fraud_detection_grpc.FraudDetectionServiceStub, "CheckKnownFraudUsers", vector_clock=general_vector_clock),
+        call_action(order_id, "fraud_detection:50051", fraud_detection_grpc.FraudDetectionServiceStub, "CheckKnownFraudLocations", vector_clock=general_vector_clock),
+    )
+    if error_message:
+        _ = await clear_parallel_services(order_id)
+        order_response["status"] = "Order Denied"
+        order_response["errorMessage"] = error_message
+        return order_response
+    
+    general_vector_clock, error_message = await call_parallel_services(
+        general_vector_clock,
+        call_action(order_id, "transaction_verification:50052", transaction_verification_grpc.TransactionVerificationServiceStub, "VerifyCreditCard", vector_clock=general_vector_clock),
+        call_action(order_id, "transaction_verification:50052", transaction_verification_grpc.TransactionVerificationServiceStub, "VerifyBillingAddress", vector_clock=general_vector_clock),
+        call_action(order_id, "fraud_detection:50051", fraud_detection_grpc.FraudDetectionServiceStub, "CheckGeneralFraud", vector_clock=general_vector_clock),
+    )
+    if error_message:
+        _ = await clear_parallel_services(order_id)
+        order_response["status"] = "Order Denied"
+        order_response["errorMessage"] = error_message
+        return order_response
+    
+    order_response["status"] = "Order Approved"
+    """
+    results = await asyncio.gather(
+        call_action(order_id, "recommendation_system:50053", recommendation_system_grpc.RecommendationServiceStub, "GetRecommendations", vector_clock=general_vector_clock),
+    )
+    general_vector_clock = merge_into_general_vector_clock(general_vector_clock, *results)
+    recommended_books = results[0].recommended_books
+    order_response["suggestedBooks"] = [book.title for book in recommended_books]
+    """
+    _ = await clear_parallel_services(order_id)
+    await add_to_order_queue(create_input_order_details(request_data, order_id))
     return order_response
 
 

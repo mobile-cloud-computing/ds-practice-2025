@@ -6,6 +6,8 @@ import "order_details.proto";
 
 service FraudDetectionService {
     rpc InitTransaction (InputOrderDetails) returns (StatusMessage);
-    rpc CheckFraud (OperationalMessage) returns (OrderResponce);
+    rpc CheckKnownFraudUsers (OperationalMessage) returns (OrderResponce);
+    rpc CheckKnownFraudLocations (OperationalMessage) returns (OrderResponce);
+    rpc CheckGeneralFraud (OperationalMessage) returns (OrderResponce);
     rpc ClearTransaction (OperationalMessage) returns (StatusMessage);
 }
