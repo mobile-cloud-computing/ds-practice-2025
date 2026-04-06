@@ -136,11 +136,18 @@ Why this satisfies the checkpoint requirements:
 ### Architecture
 The system is a small distributed online-bookstore workflow:
 
+![Architecture diagram](./docs/diagrams/architecture-diagram.jpg)
+
 - `frontend` serves the browser UI
 - `orchestrator` accepts checkout requests over HTTP and coordinates the workflow
 - `transaction_verification`, `fraud_detection`, and `suggestions` are gRPC services that participate in the vector-clock event flow
 - `order_queue` stores approved orders in FIFO order
 - `order_executor_1..3` form a replicated execution tier that elects a leader and consumes approved orders
+
+### System flow
+The following diagram shows the end-to-end flow of an order through the system:
+
+![System flow diagram](./docs/diagrams/system-flow-diagram.jpg)
 
 ### Communication model
 - the browser communicates with the orchestrator over HTTP
