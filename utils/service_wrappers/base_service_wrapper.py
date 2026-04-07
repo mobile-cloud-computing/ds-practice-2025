@@ -1,5 +1,6 @@
 import sys
 import os
+import threading
 
 def init_grpc_pathes():
     FILE = __file__ if '__file__' in globals() else os.getenv("PYTHONFILE", "")
@@ -26,30 +27,33 @@ class BaseServiceWrapper:
         self.service_id = service_id
         self.n_services = n_services
         self.vector_clocks = dict()
-
         self.order_details = dict()
+        self._main_lock = threading.Lock()
 
     def InitTransaction(self, request, context):
-        self.order_details[request.order_id] = request
-        self.vector_clocks[request.order_id] = [0] * self.n_services
+        with self._main_lock:
+            self.order_details[request.order_id] = request
+            self.vector_clocks[request.order_id] = [0] * self.n_services
         return order_details.StatusMessage(
             success = True,
             order_id = request.order_id
         )
 
     def ClearTransaction(self, request, context):
-        if request.order_id in self.order_details:
-            del self.order_details[request.order_id]
-            del self.vector_clocks[request.order_id]
+        with self._main_lock:
+            if request.order_id in self.order_details:
+                del self.order_details[request.order_id]
+                del self.vector_clocks[request.order_id]
         return order_details.StatusMessage(
             success = True,
             order_id = request.order_id
         )
 
     def _update_vector_clock(self, order_id, incoming_vector_clock):
-        for i in range(self.n_services):
-            self.vector_clocks[order_id][i] = max(self.vector_clocks[order_id][i], incoming_vector_clock[i])
-        self.vector_clocks[order_id][self.service_id] += 1
+        with self._main_lock:
+            for i in range(self.n_services):
+                self.vector_clocks[order_id][i] = max(self.vector_clocks[order_id][i], incoming_vector_clock[i])
+            self.vector_clocks[order_id][self.service_id] += 1
 
     def _send_request_to_service(self, stub_class, connection_string, method_name, message):
         for i in range(self.n_services):
