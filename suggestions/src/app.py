@@ -48,11 +48,18 @@ class SuggestionsService(suggestions_grpc.SuggestionsServiceServicer):
             logger.info("Fetching suggestions for: %s", book)
             books_data = books_data + book_script.get_book_suggestions(book)
 
-        # in case API service doesn't work
-        # books_data = [
-        #     {'bookId': '123', 'title': 'The Best Book', 'author': 'Author 1'},
-        #     {'bookId': '456', 'title': 'The Second Best Book', 'author': 'Author 2'}
-        # ]
+        try:
+            for book in request.ordered_books:
+                logger.info("Fetching suggestions for: %s", book)
+                books_data = books_data + book_script.get_book_suggestions(book)
+        except Exception as e:
+            logger.error(f"API API failed or rate limited: {e}. Using hardcoded suggestions.")
+            #fallback
+            books_data = [
+                {"bookId": 1, "title": "The Great Gatsby", "author": "F. Scott Fitzgerald"},
+                {"bookId": 2, "title": "To Kill a Mockingbird", "author": "Harper Lee"},
+                {"bookId": 3, "title": "1984", "author": "George Orwell"},
+            ]
 
         if len(books_data) > 0:
             for b in books_data:
