@@ -130,7 +130,7 @@ async def clear_parallel_services(order_id):
     return await asyncio.gather(
         clear_transaction(order_id, "transaction_verification:50052", transaction_verification_grpc.TransactionVerificationServiceStub),
         clear_transaction(order_id, "fraud_detection:50051", fraud_detection_grpc.FraudDetectionServiceStub),
-        #clear_transaction(order_id, "recommendation_system:50053", recommendation_system_grpc.RecommendationServiceStub),
+        clear_transaction(order_id, "recommendation_system:50053", recommendation_system_grpc.RecommendationServiceStub),
     )
 
 @app.route('/checkout', methods=['POST'])
@@ -152,42 +152,27 @@ async def checkout():
     _ = await asyncio.gather(
         init_transaction(request_data, order_id, "transaction_verification:50052", transaction_verification_grpc.TransactionVerificationServiceStub),
         init_transaction(request_data, order_id, "fraud_detection:50051", fraud_detection_grpc.FraudDetectionServiceStub),
-        #init_transaction(request_data, order_id, "recommendation_system:50053", recommendation_system_grpc.RecommendationServiceStub),
+        init_transaction(request_data, order_id, "recommendation_system:50053", recommendation_system_grpc.RecommendationServiceStub),
     )
-    
+
     general_vector_clock, error_message = await call_parallel_services(
         general_vector_clock,
         call_action(order_id, "transaction_verification:50052", transaction_verification_grpc.TransactionVerificationServiceStub, "VerifyItems", vector_clock=general_vector_clock),
-        call_action(order_id, "fraud_detection:50051", fraud_detection_grpc.FraudDetectionServiceStub, "CheckKnownFraudUsers", vector_clock=general_vector_clock),
-        call_action(order_id, "fraud_detection:50051", fraud_detection_grpc.FraudDetectionServiceStub, "CheckKnownFraudLocations", vector_clock=general_vector_clock),
     )
     if error_message:
         _ = await clear_parallel_services(order_id)
         order_response["status"] = "Order Denied"
         order_response["errorMessage"] = error_message
         return order_response
-    
-    general_vector_clock, error_message = await call_parallel_services(
-        general_vector_clock,
-        call_action(order_id, "transaction_verification:50052", transaction_verification_grpc.TransactionVerificationServiceStub, "VerifyCreditCard", vector_clock=general_vector_clock),
-        call_action(order_id, "transaction_verification:50052", transaction_verification_grpc.TransactionVerificationServiceStub, "VerifyBillingAddress", vector_clock=general_vector_clock),
-        call_action(order_id, "fraud_detection:50051", fraud_detection_grpc.FraudDetectionServiceStub, "CheckGeneralFraud", vector_clock=general_vector_clock),
-    )
-    if error_message:
-        _ = await clear_parallel_services(order_id)
-        order_response["status"] = "Order Denied"
-        order_response["errorMessage"] = error_message
-        return order_response
-    
+
     order_response["status"] = "Order Approved"
-    """
     results = await asyncio.gather(
         call_action(order_id, "recommendation_system:50053", recommendation_system_grpc.RecommendationServiceStub, "GetRecommendations", vector_clock=general_vector_clock),
     )
     general_vector_clock = merge_into_general_vector_clock(general_vector_clock, *results)
     recommended_books = results[0].recommended_books
     order_response["suggestedBooks"] = [book.title for book in recommended_books]
-    """
+    
     _ = await clear_parallel_services(order_id)
     await add_to_order_queue(create_input_order_details(request_data, order_id))
     return order_response

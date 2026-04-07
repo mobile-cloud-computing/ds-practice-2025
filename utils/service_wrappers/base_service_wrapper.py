@@ -49,11 +49,12 @@ class BaseServiceWrapper:
             order_id = request.order_id
         )
 
-    def _update_vector_clock(self, order_id, incoming_vector_clock):
+    def _update_vector_clock(self, order_id, incoming_vector_clock, increment_self=True):
         with self._main_lock:
             for i in range(self.n_services):
                 self.vector_clocks[order_id][i] = max(self.vector_clocks[order_id][i], incoming_vector_clock[i])
-            self.vector_clocks[order_id][self.service_id] += 1
+            if increment_self:
+                self.vector_clocks[order_id][self.service_id] += 1
 
     def _send_request_to_service(self, stub_class, connection_string, method_name, message):
         for i in range(self.n_services):
@@ -62,4 +63,6 @@ class BaseServiceWrapper:
             stub = stub_class(channel)
             method = getattr(stub, method_name)
             response = method(message)
+            print(f"Response from {method_name}: {response}")
+            self._update_vector_clock(message.order_id, response.status.vector_clock, increment_self=False)
         return response

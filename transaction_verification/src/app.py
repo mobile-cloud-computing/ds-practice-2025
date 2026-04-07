@@ -156,19 +156,20 @@ class TransactionVerificationService(BaseServiceWrapper, transaction_verificatio
         )
 
         try:
-            self._update_vector_clock(request.order_id, request.vector_clock)
-
-            res, err_message = self._do_verification(request, verify_functions)
-            status.success = res
-            status.error_message = err_message
+            if len(verify_functions) > 0:
+                self._update_vector_clock(request.order_id, request.vector_clock)
+                res, err_message = self._do_verification(request, verify_functions)
+                status.success = res
+                status.error_message = err_message
 
             if status.success:
-                return self._send_request_to_service(
+                res = self._send_request_to_service(
                     stub_class=stub_class,
                     connection_string=connection_string,
                     method_name=method_name,
                     message=request
                 )
+                return res
             else:
                 result = order_details.OrderResponce()
                 result.status.CopyFrom(status)
@@ -199,9 +200,60 @@ class TransactionVerificationService(BaseServiceWrapper, transaction_verificatio
         event1 = threading.Thread(target=self._method_template_threaded, kwargs={
             "request": request,
             "verify_functions": [lambda data: validate_order_list(data.items)],
+            "stub_class": fraud_detection_grpc.FraudDetectionServiceStub,
+            "connection_string": "fraud_detection:50051",
+            "method_name": "CheckKnownFraudUsers",
+            "result_container": result_container,
+            "index": 0
+        })
+
+        event2 = threading.Thread(target=self._method_template_threaded, kwargs={
+            "request": request,
+            "verify_functions": [],
             "stub_class": transaction_verification_grpc.TransactionVerificationServiceStub,
             "connection_string": "transaction_verification:50052",
             "method_name": "VerifyCreditCard",
+            "result_container": result_container,
+            "index": 1
+        })
+
+        event1.start()
+        event2.start()
+
+        event1.join()
+        event2.join()
+
+        status = order_details.StatusMessage(
+            success=all(result.status.success for result in result_container if result),
+            order_id=request.order_id,
+            vector_clock=self.vector_clocks[request.order_id],
+            error_message="; ".join(result.status.error_message for result in result_container if result and not result.status.success)
+        )
+
+        result = order_details.OrderResponce()
+        result.status.CopyFrom(status)
+        for i in range(len(result_container)):
+            if len(result_container[i].recommended_books):
+                result.recommended_books.extend(result_container[i].recommended_books)
+                break
+        return result
+
+
+    def VerifyCreditCard(self, request, context):
+        logger.info(f"Verifying credit card for order id {request.order_id} with vector clock {self.vector_clocks[request.order_id]}")
+
+        result_container = [None, None]
+        event1 = threading.Thread(target=self._method_template_threaded, kwargs={
+            "request": request,
+            "verify_functions": [
+                lambda data: validate_credit_card(data.credit_card.number),
+                lambda data: validate_credit_card_vendor(data.credit_card.number),
+                lambda data: validate_expiration_date(data.credit_card.expiration_date),
+                lambda data: validate_cvv(data.credit_card.cvv)
+            ],
+            "stub_class": fraud_detection_grpc.FraudDetectionServiceStub,
+            "connection_string": "fraud_detection:50051",
+            "method_name": "CheckKnownFraudLocations",
             "result_container": result_container,
             "index": 0
         })
@@ -236,44 +288,17 @@ class TransactionVerificationService(BaseServiceWrapper, transaction_verificatio
                 result.recommended_books.extend(result_container[i].recommended_books)
                 break
         return result
-
-
-    def VerifyCreditCard(self, request, context):
-        logger.info(f"Verifying credit card for order id {request.order_id} with vector clock {self.vector_clocks[request.order_id]}")
-        return self._method_template(
-            request=request,
-            verify_functions=[
-                lambda data: validate_credit_card(data.credit_card.number),
-                lambda data: validate_credit_card_vendor(data.credit_card.number),
-                lambda data: validate_expiration_date(data.credit_card.expiration_date),
-                lambda data: validate_cvv(data.credit_card.cvv)
-            ],
-            stub_class=transaction_verification_grpc.TransactionVerificationServiceStub,
-            connection_string="transaction_verification:50052",
-            method_name="SuccessfullVerify"
-        )
     
     def VerifyBillingAddress(self, request, context):
         logger.info(f"Verifying billing address for order id {request.order_id} with vector clock {self.vector_clocks[request.order_id]}")
         return self._method_template(
             request=request,
             verify_functions=[lambda data: validate_location(data.billing_address)],
-            stub_class=transaction_verification_grpc.TransactionVerificationServiceStub,
-            connection_string="transaction_verification:50052",
-            method_name="SuccessfullVerify"
-        )
-    
-    def SuccessfullVerify(self, request, context):
-        logger.info(f"Successful verification root for order id {request.order_id} with vector clock {self.vector_clocks[request.order_id]}")
-        status = order_details.StatusMessage(
-            success=True,
-            order_id=request.order_id,
-            vector_clock=self.vector_clocks[request.order_id]
+            stub_class=fraud_detection_grpc.FraudDetectionServiceStub,
+            connection_string="fraud_detection:50051",
+            method_name="CheckGeneralFraud"
         )
 
-        result = order_details.OrderResponce()
-        result.status.CopyFrom(status)
-        return result
     
 def serve():
     server = grpc.server(futures.ThreadPoolExecutor())

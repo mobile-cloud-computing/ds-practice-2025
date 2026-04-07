@@ -15,7 +15,7 @@ from log_utils.logger import setup_logger
 
 logger = setup_logger("Orchestrator")
 
-RECOMMENDATION_GRPC_TARGET = os.environ.get("RECOMMENDATION_GRPC_TARGET", "recomendation_sys:50053")
+RECOMMENDATION_GRPC_TARGET = os.environ.get("RECOMMENDATION_GRPC_TARGET", "recommendation_system:50053")
 
 
 def format_recommendation_log(books: list[dict]) -> str:

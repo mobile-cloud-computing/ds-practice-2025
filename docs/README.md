@@ -1,6 +1,6 @@
 # Recommendation Service
 
-`recomendation_sys` now exposes a gRPC API:
+`recommendation_system` now exposes a gRPC API:
 
 - Service: `recommendation_system.RecommendationService`
 - RPC: `GetRecommendations(RecommendationRequest) -> RecommendationResponse`
