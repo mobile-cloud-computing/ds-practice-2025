@@ -25,12 +25,13 @@ class BaseServiceWrapper:
     def __init__(self, service_id, n_services):
         self.service_id = service_id
         self.n_services = n_services
-        self.vector_clock = [0] * n_services
+        self.vector_clocks = dict()
 
         self.order_details = dict()
 
     def InitTransaction(self, request, context):
         self.order_details[request.order_id] = request
+        self.vector_clocks[request.order_id] = [0] * self.n_services
         return order_details.StatusMessage(
             success = True,
             order_id = request.order_id
@@ -39,20 +40,20 @@ class BaseServiceWrapper:
     def ClearTransaction(self, request, context):
         if request.order_id in self.order_details:
             del self.order_details[request.order_id]
+            del self.vector_clocks[request.order_id]
         return order_details.StatusMessage(
             success = True,
             order_id = request.order_id
         )
 
-    def _update_vector_clock(self, incoming_vector_clock):
+    def _update_vector_clock(self, order_id, incoming_vector_clock):
         for i in range(self.n_services):
-            self.vector_clock[i] = max(self.vector_clock[i], incoming_vector_clock[i])
-        self.vector_clock[self.service_id] += 1
+            self.vector_clocks[order_id][i] = max(self.vector_clocks[order_id][i], incoming_vector_clock[i])
+        self.vector_clocks[order_id][self.service_id] += 1
 
     def _send_request_to_service(self, stub_class, connection_string, method_name, message):
-        # message.vector_clock.CopyFrom(self.vector_clock)
         for i in range(self.n_services):
-            message.vector_clock[i] = self.vector_clock[i]
+            message.vector_clock[i] = self.vector_clocks[message.order_id][i]
         with grpc.insecure_channel(connection_string) as channel:
             stub = stub_class(channel)
             method = getattr(stub, method_name)

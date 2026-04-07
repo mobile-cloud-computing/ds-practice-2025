@@ -152,11 +152,11 @@ class TransactionVerificationService(BaseServiceWrapper, transaction_verificatio
         status = order_details.StatusMessage(
             success=True,
             order_id=request.order_id,
-            vector_clock=self.vector_clock
+            vector_clock=self.vector_clocks[request.order_id]
         )
 
         try:
-            self._update_vector_clock(request.vector_clock)
+            self._update_vector_clock(request.order_id, request.vector_clock)
 
             res, err_message = self._do_verification(request, verify_functions)
             status.success = res
@@ -193,7 +193,7 @@ class TransactionVerificationService(BaseServiceWrapper, transaction_verificatio
         )
 
     def VerifyItems(self, request, context):
-        logger.info(f"Verifying items for order id {request.order_id} with vector clock {self.vector_clock}")
+        logger.info(f"Verifying items for order id {request.order_id} with vector clock {self.vector_clocks[request.order_id]}")
 
         result_container = [None, None]
         event1 = threading.Thread(target=self._method_template_threaded, kwargs={
@@ -225,7 +225,7 @@ class TransactionVerificationService(BaseServiceWrapper, transaction_verificatio
         status = order_details.StatusMessage(
             success=all(result.status.success for result in result_container if result),
             order_id=request.order_id,
-            vector_clock=self.vector_clock,
+            vector_clock=self.vector_clocks[request.order_id],
             error_message="; ".join(result.status.error_message for result in result_container if result and not result.status.success)
         )
 
@@ -239,7 +239,7 @@ class TransactionVerificationService(BaseServiceWrapper, transaction_verificatio
 
 
     def VerifyCreditCard(self, request, context):
-        logger.info(f"Verifying credit card for order id {request.order_id} with vector clock {self.vector_clock}")
+        logger.info(f"Verifying credit card for order id {request.order_id} with vector clock {self.vector_clocks[request.order_id]}")
         return self._method_template(
             request=request,
             verify_functions=[
@@ -254,7 +254,7 @@ class TransactionVerificationService(BaseServiceWrapper, transaction_verificatio
         )
     
     def VerifyBillingAddress(self, request, context):
-        logger.info(f"Verifying billing address for order id {request.order_id} with vector clock {self.vector_clock}")
+        logger.info(f"Verifying billing address for order id {request.order_id} with vector clock {self.vector_clocks[request.order_id]}")
         return self._method_template(
             request=request,
             verify_functions=[lambda data: validate_location(data.billing_address)],
@@ -264,10 +264,11 @@ class TransactionVerificationService(BaseServiceWrapper, transaction_verificatio
         )
     
     def SuccessfullVerify(self, request, context):
+        logger.info(f"Successful verification root for order id {request.order_id} with vector clock {self.vector_clocks[request.order_id]}")
         status = order_details.StatusMessage(
             success=True,
             order_id=request.order_id,
-            vector_clock=self.vector_clock
+            vector_clock=self.vector_clocks[request.order_id]
         )
 
         result = order_details.OrderResponce()
