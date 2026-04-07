@@ -171,7 +171,11 @@ async def checkout():
     )
     general_vector_clock = merge_into_general_vector_clock(general_vector_clock, *results)
     recommended_books = results[0].recommended_books
-    order_response["suggestedBooks"] = [book.title for book in recommended_books]
+    order_response["suggestedBooks"] = [{
+        "title": book.title,
+        "author": book.author,
+        "description": book.description
+    } for book in recommended_books]
     
     _ = await clear_parallel_services(order_id)
     await add_to_order_queue(create_input_order_details(request_data, order_id))
