@@ -3,8 +3,7 @@
 import grpc
 import warnings
 
-from google.protobuf import empty_pb2 as google_dot_protobuf_dot_empty__pb2
-from orchestrator import orchestrator_pb2 as orchestrator_dot_orchestrator__pb2
+import executor_pb2 as executor__pb2
 
 GRPC_GENERATED_VERSION = '1.70.0'
 GRPC_VERSION = grpc.__version__
@@ -19,14 +18,14 @@ except ImportError:
 if _version_not_supported:
     raise RuntimeError(
         f'The grpc package installed is at version {GRPC_VERSION},'
-        + f' but the generated code in orchestrator/orchestrator_pb2_grpc.py depends on'
+        + f' but the generated code in executor_pb2_grpc.py depends on'
         + f' grpcio>={GRPC_GENERATED_VERSION}.'
         + f' Please upgrade your grpc module to grpcio>={GRPC_GENERATED_VERSION}'
         + f' or downgrade your generated code using grpcio-tools<={GRPC_VERSION}.'
     )
 
 
-class OrchestratorServiceStub(object):
+class ExecutorServiceStub(object):
     """Missing associated documentation comment in .proto file."""
 
     def __init__(self, channel):
@@ -35,75 +34,75 @@ class OrchestratorServiceStub(object):
         Args:
             channel: A grpc.Channel.
         """
-        self.fraudDone = channel.unary_unary(
-                '/orchestrator.OrchestratorService/fraudDone',
-                request_serializer=orchestrator_dot_orchestrator__pb2.fraudDoneRequest.SerializeToString,
-                response_deserializer=google_dot_protobuf_dot_empty__pb2.Empty.FromString,
+        self.Election = channel.unary_unary(
+                '/executor.ExecutorService/Election',
+                request_serializer=executor__pb2.ElectionRequest.SerializeToString,
+                response_deserializer=executor__pb2.ElectionResponse.FromString,
                 _registered_method=True)
-        self.verificationDone = channel.unary_unary(
-                '/orchestrator.OrchestratorService/verificationDone',
-                request_serializer=orchestrator_dot_orchestrator__pb2.verificationDoneRequest.SerializeToString,
-                response_deserializer=google_dot_protobuf_dot_empty__pb2.Empty.FromString,
+        self.Coordinator = channel.unary_unary(
+                '/executor.ExecutorService/Coordinator',
+                request_serializer=executor__pb2.CoordinatorRequest.SerializeToString,
+                response_deserializer=executor__pb2.CoordinatorResponse.FromString,
                 _registered_method=True)
-        self.suggestionsDone = channel.unary_unary(
-                '/orchestrator.OrchestratorService/suggestionsDone',
-                request_serializer=orchestrator_dot_orchestrator__pb2.suggestionsDoneRequest.SerializeToString,
-                response_deserializer=google_dot_protobuf_dot_empty__pb2.Empty.FromString,
+        self.Heartbeat = channel.unary_unary(
+                '/executor.ExecutorService/Heartbeat',
+                request_serializer=executor__pb2.HeartbeatRequest.SerializeToString,
+                response_deserializer=executor__pb2.HeartbeatResponse.FromString,
                 _registered_method=True)
 
 
-class OrchestratorServiceServicer(object):
+class ExecutorServiceServicer(object):
     """Missing associated documentation comment in .proto file."""
 
-    def fraudDone(self, request, context):
+    def Election(self, request, context):
         """Missing associated documentation comment in .proto file."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
-    def verificationDone(self, request, context):
+    def Coordinator(self, request, context):
         """Missing associated documentation comment in .proto file."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
-    def suggestionsDone(self, request, context):
+    def Heartbeat(self, request, context):
         """Missing associated documentation comment in .proto file."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
 
-def add_OrchestratorServiceServicer_to_server(servicer, server):
+def add_ExecutorServiceServicer_to_server(servicer, server):
     rpc_method_handlers = {
-            'fraudDone': grpc.unary_unary_rpc_method_handler(
-                    servicer.fraudDone,
-                    request_deserializer=orchestrator_dot_orchestrator__pb2.fraudDoneRequest.FromString,
-                    response_serializer=google_dot_protobuf_dot_empty__pb2.Empty.SerializeToString,
+            'Election': grpc.unary_unary_rpc_method_handler(
+                    servicer.Election,
+                    request_deserializer=executor__pb2.ElectionRequest.FromString,
+                    response_serializer=executor__pb2.ElectionResponse.SerializeToString,
             ),
-            'verificationDone': grpc.unary_unary_rpc_method_handler(
-                    servicer.verificationDone,
-                    request_deserializer=orchestrator_dot_orchestrator__pb2.verificationDoneRequest.FromString,
-                    response_serializer=google_dot_protobuf_dot_empty__pb2.Empty.SerializeToString,
+            'Coordinator': grpc.unary_unary_rpc_method_handler(
+                    servicer.Coordinator,
+                    request_deserializer=executor__pb2.CoordinatorRequest.FromString,
+                    response_serializer=executor__pb2.CoordinatorResponse.SerializeToString,
             ),
-            'suggestionsDone': grpc.unary_unary_rpc_method_handler(
-                    servicer.suggestionsDone,
-                    request_deserializer=orchestrator_dot_orchestrator__pb2.suggestionsDoneRequest.FromString,
-                    response_serializer=google_dot_protobuf_dot_empty__pb2.Empty.SerializeToString,
+            'Heartbeat': grpc.unary_unary_rpc_method_handler(
+                    servicer.Heartbeat,
+                    request_deserializer=executor__pb2.HeartbeatRequest.FromString,
+                    response_serializer=executor__pb2.HeartbeatResponse.SerializeToString,
             ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
-            'orchestrator.OrchestratorService', rpc_method_handlers)
+            'executor.ExecutorService', rpc_method_handlers)
     server.add_generic_rpc_handlers((generic_handler,))
-    server.add_registered_method_handlers('orchestrator.OrchestratorService', rpc_method_handlers)
+    server.add_registered_method_handlers('executor.ExecutorService', rpc_method_handlers)
 
 
  # This class is part of an EXPERIMENTAL API.
-class OrchestratorService(object):
+class ExecutorService(object):
     """Missing associated documentation comment in .proto file."""
 
     @staticmethod
-    def fraudDone(request,
+    def Election(request,
             target,
             options=(),
             channel_credentials=None,
@@ -116,9 +115,9 @@ class OrchestratorService(object):
         return grpc.experimental.unary_unary(
             request,
             target,
-            '/orchestrator.OrchestratorService/fraudDone',
-            orchestrator_dot_orchestrator__pb2.fraudDoneRequest.SerializeToString,
-            google_dot_protobuf_dot_empty__pb2.Empty.FromString,
+            '/executor.ExecutorService/Election',
+            executor__pb2.ElectionRequest.SerializeToString,
+            executor__pb2.ElectionResponse.FromString,
             options,
             channel_credentials,
             insecure,
@@ -130,7 +129,7 @@ class OrchestratorService(object):
             _registered_method=True)
 
     @staticmethod
-    def verificationDone(request,
+    def Coordinator(request,
             target,
             options=(),
             channel_credentials=None,
@@ -143,9 +142,9 @@ class OrchestratorService(object):
         return grpc.experimental.unary_unary(
             request,
             target,
-            '/orchestrator.OrchestratorService/verificationDone',
-            orchestrator_dot_orchestrator__pb2.verificationDoneRequest.SerializeToString,
-            google_dot_protobuf_dot_empty__pb2.Empty.FromString,
+            '/executor.ExecutorService/Coordinator',
+            executor__pb2.CoordinatorRequest.SerializeToString,
+            executor__pb2.CoordinatorResponse.FromString,
             options,
             channel_credentials,
             insecure,
@@ -157,7 +156,7 @@ class OrchestratorService(object):
             _registered_method=True)
 
     @staticmethod
-    def suggestionsDone(request,
+    def Heartbeat(request,
             target,
             options=(),
             channel_credentials=None,
@@ -170,9 +169,9 @@ class OrchestratorService(object):
         return grpc.experimental.unary_unary(
             request,
             target,
-            '/orchestrator.OrchestratorService/suggestionsDone',
-            orchestrator_dot_orchestrator__pb2.suggestionsDoneRequest.SerializeToString,
-            google_dot_protobuf_dot_empty__pb2.Empty.FromString,
+            '/executor.ExecutorService/Heartbeat',
+            executor__pb2.HeartbeatRequest.SerializeToString,
+            executor__pb2.HeartbeatResponse.FromString,
             options,
             channel_credentials,
             insecure,

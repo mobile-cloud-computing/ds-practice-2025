@@ -121,6 +121,9 @@
             try {
                 const response = await fetch('http://localhost:8081/checkout', {
                     method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
                     body: JSON.stringify(data),
                 });
 
@@ -128,17 +131,18 @@
                 const responseDiv = document.getElementById('response');
 
                 if (response.ok) {
-                    const suggestedBooks = result.suggestedBooks.map(book => `<li>${book.title} by ${book.author}</li>`).join('');
-                    responseDiv.innerHTML = `
-                        <strong>Order status: ${result.status}</strong><br>
-                        Order ID: ${result.orderId}<br>
-                        ${result.status === "Order Approved" ?
-                            `Suggested Books:
-                            <ul class="list-disc pl-5 mt-2 space-y-1">${suggestedBooks}</ul>`
-                        : ``
-                        }
-                    `;
-                    color = result.status === 'Order Approved' ? 'green' : 'red';
+                     const suggestedBooks = (result.suggestedBooks || []).map(book => `<li>${book.title} by ${book.author}</li>`).join('');
+                    
+                    let htmlContent = `<strong>Order status: ${result.status}</strong><br>Order ID: ${result.orderId}<br>`;
+                    
+                    if (result.status === "Order Approved" && suggestedBooks) {
+                        htmlContent += `Suggested Books:
+                        <ul class="list-disc pl-5 mt-2 space-y-1">${suggestedBooks}</ul>`;
+                    }
+                    
+                    responseDiv.innerHTML = htmlContent;
+                    
+                    let color = result.status === 'Order Approved' ? 'green' : 'red';
                     responseDiv.className = `mt-6 p-4 border rounded-lg bg-${color}-100 text-${color}-700`;
                 } else {
                     responseDiv.textContent = `Error: ${result.error.message}`;

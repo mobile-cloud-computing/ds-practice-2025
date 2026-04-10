@@ -1,0 +1,17 @@
+syntax = "proto3";
+package executor;
+
+service ExecutorService {
+    rpc Election (ElectionRequest) returns (ElectionResponse);
+    rpc Coordinator (CoordinatorRequest) returns (CoordinatorResponse);
+    rpc Heartbeat (HeartbeatRequest) returns (HeartbeatResponse);
+}
+
+message ElectionRequest { int32 sender_id = 1; }
+message ElectionResponse { bool ok = 1; }
+
+message CoordinatorRequest { int32 leader_id = 1; }
+message CoordinatorResponse { bool ok = 1; }
+
+message HeartbeatRequest { int32 leader_id = 1; }
+message HeartbeatResponse { bool is_alive = 1; }

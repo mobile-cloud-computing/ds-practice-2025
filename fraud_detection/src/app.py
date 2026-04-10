@@ -9,18 +9,11 @@ from google.protobuf import empty_pb2
 # --- Path setups for gRPC imports ---
 FILE = __file__ if '__file__' in globals() else os.getenv("PYTHONFILE", "")
 root_path = os.path.abspath(os.path.join(FILE, '../../..'))
-sys.path.insert(0, root_path)
-import utils.pb.fraud_detection.fraud_detection_pb2 as fraud_detection
-import utils.pb.fraud_detection.fraud_detection_pb2_grpc as fraud_detection_grpc
 
-import utils.pb.transaction_verification.transaction_verification_pb2 as transaction_verification
-import utils.pb.transaction_verification.transaction_verification_pb2_grpc as transaction_verification_grpc
-
-import utils.pb.suggestions.suggestions_pb2 as suggestions
-import utils.pb.suggestions.suggestions_pb2_grpc as suggestions_grpc
-
-import utils.pb.orchestrator.orchestrator_pb2 as orchestrator
-import utils.pb.orchestrator.orchestrator_pb2_grpc as orchestrator_grpc
+# Залишаємо ТІЛЬКИ fraud_detection, бо інші тут не використовуються!
+sys.path.insert(0, os.path.join(root_path, 'utils/pb/fraud_detection'))
+import fraud_detection_pb2 as fraud_detection
+import fraud_detection_pb2_grpc as fraud_detection_grpc
 
 # --- Logger configuration ---
 logging.basicConfig(

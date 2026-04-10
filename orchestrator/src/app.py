@@ -7,18 +7,38 @@ import logging
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 
-# Setup paths
+# --- Setup paths for gRPC imports ---
 FILE = __file__ if '__file__' in globals() else os.getenv("PYTHONFILE", "")
 root_path = os.path.abspath(os.path.join(FILE, '../../..'))
-sys.path.insert(0, root_path)
 
-import utils.pb.fraud_detection.fraud_detection_pb2 as fraud_detection
-import utils.pb.fraud_detection.fraud_detection_pb2_grpc as fraud_detection_grpc
-import utils.pb.transaction_verification.transaction_verification_pb2 as transaction_verification
-import utils.pb.transaction_verification.transaction_verification_pb2_grpc as transaction_verification_grpc
-import utils.pb.suggestions.suggestions_pb2 as suggestions
-import utils.pb.suggestions.suggestions_pb2_grpc as suggestions_grpc
+# 1. Fraud Detection
+sys.path.insert(0, os.path.join(root_path, 'utils/pb/fraud_detection'))
+import fraud_detection_pb2 as fraud_detection
+import fraud_detection_pb2_grpc as fraud_detection_grpc
 
+# 2. Transaction Verification
+sys.path.insert(0, os.path.join(root_path, 'utils/pb/transaction_verification'))
+import transaction_verification_pb2 as transaction_verification
+import transaction_verification_pb2_grpc as transaction_verification_grpc
+
+# 3. Suggestions
+sys.path.insert(0, os.path.join(root_path, 'utils/pb/suggestions'))
+import suggestions_pb2 as suggestions
+import suggestions_pb2_grpc as suggestions_grpc
+
+# 4. Order Queue
+sys.path.insert(0, os.path.join(root_path, 'utils/pb/order_queue'))
+import order_queue_pb2 as order_queue
+import order_queue_pb2_grpc as order_queue_grpc
+
+# 5. Orchestrator (якщо він використовує власний proto)
+sys.path.insert(0, os.path.join(root_path, 'utils/pb/orchestrator'))
+try:
+    import orchestrator_pb2 as orchestrator_pb
+    import orchestrator_pb2_grpc as orchestrator_grpc
+except ImportError:
+    pass 
+# --- Logger configuration ---
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 logger = logging.getLogger(__name__)
 
@@ -43,13 +63,29 @@ def trigger_book_check(order_id):
         stub.bookCheck(fraud_detection.BookCheckRequest(order_id=order_id))
 
 def verify_transaction(card_nr, order_id, amount):
-    """Verify transaction. It will trigger userCheck in Fraud Detection."""
+    
     with grpc.insecure_channel('transaction_verification:50052') as channel:
         stub = transaction_verification_grpc.transactionServiceStub(channel)
-        response = stub.verifyTransaction(
-            transaction_verification.PayRequest(card_nr=str(card_nr), order_id=order_id, money=amount)
-        )
-        return response.verified
+        
+        stub.initOrder(transaction_verification.InitRequest(
+            order_id=order_id,
+            orderData=transaction_verification.OdrerData(card_nr=str(card_nr), order_ammount=float(amount))
+        ))
+
+        clock_msg = transaction_verification.VectorClock()
+        clock_msg.values["Orchestrator"] = 1
+
+        stub.checkCard(transaction_verification.CheckCardRequest(
+            order_id=order_id,
+            clock=clock_msg
+        ))
+
+        stub.checkMoney(transaction_verification.CheckMoneyRequest(
+            order_id=order_id,
+            clock=clock_msg
+        ))
+
+        return True 
 
 def get_suggestions(books):
     """Fetch book suggestions."""
@@ -57,6 +93,13 @@ def get_suggestions(books):
         stub = suggestions_grpc.SuggestionsServiceStub(channel)
         response = stub.suggest(suggestions.SuggestRequest(ordered_books=books))
         return response.suggested_books
+
+def enqueue_order(order_id, is_express):
+    """Sends approved order to the queue."""
+    with grpc.insecure_channel("order_queue:50054") as channel:
+        stub = order_queue_grpc.OrderQueueServiceStub(channel)
+        priority = 1 if is_express else 5 # Lower number = higher priority
+        stub.Enqueue(order_queue.EnqueueRequest(order_id=str(order_id), priority=priority))
 
 @app.route('/', methods=['GET'])
 def index():
@@ -131,6 +174,13 @@ def checkout():
     except Exception as e:
         logger.error(f"Failed to get suggestions: {e}")
         suggestions_list = []
+
+    # 6. Enqueue the order for execution (Seminar 7 Integration)
+    try:
+        is_express = (data.get("shippingMethod") in ["Express", "Next-Day"])
+        enqueue_order(order_id_uuid, is_express)
+    except Exception as e:
+        logger.error(f"Failed to enqueue order: {e}")
 
     return jsonify({
         "orderId": order_id_uuid,
